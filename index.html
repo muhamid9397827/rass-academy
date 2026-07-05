@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أكاديمية أمن المنشآت | محافظة الرس</title>
+    <!-- استدعاء خط احترافي من جوجل -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* الألوان العصرية للقطاع الأمني */
+            --bg-main: #0B1120;
+            --bg-card: #1E293B;
+            --primary: #3B82F6;
+            --primary-hover: #2563EB;
+            --accent-gold: #F59E0B;
+            --success: #10B981;
+            --danger: #EF4444;
+            --text-main: #F8FAFC;
+            --text-muted: #94A3B8;
+            --border-color: #334155;
+        }
+
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); margin: 0; padding: 20px; user-select: none; }
+        
+        /* التخطيط العام (Layout) */
+        .container { max-width: 1000px; margin: auto; }
+        .header-logo { text-align: center; margin-bottom: 30px; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; }
+        .header-logo h1 { color: var(--accent-gold); margin: 0; font-size: 2.5em; font-weight: 900; letter-spacing: 1px; }
+        .header-logo h2 { color: var(--text-main); margin: 5px 0 0; font-size: 1.5em; font-weight: 700; }
+        
+        .card { background: var(--bg-card); padding: 30px; border-radius: 16px; border: 1px solid var(--border-color); margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        
+        /* المدخلات والأزرار */
+        .input-group { margin-bottom: 15px; text-align: right; }
+        .input-group label { display: block; margin-bottom: 5px; color: var(--text-muted); font-weight: bold; }
+        .input-group input { width: 100%; padding: 12px; background: #0F172A; border: 1px solid var(--border-color); color: white; border-radius: 8px; box-sizing: border-box; font-family: 'Cairo', sans-serif; font-size: 1em; transition: 0.3s; }
+        .input-group input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); }
+        
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em; transition: 0.3s; color: white; font-family: 'Cairo', sans-serif; margin-top: 10px; }
+        .btn-primary { background: var(--primary); }
+        .btn-success { background: var(--success); }
+        .btn-warning { background: var(--accent-gold); color: #000; }
+        .btn-danger { background: var(--danger); }
+        .btn:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+
+        /* منطقة الاختبار */
+        .quiz-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 20px; }
+        .quiz-title { color: var(--primary); margin: 0; }
+        .timer { font-size: 1.5em; font-weight: bold; color: var(--accent-gold); background: rgba(245, 158, 11, 0.1); padding: 5px 20px; border-radius: 8px; border: 1px solid var(--accent-gold); }
+        
+        .progress-bar { height: 10px; background: var(--bg-main); border-radius: 10px; margin-bottom: 30px; overflow: hidden; border: 1px solid var(--border-color); }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), #60A5FA); width: 0%; transition: 0.4s ease; }
+        
+        .question-block { background: #151F32; padding: 25px; border-radius: 12px; border-right: 5px solid var(--primary); margin-bottom: 25px; }
+        .question-text { font-size: 1.2em; font-weight: bold; margin-top: 0; color: #FFF; }
+        
+        .option-label { display: block; padding: 15px; margin: 10px 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; }
+        .option-label:hover { background: #2A3B52; border-color: var(--primary); }
+        input[type="radio"] { transform: scale(1.3); margin-left: 15px; accent-color: var(--primary); }
+        input[type="radio"]:checked + span { color: var(--primary); font-weight: bold; }
+
+        /* النتائج والمراجعة */
+        .result-circle { width: 160px; height: 160px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 3em; font-weight: 900; margin: 30px auto; border: 10px solid var(--border-color); background: var(--bg-main); }
+        .review-item { text-align: right; background: #151F32; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border-color); border-right: 5px solid var(--accent-gold); }
+        .correct-text { color: var(--success); font-weight: bold; background: rgba(16, 185, 129, 0.1); padding: 5px 10px; border-radius: 5px; }
+        .wrong-text { color: var(--danger); text-decoration: line-through; margin-right: 10px; }
+
+        /* التحكم بالظهور */
+        #dashboard-section, #quiz-section, #result-section, #review-section { display: none; }
+        
+        .trainee-badge { display: inline-block; background: rgba(59, 130, 246, 0.1); border: 1px solid var(--primary); padding: 10px 20px; border-radius: 30px; color: var(--primary); font-weight: bold; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="header-logo">
+        <h1>أمن المنشآت</h1>
+        <h2>محافظة الرس - مركز القيادة والتدريب</h2>
+    </div>
+
+    <!-- 1. شاشة تسجيل الدخول -->
+    <div id="login-section" class="container card">
+        <h2 style="text-align: center; color: var(--primary); margin-bottom: 5px;">بوابة التحقق الأمني</h2>
+        <p style="text-align: center; color: var(--text-muted); margin-bottom: 30px;">يرجى إدخال بياناتك الرسمية للمتابعة</p>
+        
+        <div class="grid">
+            <div class="input-group">
+                <label>الاسم الأول:</label>
+                <input type="text" id="trainee-fname" placeholder="أدخل اسمك الأول...">
+            </div>
+            <div class="input-group">
+                <label>الاسم الثاني (العائلة):</label>
+                <input type="text" id="trainee-lname" placeholder="أدخل اسم العائلة...">
+            </div>
+        </div>
+        
+        <div class="grid">
+            <div class="input-group">
+                <label>الرتبة العسكرية:</label>
+                <input type="text" id="trainee-rank" placeholder="مثال: رقيب أول، ملازم...">
+            </div>
+            <div class="input-group">
+                <label>معرف الديسكورد (Discord ID):</label>
+                <input type="text" id="trainee-discord" placeholder="أدخل الـ ID الخاص بك...">
+            </div>
+        </div>
+        
+        <button class="btn btn-primary" onclick="login()" style="margin-top: 20px;">دخول للمنصة</button>
+    </div>
+
+    <!-- 2. لوحة التحكم (الدورات) -->
+    <div id="dashboard-section" class="container">
+        <div class="card" style="text-align: center;">
+            <div class="trainee-badge" id="welcome-msg"></div>
+            <h2 style="margin: 0;">الاختبارات الأكاديمية المتاحة</h2>
+        </div>
+        <div class="grid" id="courses-container"></div>
+    </div>
+
+    <!-- 3. منطقة الاختبار -->
+    <div id="quiz-section" class="container card">
+        <div class="quiz-header">
+            <h2 class="quiz-title" id="quiz-title"></h2>
+            <div class="timer" id="timer">30:00</div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        <div id="questions-container"></div>
+        <button class="btn btn-success" onclick="submitQuiz()">إنهاء وتسليم الإجابات</button>
+    </div>
+
+    <!-- 4. شاشة النتائج -->
+    <div id="result-section" class="container card" style="text-align: center;">
+        <h2 style="color: var(--primary);">النتيجة النهائية للاختبار</h2>
+        <div class="result-circle" id="result-circle">0%</div>
+        <h2 id="result-status" style="margin: 10px 0;"></h2>
+        <div id="result-details" style="color: var(--text-muted); font-size: 1.2em; margin-bottom: 20px; line-height: 1.8;"></div>
+        
+        <div id="cheat-warning" style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); padding: 15px; border-radius: 8px; color: var(--danger); font-weight: bold; display: none; margin-bottom: 20px;">
+            ⚠️ تنبيه أمني: تم رصد محاولة خروج من شاشة الاختبار أو فتح نوافذ أخرى أثناء الحل.
+        </div>
+        
+        <div class="grid" style="max-width: 600px; margin: auto;">
+            <button class="btn btn-warning" onclick="showReview()">مراجعة الأخطاء</button>
+            <button class="btn btn-primary" onclick="location.reload()">تسجيل خروج</button>
+        </div>
+    </div>
+
+    <!-- 5. شاشة المراجعة -->
+    <div id="review-section" class="container card">
+        <h2 style="text-align: center; color: var(--accent-gold); margin-bottom: 30px;">تقرير المراجعة الفنية</h2>
+        <div id="review-container"></div>
+        <button class="btn btn-primary" onclick="document.getElementById('review-section').style.display='none'; document.getElementById('result-section').style.display='block';">العودة للنتيجة</button>
+    </div>
+
+    <script>
+        // === إعدادات النظام المركزية ===
+        const CONFIG = {
+            passingScore: 75, // نسبة النجاح المعتمدة
+            defaultTime: 1800 // 30 دقيقة (1800 ثانية)
+        };
+
+        // قاعدة بيانات الأسئلة الشاملة
+        const courses = [
+            {
+                id: 1, name: "دورة السوات (SWAT)", duration: CONFIG.defaultTime,
+                questions: [
+                    { q: "ما هو الحد الأدنى والحد الأقصى لعدد أفراد فرقة السوات المسموح به للخروج للميدان؟", options: ["فردان كحد أدنى و 8 أفراد كحد أقصى.", "3 أشخاص كحد أدنى و 6 أشخاص كحد أقصى.", "5 أشخاص كحد أدنى و 10 أشخاص كحد أقصى."], answer: 1 },
+                    { q: "من هو الشخص الوحيد المصرح له بمخاطبة المواطنين من داخل مركبة السوات؟", options: ["مسؤول البلاغات.", "مسؤول النداءات.", "قائد الفرقة (السائق)."], answer: 2 },
+                    { q: "ما هو الموقف القانوني لفرقة السوات بخصوص التدرج في استخدام السلاح؟", options: ["ملزمون بقانون التدرج في استخدام السلاح مع الجميع دائماً.", "غير ملزمين بقانون التدرج، ويحق لهم إطلاق النار فوراً على أي شخص يحمل سلاحاً (أبيض أو ناري).", "التدرج مطلوب فقط في حال كان الطرف الآخر يعاني من اضطراب سلوكي."], answer: 1 },
+                    { q: "ما هي المركبات الرسمية المعتمدة والتي يجب على فرقة السوات التنقل بها جماعياً حصراً؟", options: ["الدوريات العادية التابعة للأمن العام أو الأفواج.", "فان السوات، المروحية، والقارب.", "أي مركبة عسكرية متوفرة في الموقع دون اشتراط نوع محدد."], answer: 1 },
+                    { q: "متى يحق لفرقة السوات استخدام سلاح القناصة (السنايبر) في الميدان؟", options: ["كإجراء استباقي لتأمين موقع المداهمة من النقاط المرتفعة.", "يُمنع استخدامه نهائياً تحت أي ظرف من الظروف.", "يُسمح به في حالة واحدة فقط: إذا كان الطرف الآخر يستخدم سلاح سنايبر ضد الفرقة."], answer: 2 },
+                    { q: "ما هو الإجراء الصحيح الذي يجب على السوات اتخاذه مع المجرمين بعد السيطرة عليهم؟", options: ["القيام بالتحقيق الروتيني معهم ومصادرة الأسلحة المرخصة.", "تسليمهم لأي عسكري آخر (أمن عام، أفواج، أمن منشآت) لاستكمال الإجراءات النظامية والسجن.", "نقلهم إلى مقر قيادة السوات وتوقيفهم هناك بصفة دائمة."], answer: 1 },
+                    { q: "أي من الخيارات التالية يُعد مخالفة صريحة لقوانين ملابس وزي السوات الرسمي؟", options: ["نزع السترة أو الخوذة أو إظهار الشعر تحت الخوذة.", "ارتداء سترة إضافية فوق الزي الرسمي لأنها تنزع الدرع الخاص.", "جميع ما سبق صحيح ويُعد مخالفة."], answer: 2 },
+                    { q: "في حال عدم توفر وحدات شاغرة من الأمن العام أو الأفواج أو أمن المنشآت، ما هي الصلاحية الاستثنائية الممنوحة للسوات؟", options: ["يحق لهم سجن المواطنين.", "يحق لهم مصادرة كافة الممتلكات الشخصية للموقوفين.", "إلغاء العملية والانسحاب من الموقع فوراً."], answer: 0 },
+                    { q: "ما هي الموجة الرسمية التي يجب على فرقة السوات الالتزام بها أثناء مباشرة العمليات الميدانية؟", options: ["موجة الأمن العام (موجة 5).", "موجة أمن المنشآت الرسمية (موجة 10).", "موجة حرة ومفتوحة للتواصل مع المواطنين."], answer: 1 },
+                    { q: "من يتولى قيادة فرقة السوات ميدانياً وتكون له الصلاحية الكاملة في إصدار أوامر النزول والمداهمة؟", options: ["أقدم فرد حصل على دورة السوات في المحافظة.", "أعلى رتبة عسكرية موجودة ضمن الفريق الميداني.", "الشخص المعين كمسؤول للنداءات والاستنفارات."], answer: 1 }
+                ]
+            },
+            {
+                id: 2, name: "دورة العمليات (مركز القيادة والتحكم)", duration: CONFIG.defaultTime,
+                questions: [
+                    { q: "كم المدة الزمنية الواجب تركها بين البلاغات عبر الراديو لضمان منع مقاطعة الإرسال؟", options: ["ثانيتان (2 ثانية).", "5 ثوانٍ.", "10 ثوانٍ."], answer: 1 },
+                    { q: "وفقاً لقاعدة الغياب، متى يستلم نائب العمليات مهام العمليات بشكل كامل؟", options: ["فور خروج المسؤول للميدان مباشرة.", "في حال غياب المسؤول لأكثر من 15 دقيقة.", "عند نهاية النوبة (الشفت) فقط."], answer: 1 },
+                    { q: "ما هو المسمى الإذاعي الصحيح لرتبة (جندي، جندي أول، عريف، وكيل رقيب) داخل الميناء وخارجه؟", options: ["داخل الميناء: حرة | خارج الميناء: ساهر.", "داخل الميناء: ساهر | خارج الميناء: حرة.", "داخل وخارج الميناء يسمى: صقر."], answer: 0 },
+                    { q: "ما هي الطريقة النظامية الصحيحة المعتمدة لتوجيه القادة للبلاغات الميدانية؟", options: ["توجيه القائد للبلاغ بشكل مباشر وإلزامه بالتحرك فوراً.", "\"من عمليات إلى قيادة 1، يوجد بلاغ (نوعه) في حال رغبتكم بالتوجه\".", "إرسال تفاصيل البلاغ في روم الشات العام دون نداء الراديو."], answer: 1 },
+                    { q: "بناءً على نظام التقارير المعتمد، ما هو الوقت المحدد لإصدار التقارير ومطابقة الوحدات؟", options: ["يجب إصدار تقرير كل نصف ساعة.", "يجب إصدار تقرير كل ساعة ومطابقة الوحدات في الراديو مع التقرير.", "يتم إصدار التقرير مرة واحدة نهاية اليوم."], answer: 1 },
+                    { q: "في حال حدوث عجز ميداني، ما هو الترتيب الصارم لسلم أولويات التوجيه؟", options: ["الأمن المباشر ثم الوحدات الحرة ثم الجناح الجوي.", "الجناح الجوي ثم الأمن المباشر ثم الوحدات الحرة.", "الوحدات الحرة، ثم الأمن المباشر، ثم الجناح الجوي (شاهين)."], answer: 2 },
+                    { q: "أي من الأفعال التالية يُصنف كـ 'خطأ جسيم ومحظور' على العمليات أثناء فتح الميناء؟", options: ["إعطاء إذن مغادرة الموقع أو تعديل السيارات وقت فتح الميناء.", "إلزام الوحدات بالتركيز على نقاط التوجه الحيوية.", "استخدام الأرقام التعريفية والرتب أثناء التواصل."], answer: 0 },
+                    { q: "ما هو الكود المعتمد الذي يستخدمه مسؤول العمليات لتغطية غيابه المؤقت بواسطة النائب؟", options: ["Code 4", "Code 7", "Code 8"], answer: 1 },
+                    { q: "ما هو اللقب الإذاعي المخصص لرتبة (ملازم، ملازم أول، نقيب)؟", options: ["رعد.", "صقر.", "ردع."], answer: 1 },
+                    { q: "ما هو الإجراء الإلزامي المترتب على حامل الدورة في حال عدم وجود مسؤول عمليات بالميدان؟", options: ["إغلاق الراديو حتى يتم تعيين مسؤول من القيادة.", "يتوجب على حامل الدورة الاستلام فوراً لتجنب عقوبات الشرطة العسكرية.", "النزول للميدان كدورية حرة ومغادرة غرفة العمليات."], answer: 1 }
+                ]
+            },
+            {
+                id: 3, name: "دورة ضابط منطقة", duration: CONFIG.defaultTime,
+                questions: [
+                    { q: "ما هو الشرط الأساسي المتعلق بالوحدات والتوقيت المعتمد لفتح الميناء؟", options: ["التواجد قبل ساعة واحدة وتوافر وحدتين كحد أدنى.", "التواجد قبل ساعتين وتوافر 3 وحدات كحد أدنى.", "التواجد فور فتح الميناء مباشرة دون اشتراط عدد الوحدات."], answer: 1 },
+                    { q: "بناءً على ميثاق الانضباط، هل يحق لضابط المنطقة تنفيذ أوامر تصدر من رتب مساوية له داخل نطاقه الجغرافي؟", options: ["نعم، ما دامت الرتبة مساوية ويخدمان في نفس القطاع.", "لا، يُمنع تنفيذ أوامر من رتب مساوية داخل النطاق، فالأوامر تصدر منه حصراً في منطقته.", "نعم، ولكن بعد أخذ إذن مسبق من غرفة العمليات."], answer: 1 },
+                    { q: "كم عدد التقارير الموثقة والصحيحة التي يُشترط على ضابط المنطقة تقديمها كشرط أساسي للترقية لرتبة (رئيس رقباء)؟", options: ["3 تقارير استلام.", "5 تقارير استلام.", "7 تقارير استلام بلا ملاحظات."], answer: 2 },
+                    { q: "وفقاً لقوانين الميدان والاتصال، ما هي الصلاحية الممنوحة لضابط المنطقة عند رصد تحركات مشبوهة في الموقع؟", options: ["صلاحية فرض الصمت اللاسلكي على موجة العمليات لضمان صفاء القناة.", "صلاحية تعديل ملابس وأزياء أفراد الدوريات دون مراجعة.", "صلاحية مغادرة النطاق الجغرافي فوراً دون تبليغ العمليات."], answer: 0 },
+                    { q: "ما هي التغطية الزمنية المستمرة التي يجب أن يشملها التقرير ليُحتسب كساعة واحدة؟", options: ["30 دقيقة.", "45 دقيقة.", "60 دقيقة من العمل المستمر."], answer: 2 },
+                    { q: "عند حدوث خرق أمني واختراق لنقطة التفتيش 'أمن 1'، ما هو الإجراء الفوري الواجب تطبيقه؟", options: ["تراجع جميع الوحدات إلى المكاتب اللوجستية.", "إغلاق البوابات وتفعيل الدفاع فوراً من قبل 'أمن 2'.", "فتح كاميرات المراقبة وانتظار التعليمات."], answer: 1 },
+                    { q: "ما هي السياسة المعتمدة لتحركات 'قوانين الدوريات الحرة' داخل الميناء؟", options: ["التمركز الثابت والترصد الطويل عند البوابات الرئيسية.", "الالتزام بالتنقل المستمر ويُمنع الترصد أو التمركز الثابت الطويل.", "التحرك فقط عند تلقي بلاغ مباشر من غرفة العمليات."], answer: 1 },
+                    { q: "بعد صدور تقرير ضابط المنطقة عبر القناة الرسمية، من هي الجهة الوحيدة المخولة بإعطاء الإذن للتعديل عليه؟", options: ["غرفة العمليات الصوتية.", "نائب مركز القيادة والتحكم.", "الشرطة العسكرية."], answer: 2 },
+                    { q: "التزاماً بالأحكام التأديبية والضبط المسلكي، ما هي المدة النظامية لعقوبة السجن؟", options: ["أقل مدة شهرين وأقصى مدة 10 شهور.", "أقل مدة 5 شهور وأقصى مدة 20 شهراً، ويُمنع التلاعب بالمدة.", "أقل مدة سنة واحدة وأقصى مدة 3 سنوات."], answer: 1 },
+                    { q: "ما هو المعدل الزمني المحدد لتسيير الدوريات الراجلة لتأمين القطاعات، وكيف يتم إدارة المشهد؟", options: ["دورية كل 10 دقائق، وإدارة المشهد عبر لوحة كاميرات المراقبة (F11).", "دورية كل 30 دقيقة، وإدارة المشهد عبر شات العمليات العام.", "دورية كل ساعة، وإدارة المشهد بالتواصل اللاسلكي فقط."], answer: 0 }
+                ]
+            },
+            {
+                id: 4, name: "اختبار تأهيل الضباط", duration: CONFIG.defaultTime,
+                questions: [
+                    { q: "ما هو الحد الأقصى للعقوبة الميدانية الفورية (السجن العسكري) التي يملك الضابط أحقية إيقاعها بحق الأفراد وضباط الصف المخالفين؟", options: ["15 شهراً فقط.", "20 شهراً فقط.", "30 شهراً فقط."], answer: 2 },
+                    { q: "ما هي المدة الزمنية القصوى المسموح بها للضابط لتوريد المضبوطات والأموال غير المشروعة لخزينة القطاع بتقرير رسمي؟", options: ["خلال 15 دقيقة فقط من وقت الضبط.", "خلال 30 دقيقة فقط من وقت الضبط.", "عند نهاية النوبة الميدانية (الشفت)."], answer: 0 },
+                    { q: "إذا رصد الملازم فرداً برتبة 'رقيب' يحمل سلاحاً رشاشاً غير مصرح، فما هو الإجراء النظامي الفوري؟", options: ["التغاضي عنه إذا كان في مهمة اشتباك.", "سحب السلاح منه فوراً وكتابة محضر ضبط رسمي لرفعه للشرطة العسكرية.", "معاقبته بالسجن العسكري الفوري لمدة 40 شهراً."], answer: 1 },
+                    { q: "وفقاً لبروتوكول التعامل مع التجاوزات الصادرة من منسوبي 'الأمن العام'، كيف يتم التعامل مع المخالفة؟", options: ["معالجة الأمر ميدانياً بالاجتهاد الشخصي وسحب عهدة الفرد.", "فتح تذكرة شكوى رسمية (تكت) وإرفاق الأدلة للفصل بين قيادتي القطاعين.", "إيقاع عقوبة السجن العسكري الفوري بحق الفرد التابع للأمن العام."], answer: 1 },
+                    { q: "ما هو التسلسل القيادي المعتمد والملزم للأفراد عند رغبتهم في تقديم الشكاوى؟", options: ["فرد ◄ ضابط منطقة ◄ ضابط نوبة ◄ شرطة عسكرية.", "فرد ◄ عمليات ◄ مجلس القضاء العسكري.", "فرد ◄ ضابط نوبة ◄ قيادة القطاع مباشرة."], answer: 0 },
+                    { q: "أي من الحالات التالية تقع ضمن الاختصاص الأصيل والحصري لـ 'مجلس القضاء العسكري' فقط؟", options: ["سجن ومحاسبة الأفراد وضباط الصف المخالفين.", "حق سجن ومحاسبة الضباط بجميع رتبهم.", "مصادرة الأسلحة الرشاشة والقناصات المخالفة."], answer: 1 },
+                    { q: "في حال انتهاء حدث طارئ (سرقة الميناء)، ما هو الترتيب الصحيح لمرحلة الإخلاء والتقرير؟", options: ["رفع التقرير الميداني أولاً ثم إعطاء أمر الانسحاب.", "إصدار أمر 'الانسحاب الموحد' بعد تفتيش المكان وتأمين المحرزات، ثم رفع التقرير.", "مغادرة الموقع فوراً وترك تأمين المحرزات لضابط المنطقة."], answer: 1 },
+                    { q: "كيف تصف اللائحة تجاوز مدة الـ 15 دقيقة دون تسليم الممنوعات المصادرة لغرفة الأمانات؟", options: ["يُعد إهمالاً إدارياً بسيطاً يتطلب التنبيه.", "يُعتبر جريمة 'اختلاس عهدة' يحاسب عليها القانون.", "يُعد تصرفاً مباحاً للضابط لحين انتهاء النوبة."], answer: 1 },
+                    { q: "أي من الخيارات يُعد من 'الخطوط الحمراء' التي يُحظر على الضابط ارتكابها إدارياً؟", options: ["فرض الصمت اللاسلكي أثناء الأحداث الطارئة.", "الإلحاح أو طلب الانضمام للأجهزة الخاصة (كالشرطة العسكرية أو القضاء).", "تسيير خفارات ميدانية بنفسه لسد العجز."], answer: 1 },
+                    { q: "ما هي السياسة المعتمدة بخصوص استخدام موجة اللاسلكي؟", options: ["يُسمح بفتح الحوارات الخفيفة لرفع المعنويات.", "مخصص فقط للبلاغات العسكرية ويُمنع فتح الحوارات أو الاعتراضات أو المزاح.", "يُسمح للضابط فقط بالاعتراض ومناقشة القضاء علناً."], answer: 1 },
+                    { q: "(احترافي): رصد (نقيب) مخالفة من (ملازم) في الميدان، ما هو الإجراء القانوني للنقيب؟", options: ["يسجنه 30 شهراً عسكرياً لأن الملازم أدنى منه رتبة.", "يُمنع قطعاً على ضابط سجن ضابط آخر، ترفع الشكوى سرياً للقضاء العسكري.", "يحق له محاسبته وتوبيخه علناً أمام الأفراد."], answer: 1 },
+                    { q: "(احترافي): اقتحم مواطن مدني بوابات الميناء بسيارته، كيف يطبق الضابط 'السجن العسكري'؟", options: ["يسجنه فوراً عسكرياً لمدة 30 شهراً لخطورة الجريمة.", "يُمنع قطعاً سجن المواطنين بمدد عسكرية، تطبق بحقهم 'العقوبات المدنية' للسيرفر.", "يخير المواطن بين السجن أو الغرامة."], answer: 1 },
+                    { q: "(احترافي): عثر الضابط على (سنايبر) غير مخول به مع 'ضابط المنطقة'؛ ما هو الإجراء؟", options: ["يسحب القناص ويسجن ضابط المنطقة 30 شهراً.", "يصادر القناص ويرفع محضر ضبط للشرطة العسكرية دون سجن الضابط ميدانياً.", "يترك السلاح معه ويكتفي بنصيحة سرية."], answer: 1 },
+                    { q: "(احترافي): اشتباك مفاجئ وخطير يهدد حياة الأفراد، ما هو التطبيق لبروتوكول 'التدرج في القوة'؟", options: ["يجب البدء بالتحذير الشفهي، ثم الصاعق، ثم الخفيف.", "استخدام السلاح الثقيل فوراً ودون تدرج لوجود حالة ضرورة قصوى ودفاع عن الحياة.", "يُمنع استخدام سلاح خارج العهدة حتى لو تعرضت الحياة للخطر."], answer: 1 },
+                    { q: "(احترافي): مشادة كلامية حادة في الميدان بين ضابط أمن منشآت وضابط أمن عام؟", options: ["لا توجد عقوبة طالما يدافع عن قطاعه.", "مخالفة عسكرية جسيمة تصل للإعفاء والتجريد، الجدال محظور والشكاوى عبر التكت.", "إيقاف مؤقت 15 دقيقة فقط."], answer: 1 }
+                ]
+            }
+        ];
+
+        let traineeInfo = {};
+        let currentCourse = null;
+        let timerInterval;
+        let cheatAttempts = 0;
+        let userAnswers = [];
+
+        // 1. تسجيل الدخول
+        function login() {
+            const fname = document.getElementById('trainee-fname').value.trim();
+            const lname = document.getElementById('trainee-lname').value.trim();
+            const rank = document.getElementById('trainee-rank').value.trim();
+            const discord = document.getElementById('trainee-discord').value.trim();
+
+            if(!fname || !lname || !rank || !discord) {
+                alert("تنبيه: يرجى تعبئة كافة الحقول العسكرية للتمكن من الدخول.");
+                return;
+            }
+
+            traineeInfo = { name: fname + " " + lname, rank, discord };
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('dashboard-section').style.display = 'block';
+            document.getElementById('welcome-msg').innerText = `الرتبة: ${rank} | الاسم: ${traineeInfo.name}`;
+            
+            renderCourses();
+        }
+
+        // 2. عرض الدورات
+        function renderCourses() {
+            const container = document.getElementById('courses-container');
+            container.innerHTML = courses.map(c => `
+                <div class="card" style="text-align: right;">
+                    <h2 style="color: var(--primary); margin-top: 0;">${c.name}</h2>
+                    <p style="color: var(--text-muted); margin: 5px 0;"><strong style="color:#fff">الأسئلة:</strong> ${c.questions.length} سؤال اختياري</p>
+                    <p style="color: var(--text-muted); margin: 5px 0;"><strong style="color:#fff">الوقت:</strong> 30 دقيقة</p>
+                    <button class="btn btn-primary" onclick="startQuiz(${c.id})">البدء الفوري</button>
+                </div>
+            `).join('');
+        }
+
+        // 3. بدء الاختبار
+        function startQuiz(id) {
+            currentCourse = courses.find(c => c.id === id);
+            userAnswers = new Array(currentCourse.questions.length).fill(null);
+            cheatAttempts = 0;
+            
+            document.getElementById('dashboard-section').style.display = 'none';
+            document.getElementById('quiz-section').style.display = 'block';
+            document.getElementById('quiz-title').innerText = currentCourse.name;
+            
+            const container = document.getElementById('questions-container');
+            container.innerHTML = currentCourse.questions.map((q, i) => `
+                <div class="question-block">
+                    <p class="question-text">${i+1}. ${q.q}</p>
+                    ${q.options.map((opt, j) => `
+                        <label class="option-label">
+                            <input type="radio" name="q${i}" value="${j}" onchange="saveAnswer(${i}, ${j})"> 
+                            <span>${opt}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            `).join('');
+
+            startTimer(currentCourse.duration);
+            initAntiCheat();
+            window.scrollTo(0, 0);
+        }
+
+        // حفظ الإجابة وتحديث شريط التقدم
+        function saveAnswer(qIndex, optIndex) {
+            userAnswers[qIndex] = optIndex;
+            const answered = userAnswers.filter(a => a !== null).length;
+            document.getElementById('progress-fill').style.width = (answered / currentCourse.questions.length * 100) + '%';
+        }
+
+        // عداد الوقت التنازلي
+        function startTimer(duration) {
+            let timer = duration, minutes, seconds;
+            timerInterval = setInterval(() => {
+                minutes = parseInt(timer / 60, 10);
+                seconds = parseInt(timer % 60, 10);
+                document.getElementById('timer').textContent = `${minutes < 10 ? '0'+minutes : minutes}:${seconds < 10 ? '0'+seconds : seconds}`;
+                
+                if (timer < 300) { document.getElementById('timer').style.color = "var(--danger)"; document.getElementById('timer').style.borderColor = "var(--danger)"; } // آخر 5 دقائق أحمر
+                
+                if (--timer < 0) {
+                    clearInterval(timerInterval);
+                    alert("انتهى الوقت المخصص! سيتم تسليم إجاباتك فوراً.");
+                    submitQuiz();
+                }
+            }, 1000);
+        }
+
+        // نظام الحماية والمراقبة
+        function initAntiCheat() {
+            document.addEventListener('contextmenu', event => event.preventDefault()); // منع الكليك يمين
+            document.addEventListener('visibilitychange', () => {
+                if(document.visibilityState === 'hidden' && document.getElementById('quiz-section').style.display === 'block') {
+                    cheatAttempts++;
+                    alert("⚠️ تحذير نظامي: يمنع مغادرة نافذة الاختبار. تم توثيق المحاولة الميدانية.");
+                }
+            });
+        }
+
+        // 4. تسليم الاختبار والتقييم
+        function submitQuiz() {
+            // التأكد من الإجابة على جميع الأسئلة
+            const unanswered = userAnswers.filter(a => a === null).length;
+            if(unanswered > 0) {
+                if(!confirm(`يوجد لديك ${unanswered} أسئلة لم تقم بالإجابة عليها. هل أنت متأكد من رغبتك في التسليم؟`)) return;
+            }
+
+            clearInterval(timerInterval);
+            let score = 0;
+            currentCourse.questions.forEach((q, i) => { if(userAnswers[i] === q.answer) score++; });
+            
+            const percentage = Math.round((score / currentCourse.questions.length) * 100);
+            
+            document.getElementById('quiz-section').style.display = 'none';
+            document.getElementById('result-section').style.display = 'block';
+            
+            const circle = document.getElementById('result-circle');
+            const status = document.getElementById('result-status');
+            
+            circle.innerText = percentage + '%';
+            document.getElementById('result-details').innerHTML = `
+                معلومات المتدرب: <b>${traineeInfo.rank} / ${traineeInfo.name}</b><br>
+                معرف الديسكورد: <b style="color:var(--primary)">${traineeInfo.discord}</b><br>
+                أجبت بشكل صحيح على <b style="color:#FFF">${score}</b> من أصل <b style="color:#FFF">${currentCourse.questions.length}</b> أسئلة
+            `;
+
+            if(percentage >= CONFIG.passingScore) {
+                circle.style.borderColor = 'var(--success)'; circle.style.color = 'var(--success)';
+                status.innerText = "اجتياز أمني بنجاح ✅"; status.style.color = 'var(--success)';
+            } else {
+                circle.style.borderColor = 'var(--danger)'; circle.style.color = 'var(--danger)';
+                status.innerText = "لم يتم الاجتياز ❌"; status.style.color = 'var(--danger)';
+            }
+
+            if(cheatAttempts > 0) document.getElementById('cheat-warning').style.display = 'block';
+            window.scrollTo(0, 0);
+        }
+
+        // 5. التغذية الراجعة (المراجعة)
+        function showReview() {
+            document.getElementById('result-section').style.display = 'none';
+            document.getElementById('review-section').style.display = 'block';
+            
+            const container = document.getElementById('review-container');
+            container.innerHTML = currentCourse.questions.map((q, i) => {
+                const userAnswered = userAnswers[i];
+                const isCorrect = userAnswered === q.answer;
+                
+                let html = `<div class="review-item" style="border-right-color: ${isCorrect ? 'var(--success)' : 'var(--danger)'}">
+                    <p style="font-weight:bold; font-size: 1.1em; color: #FFF;">س${i+1}: ${q.q}</p>
+                    <p>الإجابة الصحيحة المعتمدة: <br><span class="correct-text">${q.options[q.answer]}</span></p>`;
+                
+                if(!isCorrect) {
+                    const wrongAnswerText = userAnswered !== null ? q.options[userAnswered] : "لم تقم بالإجابة على هذا السؤال";
+                    html += `<p style="margin-top: 15px;">إجابتك المسجلة: <br><span class="wrong-text">${wrongAnswerText}</span></p>`;
+                }
+                return html + `</div>`;
+            }).join('');
+            window.scrollTo(0, 0);
+        }
+    </script>
+</body>
+</html>
