@@ -333,7 +333,7 @@
             });
         }
 
-        // 4. تسليم الاختبار والتقييم والرفع السحابي (الكود المدمج بالكامل)
+        // 4. تسليم الاختبار والتقييم والرفع السحابي
         function submitQuiz() {
             // التأكد من الإجابة على جميع الأسئلة
             const unanswered = userAnswers.filter(a => a === null).length;
@@ -375,9 +375,9 @@
             window.scrollTo(0, 0);
 
             // ==========================================
-            // كود الإرسال إلى جداول جوجل (Google Sheets)
+            // كود الإرسال إلى جداول جوجل (المُحدث والآمن)
             // ==========================================
-            const webAppUrl = "ضع_الرابط_هنا"; // <--- الصق الرابط الطويل الخاص بك هنا بين علامتي التنصيص
+            const webAppUrl = "https://script.google.com/macros/s/AKfycbxIjf7OH_lC1qGdh8XL7_bFnz3-pVE4DOxDRS7kopjhJCyfAZ9SdnldRj-Vdt1p_OeL/exec"; 
 
             const payload = {
                 name: traineeInfo.name,
@@ -391,14 +391,19 @@
                 cheatAttempts: cheatAttempts
             };
 
-            // عملية الإرسال المخفية
+            // عملية الإرسال بتنسيق آمن للمتصفح لتجنب أخطاء الاتصال
             fetch(webAppUrl, {
                 method: 'POST',
                 mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8'
+                },
                 body: JSON.stringify(payload)
-            }).then(() => console.log("تم ترحيل البيانات بنجاح"))
-              .catch(error => console.error("خطأ في الاتصال:", error));
+            }).then(() => {
+                console.log("تم ترحيل البيانات بنجاح");
+            }).catch(error => {
+                console.error("خطأ في الاتصال:", error);
+            });
         }
 
         // 5. التغذية الراجعة (المراجعة)
