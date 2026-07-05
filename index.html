@@ -333,7 +333,7 @@
             });
         }
 
-        // 4. تسليم الاختبار والتقييم
+        // 4. تسليم الاختبار والتقييم والرفع السحابي (الكود المدمج بالكامل)
         function submitQuiz() {
             // التأكد من الإجابة على جميع الأسئلة
             const unanswered = userAnswers.filter(a => a === null).length;
@@ -360,16 +360,45 @@
                 أجبت بشكل صحيح على <b style="color:#FFF">${score}</b> من أصل <b style="color:#FFF">${currentCourse.questions.length}</b> أسئلة
             `;
 
+            let passStatus = "";
             if(percentage >= CONFIG.passingScore) {
                 circle.style.borderColor = 'var(--success)'; circle.style.color = 'var(--success)';
                 status.innerText = "اجتياز أمني بنجاح ✅"; status.style.color = 'var(--success)';
+                passStatus = "اجتياز";
             } else {
                 circle.style.borderColor = 'var(--danger)'; circle.style.color = 'var(--danger)';
                 status.innerText = "لم يتم الاجتياز ❌"; status.style.color = 'var(--danger)';
+                passStatus = "رسوب";
             }
 
             if(cheatAttempts > 0) document.getElementById('cheat-warning').style.display = 'block';
             window.scrollTo(0, 0);
+
+            // ==========================================
+            // كود الإرسال إلى جداول جوجل (Google Sheets)
+            // ==========================================
+            const webAppUrl = "ضع_الرابط_هنا"; // <--- الصق الرابط الطويل الخاص بك هنا بين علامتي التنصيص
+
+            const payload = {
+                name: traineeInfo.name,
+                rank: traineeInfo.rank,
+                discord: traineeInfo.discord,
+                courseName: currentCourse.name,
+                score: score,
+                total: currentCourse.questions.length,
+                percentage: percentage,
+                status: passStatus,
+                cheatAttempts: cheatAttempts
+            };
+
+            // عملية الإرسال المخفية
+            fetch(webAppUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(() => console.log("تم ترحيل البيانات بنجاح"))
+              .catch(error => console.error("خطأ في الاتصال:", error));
         }
 
         // 5. التغذية الراجعة (المراجعة)
