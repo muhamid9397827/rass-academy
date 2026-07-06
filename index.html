@@ -32,6 +32,8 @@
 
         .study-content { background: #0F172A; padding: 0; border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; margin-bottom: 20px;}
         .study-content iframe { width: 100%; height: 600px; border: none; }
+        
+        .info-box { background: rgba(59, 130, 246, 0.1); border: 1px solid var(--primary); padding: 15px; border-radius: 8px; margin-bottom: 20px; line-height: 1.8; }
         .timer-box { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); color: var(--danger); padding: 15px; border-radius: 8px; text-align: center; font-size: 1.2em; font-weight: bold; margin-bottom: 20px; }
 
         .question-block { background: #151F32; padding: 25px; border-radius: 12px; border-right: 5px solid var(--primary); margin-bottom: 25px; }
@@ -39,7 +41,8 @@
         .option-label:hover { background: #1F2937; border-color: var(--primary); }
         input[type="radio"] { transform: scale(1.3); margin-left: 15px; accent-color: var(--primary); }
 
-        .alert-box { background: rgba(245, 158, 11, 0.1); border: 1px solid var(--accent-gold); padding: 15px; border-radius: 8px; color: var(--accent-gold); margin-bottom: 20px; text-align: center; font-weight: bold; }
+        .alert-box { background: rgba(245, 158, 11, 0.1); border: 1px solid var(--accent-gold); padding: 15px; border-radius: 8px; color: var(--accent-gold); margin-bottom: 20px; text-align: center; font-weight: bold; line-height: 1.6; }
+        
         #login-section, #study-section, #quiz-section, #result-section { display: none; }
         #login-section { display: block; }
     </style>
@@ -51,10 +54,11 @@
         <h2>محافظة الرس - كلية التدريب الذكية</h2>
     </div>
 
-    <!-- واجهة الدخول -->
+    <!-- 1. واجهة الدخول -->
     <div id="login-section" class="container card">
         <div class="alert-box">
-            ⚠️ تنبيه أمني مشدد: هذا التقديم يرتبط مباشرة بالقيادة العليا. أي تلاعب بالبيانات سيتم تحويله فوراً للشرطة العسكرية.
+            ⚠️ <strong>تنبيه أمني مشدد:</strong> هذا التقديم يرتبط مباشرة بالقيادة العليا. أي تلاعب بالبيانات سيتم تحويله فوراً للشرطة العسكرية.<br>
+            <span style="color: var(--danger);">يرجى العلم بأنه لن يتم ترقيتك دون الحصول على الدورة المخصصة لك.</span>
         </div>
         
         <div class="grid">
@@ -68,53 +72,65 @@
             </div>
         </div>
         
-        <div class="input-group">
-            <label>اختر رتبتك العسكرية الحالية:</label>
-            <select id="t-rank" onchange="checkRankCourse()">
-                <option value="">-- اختر الرتبة --</option>
-                <option value="جندي">جندي</option>
-                <option value="جندي أول">جندي أول</option>
-                <option value="عريف">عريف</option>
-                <option value="وكيل رقيب">وكيل رقيب</option>
-                <option value="رقيب">رقيب</option>
-                <option value="رقيب أول">رقيب أول</option>
-                <option value="رئيس رقباء">رئيس رقباء</option>
-                <option value="ملازم">ملازم</option>
-                <option value="ملازم أول">ملازم أول</option>
-                <option value="نقيب">نقيب</option>
-                <option value="رائد">رائد</option>
-                <option value="مقدم">مقدم</option>
-                <option value="عقيد">عقيد</option>
-                <option value="عميد">عميد</option>
-                <option value="لواء">لواء</option>
-                <option value="فريق">فريق</option>
-                <option value="فريق أول">فريق أول</option>
-            </select>
+        <div class="grid">
+            <div class="input-group">
+                <label>الرتبة العسكرية (كتابة):</label>
+                <input type="text" id="t-rank" placeholder="مثال: جندي، وكيل رقيب، ملازم...">
+            </div>
+            <div class="input-group">
+                <label>اختر الدورة المراد خوضها:</label>
+                <select id="t-course" onchange="checkCourse()">
+                    <option value="">-- اختر الدورة من القائمة --</option>
+                    <option value="دورة الشخصية العسكرية">دورة الشخصية العسكرية</option>
+                    <option value="دورة العمليات">دورة العمليات</option>
+                    <option value="دورة الجناح الجوي">دورة الجناح الجوي</option>
+                    <option value="دورة ضابط منطقة">دورة ضابط منطقة</option>
+                    <option value="دورة السوات">دورة السوات</option>
+                </select>
+            </div>
         </div>
 
-        <div id="course-assigned-msg" style="text-align: center; margin: 20px 0; font-size: 1.2em; font-weight: bold; color: var(--primary);"></div>
-        <button id="btn-enter" class="btn btn-primary" onclick="enterAcademy()" disabled>تأكيد الدخول</button>
+        <button id="btn-enter" class="btn btn-primary" onclick="enterAcademy()" disabled>دخول لغرفة الدراسة</button>
     </div>
 
-    <!-- واجهة الدراسة وعرض الشرائح -->
+    <!-- 2. واجهة الدراسة وعرض الشرائح -->
     <div id="study-section" class="container card">
         <h2 style="text-align: center; color: var(--primary);" id="study-title"></h2>
-        <div class="timer-box" id="study-timer">
-            يجب قراءة الدليل بالكامل بتركيز وتأني. سيتم تفعيل زر البدء بعد: <span id="time-left">20:00</span>
+        
+        <!-- التنبيهات والقوانين بداخل الدورة -->
+        <div class="alert-box" style="text-align: right; color: var(--text-main); border-color: var(--danger); background: rgba(239, 68, 68, 0.1);">
+            <h3 style="color: var(--danger); margin-top: 0;">⚠️ تنبيهات وقوانين صارمة:</h3>
+            <ul style="margin-bottom: 0;">
+                <li style="margin-bottom: 10px;"><strong>سياسة الرسوب:</strong> في حال عدم اجتياز الاختبار من المحاولة الأولى، يُمنع منعاً باتاً إعادة الاختبار أو تكرار المحاولة إلا بعد انقضاء (24 ساعة). مخالفة هذا القرار ستؤدي إلى رفض جميع تقديماتك لمدة (أسبوع كامل).</li>
+                <li><strong>نظام الحماية (Anti-Cheat):</strong> الموقع مزود بنظام مراقبة متطور. يُمنع التنقل أو الخروج من الصفحة لأكثر من مرتين أثناء الاختبار؛ حيث يعتبر النظام ذلك محاولة غش، مما يعرضك للمساءلة والشك في الاستغلال المتعمد.</li>
+            </ul>
         </div>
+
+        <!-- تعليمات الاستخدام -->
+        <div class="info-box">
+            <h4 style="margin-top: 0; color: var(--primary);">💡 تعليمات التنقل:</h4>
+            للتنقل بين صفحات المستند التوضيحي داخل الدورة، استخدم مفاتيح الأسهم في لوحة المفاتيح:<br>
+            • ⬆️ / ⬇️ : للانتقال للأعلى وللأسفل.<br>
+            • ⬅️ / ➡️ : للانتقال بين الشرائح يميناً ويساراً.
+        </div>
+
+        <div class="timer-box" id="study-timer">
+            يجب قراءة الدليل بالكامل بتركيز. سيتم تفعيل زر البدء بعد: <span id="time-left">13:00</span>
+        </div>
+        
         <!-- سيتم دمج شرائح جوجل هنا -->
         <div class="study-content" id="study-content"></div>
         <button id="btn-start-quiz" class="btn btn-success" onclick="startQuiz()" disabled style="margin-top: 20px;">أنا جاهز، ابدأ الاختبار الفعلي</button>
     </div>
 
-    <!-- واجهة الاختبار -->
+    <!-- 3. واجهة الاختبار -->
     <div id="quiz-section" class="container card">
         <h2 style="color: var(--accent-gold); text-align: center;">الاختبار الميداني المؤتمت</h2>
         <div id="questions-container"></div>
         <button class="btn btn-primary" onclick="submitQuiz()">إنهاء وتسليم الإجابات</button>
     </div>
 
-    <!-- واجهة النتيجة -->
+    <!-- 4. واجهة النتيجة -->
     <div id="result-section" class="container card" style="text-align: center;">
         <h2 style="color: var(--primary);">النتيجة النهائية للاختبار</h2>
         <div style="font-size: 4em; font-weight: 900; margin: 20px 0;" id="result-score"></div>
@@ -124,20 +140,7 @@
     </div>
 
     <script>
-        // خريطة الرتب والدورات
-        const rankMapping = {
-            "جندي": "دورة العمليات",
-            "جندي أول": "دورة الشخصية العسكرية",
-            "عريف": "دورة الجناح الجوي",
-            "وكيل رقيب": "دورة خفر السواحل",
-            "رقيب": "دورة ضابط منطقة",
-            "رقيب أول": "لا يوجد دورات مطلوبة حالياً",
-            "رئيس رقباء": "دورة السوات", "ملازم": "دورة السوات", "ملازم أول": "دورة السوات", "نقيب": "دورة السوات",
-            "رائد": "دورة السوات", "مقدم": "دورة السوات", "عقيد": "دورة السوات", "عميد": "دورة السوات",
-            "لواء": "دورة السوات", "فريق": "دورة السوات", "فريق أول": "دورة السوات"
-        };
-
-        // الروابط السحابية للعروض التقديمية (تم تعديلها لتصبح Embed)
+        // الروابط السحابية للعروض التقديمية وبنك الأسئلة
         const coursesData = {
             "دورة العمليات": {
                 embedUrl: "https://docs.google.com/presentation/d/1sPZamlwqbxReuBo426kltMOt78wW6NWfHpv9C-HNwHA/embed?rm=minimal",
@@ -220,49 +223,39 @@
         let currentCourseData = null;
         let selectedQuestions = [];
         const passingScore = 75;
+        let cheatAttempts = 0;
 
-        function checkRankCourse() {
-            const rank = document.getElementById('t-rank').value;
-            const msgDiv = document.getElementById('course-assigned-msg');
+        function checkCourse() {
+            const course = document.getElementById('t-course').value;
             const btn = document.getElementById('btn-enter');
-            
-            if(!rank) { msgDiv.innerText = ""; btn.disabled = true; return; }
-            const assignedCourse = rankMapping[rank];
-            
-            if(assignedCourse === "لا يوجد دورات مطلوبة حالياً" || !coursesData[assignedCourse]) {
-                msgDiv.innerHTML = `<span style="color: var(--danger);">رتبتك الحالية (${rank}) إما لا تتطلب دورة للأفراد حالياً، أو الدورة سرية.</span>`;
-                btn.disabled = true;
-            } else {
-                msgDiv.innerHTML = `الدورة الإلزامية المخصصة لترقيتك هي: <br><span style="font-size:1.5em; color:var(--accent-gold);">${assignedCourse}</span>`;
-                btn.disabled = false;
-            }
+            btn.disabled = course === "";
         }
 
         function enterAcademy() {
             const name = document.getElementById('t-name').value.trim();
             const discord = document.getElementById('t-discord').value.trim();
-            const rank = document.getElementById('t-rank').value;
+            const rank = document.getElementById('t-rank').value.trim();
+            const course = document.getElementById('t-course').value;
             
-            if(!name || !discord || isNaN(discord)) {
-                alert("تنبيه أمني: يرجى إدخال اسمك الكامل ومعرف ديسكورد صحيح (يتكون من أرقام فقط).");
+            if(!name || !discord || isNaN(discord) || !rank || !course) {
+                alert("تنبيه أمني: يرجى تعبئة كافة الحقول العسكرية بشكل صحيح (ومعرف الديسكورد أرقام فقط).");
                 return;
             }
 
-            currentTrainee = { name, discord, rank, courseName: rankMapping[rank] };
-            currentCourseData = coursesData[currentTrainee.courseName];
+            currentTrainee = { name, discord, rank, courseName: course };
+            currentCourseData = coursesData[course];
 
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('study-section').style.display = 'block';
             document.getElementById('study-title').innerText = currentTrainee.courseName;
             
-            // دمج شرائح جوجل بداخل الموقع!
             document.getElementById('study-content').innerHTML = `<iframe src="${currentCourseData.embedUrl}" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>`;
             
             startStudyTimer();
         }
 
         function startStudyTimer() {
-            // للتجربة: العداد 5 ثواني. (لإلزام الطلاب، غيره إلى 1200 ليعادل 20 دقيقة)
+            // العداد مبرمج الآن على 13 دقيقة (780 ثانية)
             let time = 780; 
             const display = document.getElementById('time-left');
             const btn = document.getElementById('btn-start-quiz');
@@ -288,6 +281,20 @@
             document.getElementById('study-section').style.display = 'none';
             document.getElementById('quiz-section').style.display = 'block';
 
+            // مراقبة نظام الحماية (Anti-Cheat)
+            document.addEventListener('visibilitychange', () => {
+                if(document.visibilityState === 'hidden' && document.getElementById('quiz-section').style.display === 'block') {
+                    cheatAttempts++;
+                    if(cheatAttempts > 2) {
+                        alert("⚠️ تم رصد خروج متكرر من الصفحة ومحاولة تلاعب. سيتم إنهاء الاختبار وتسجيل رسوب فوراً!");
+                        submitQuiz(true); // الإرسال الفوري كراسب
+                    } else {
+                        alert(`⚠️ تحذير نظامي: يمنع مغادرة نافذة الاختبار. (المحاولة ${cheatAttempts}/2)`);
+                    }
+                }
+            });
+
+            // خلط بنك الأسئلة والخيارات عشوائياً
             let allQ = [...currentCourseData.questions];
             selectedQuestions = allQ.sort(() => 0.5 - Math.random()).slice(0, 10);
 
@@ -308,28 +315,30 @@
             window.scrollTo(0, 0);
         }
 
-        function submitQuiz() {
+        function submitQuiz(forceFail = false) {
             let score = 0;
             let unanswered = 0;
 
-            selectedQuestions.forEach((q, i) => {
-                const checked = document.querySelector(`input[name="q${i}"]:checked`);
-                if(!checked) {
-                    unanswered++;
-                    document.getElementById(`qblock-${i}`).style.borderColor = 'var(--danger)';
-                } else {
-                    document.getElementById(`qblock-${i}`).style.borderColor = 'var(--primary)';
-                    if(checked.value === q.a) score++;
-                }
-            });
+            if(!forceFail) {
+                selectedQuestions.forEach((q, i) => {
+                    const checked = document.querySelector(`input[name="q${i}"]:checked`);
+                    if(!checked) {
+                        unanswered++;
+                        document.getElementById(`qblock-${i}`).style.borderColor = 'var(--danger)';
+                    } else {
+                        document.getElementById(`qblock-${i}`).style.borderColor = 'var(--primary)';
+                        if(checked.value === q.a) score++;
+                    }
+                });
 
-            if(unanswered > 0) {
-                alert(`خطأ تكتيكي: يوجد لديك ${unanswered} أسئلة لم تقم بحلها!`);
-                return;
+                if(unanswered > 0) {
+                    alert(`خطأ تكتيكي: يوجد لديك ${unanswered} أسئلة لم تقم بحلها!`);
+                    return;
+                }
             }
 
-            const percentage = Math.round((score / selectedQuestions.length) * 100);
-            const isPassed = percentage >= passingScore;
+            const percentage = forceFail ? 0 : Math.round((score / selectedQuestions.length) * 100);
+            const isPassed = forceFail ? false : percentage >= passingScore;
 
             document.getElementById('quiz-section').style.display = 'none';
             document.getElementById('result-section').style.display = 'block';
@@ -339,7 +348,12 @@
             
             scoreDiv.innerText = percentage + '%';
             scoreDiv.style.color = isPassed ? 'var(--success)' : 'var(--danger)';
-            statusDiv.innerText = isPassed ? 'اجتياز أمني بنجاح ✅' : 'رسوب في الاختبار ❌';
+            
+            if (forceFail) {
+                statusDiv.innerText = 'رسوب بسبب محاولة الغش (تم الرفع للقيادة) ❌';
+            } else {
+                statusDiv.innerText = isPassed ? 'اجتياز أمني بنجاح ✅' : 'رسوب في الاختبار ❌';
+            }
             statusDiv.style.color = isPassed ? 'var(--success)' : 'var(--danger)';
             
             document.getElementById('result-details').innerHTML = `
@@ -353,7 +367,7 @@
             const payload = {
                 name: currentTrainee.name, rank: currentTrainee.rank, discord: currentTrainee.discord,
                 courseName: currentTrainee.courseName, score: score, total: selectedQuestions.length,
-                percentage: percentage, status: isPassed ? "اجتياز" : "رسوب"
+                percentage: percentage, status: isPassed ? "اجتياز" : (forceFail ? "رسوب (غش)" : "رسوب")
             };
 
             fetch(webAppUrl, {
