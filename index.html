@@ -72,41 +72,46 @@
             </div>
         </div>
         
-        <div class="grid">
-            <div class="input-group">
-                <label>الرتبة العسكرية (كتابة):</label>
-                <input type="text" id="t-rank" placeholder="مثال: جندي، وكيل رقيب، ملازم...">
-            </div>
-            <div class="input-group">
-                <label>اختر الدورة المراد خوضها:</label>
-                <select id="t-course" onchange="checkCourse()">
-                    <option value="">-- اختر الدورة من القائمة --</option>
-                    <option value="دورة الشخصية العسكرية">دورة الشخصية العسكرية</option>
-                    <option value="دورة العمليات">دورة العمليات</option>
-                    <option value="دورة الجناح الجوي">دورة الجناح الجوي</option>
-                    <option value="دورة ضابط منطقة">دورة ضابط منطقة</option>
-                    <option value="دورة السوات">دورة السوات</option>
-                </select>
-            </div>
+        <div class="input-group">
+            <label>اختر رتبتك العسكرية الحالية (لإظهار الدورة المستحقة للترقية):</label>
+            <select id="t-rank" onchange="checkRankCourse()">
+                <option value="">-- اختر الرتبة --</option>
+                <option value="جندي">جندي</option>
+                <option value="جندي أول">جندي أول</option>
+                <option value="عريف">عريف</option>
+                <option value="وكيل رقيب">وكيل رقيب</option>
+                <option value="رقيب">رقيب</option>
+                <option value="رقيب أول">رقيب أول</option>
+                <option value="رئيس رقباء">رئيس رقباء</option>
+                <option value="ملازم">ملازم</option>
+                <option value="ملازم أول">ملازم أول</option>
+                <option value="نقيب">نقيب</option>
+                <option value="رائد">رائد</option>
+                <option value="مقدم">مقدم</option>
+                <option value="عقيد">عقيد</option>
+                <option value="عميد">عميد</option>
+                <option value="لواء">لواء</option>
+                <option value="فريق">فريق</option>
+                <option value="فريق أول">فريق أول</option>
+            </select>
         </div>
 
-        <button id="btn-enter" class="btn btn-primary" onclick="enterAcademy()" disabled>دخول لغرفة الدراسة</button>
+        <div id="course-assigned-msg" style="text-align: center; margin: 20px 0; font-size: 1.2em; font-weight: bold; color: var(--primary);"></div>
+        <button id="btn-enter" class="btn btn-primary" onclick="enterAcademy()" disabled>تأكيد ودخول لغرفة الدراسة</button>
     </div>
 
     <!-- 2. واجهة الدراسة وعرض الشرائح -->
     <div id="study-section" class="container card">
         <h2 style="text-align: center; color: var(--primary);" id="study-title"></h2>
         
-        <!-- التنبيهات والقوانين بداخل الدورة -->
         <div class="alert-box" style="text-align: right; color: var(--text-main); border-color: var(--danger); background: rgba(239, 68, 68, 0.1);">
             <h3 style="color: var(--danger); margin-top: 0;">⚠️ تنبيهات وقوانين صارمة:</h3>
             <ul style="margin-bottom: 0;">
                 <li style="margin-bottom: 10px;"><strong>سياسة الرسوب:</strong> في حال عدم اجتياز الاختبار من المحاولة الأولى، يُمنع منعاً باتاً إعادة الاختبار أو تكرار المحاولة إلا بعد انقضاء (24 ساعة). مخالفة هذا القرار ستؤدي إلى رفض جميع تقديماتك لمدة (أسبوع كامل).</li>
-                <li><strong>نظام الحماية (Anti-Cheat):</strong> الموقع مزود بنظام مراقبة متطور. يُمنع التنقل أو الخروج من الصفحة لأكثر من مرتين أثناء الاختبار؛ حيث يعتبر النظام ذلك محاولة غش، مما يعرضك للمساءلة والشك في الاستغلال المتعمد.</li>
+                <li><strong>نظام الحماية (Anti-Cheat):</strong> الموقع مزود بنظام مراقبة متطور. يُمنع التنقل أو الخروج من الصفحة لأكثر من مرتين أثناء الاختبار؛ حيث يعتبر النظام ذلك محاولة غش، مما يعرضك للمساءلة.</li>
             </ul>
         </div>
 
-        <!-- تعليمات الاستخدام -->
         <div class="info-box">
             <h4 style="margin-top: 0; color: var(--primary);">💡 تعليمات التنقل:</h4>
             للتنقل بين صفحات المستند التوضيحي داخل الدورة، استخدم مفاتيح الأسهم في لوحة المفاتيح:<br>
@@ -118,7 +123,6 @@
             يجب قراءة الدليل بالكامل بتركيز. سيتم تفعيل زر البدء بعد: <span id="time-left">13:00</span>
         </div>
         
-        <!-- سيتم دمج شرائح جوجل هنا -->
         <div class="study-content" id="study-content"></div>
         <button id="btn-start-quiz" class="btn btn-success" onclick="startQuiz()" disabled style="margin-top: 20px;">أنا جاهز، ابدأ الاختبار الفعلي</button>
     </div>
@@ -140,7 +144,19 @@
     </div>
 
     <script>
-        // الروابط السحابية للعروض التقديمية وبنك الأسئلة
+        // خريطة الرتب لضمان عدم دخول أحد لدورة غير مخصصة له
+        const rankMapping = {
+            "جندي": "دورة العمليات",
+            "جندي أول": "دورة الشخصية العسكرية",
+            "عريف": "دورة الجناح الجوي",
+            "وكيل رقيب": "دورة خفر السواحل",
+            "رقيب": "دورة ضابط منطقة",
+            "رقيب أول": "لا يوجد دورات مطلوبة حالياً",
+            "رئيس رقباء": "دورة السوات", "ملازم": "دورة السوات", "ملازم أول": "دورة السوات", "نقيب": "دورة السوات",
+            "رائد": "دورة السوات", "مقدم": "دورة السوات", "عقيد": "دورة السوات", "عميد": "دورة السوات",
+            "لواء": "دورة السوات", "فريق": "دورة السوات", "فريق أول": "دورة السوات"
+        };
+
         const coursesData = {
             "دورة العمليات": {
                 embedUrl: "https://docs.google.com/presentation/d/1sPZamlwqbxReuBo426kltMOt78wW6NWfHpv9C-HNwHA/embed?rm=minimal",
@@ -225,23 +241,37 @@
         const passingScore = 75;
         let cheatAttempts = 0;
 
-        function checkCourse() {
-            const course = document.getElementById('t-course').value;
+        // دالة فحص الرتبة الذكية (القديمة)
+        function checkRankCourse() {
+            const rank = document.getElementById('t-rank').value;
+            const msgDiv = document.getElementById('course-assigned-msg');
             const btn = document.getElementById('btn-enter');
-            btn.disabled = course === "";
+            
+            if(!rank) { msgDiv.innerText = ""; btn.disabled = true; return; }
+            
+            const assignedCourse = rankMapping[rank];
+            
+            if(assignedCourse === "لا يوجد دورات مطلوبة حالياً" || !coursesData[assignedCourse]) {
+                msgDiv.innerHTML = `<span style="color: var(--danger);">رتبتك الحالية (${rank}) إما لا تتطلب دورة للأفراد حالياً، أو الدورة سرية.</span>`;
+                btn.disabled = true;
+            } else {
+                msgDiv.innerHTML = `الدورة الإلزامية المخصصة لترقيتك هي: <br><span style="font-size:1.5em; color:var(--accent-gold);">${assignedCourse}</span>`;
+                btn.disabled = false;
+            }
         }
 
         function enterAcademy() {
             const name = document.getElementById('t-name').value.trim();
             const discord = document.getElementById('t-discord').value.trim();
-            const rank = document.getElementById('t-rank').value.trim();
-            const course = document.getElementById('t-course').value;
+            const rank = document.getElementById('t-rank').value;
             
-            if(!name || !discord || isNaN(discord) || !rank || !course) {
-                alert("تنبيه أمني: يرجى تعبئة كافة الحقول العسكرية بشكل صحيح (ومعرف الديسكورد أرقام فقط).");
+            if(!name || !discord || isNaN(discord) || !rank) {
+                alert("تنبيه أمني: يرجى تعبئة كافة الحقول (ومعرف الديسكورد أرقام فقط).");
                 return;
             }
 
+            // تحديد الدورة بناءً على الرتبة المعتمدة
+            const course = rankMapping[rank];
             currentTrainee = { name, discord, rank, courseName: course };
             currentCourseData = coursesData[course];
 
@@ -255,7 +285,7 @@
         }
 
         function startStudyTimer() {
-            // العداد مبرمج الآن على 13 دقيقة (780 ثانية)
+            // العداد 13 دقيقة (780 ثانية)
             let time = 780; 
             const display = document.getElementById('time-left');
             const btn = document.getElementById('btn-start-quiz');
@@ -281,20 +311,18 @@
             document.getElementById('study-section').style.display = 'none';
             document.getElementById('quiz-section').style.display = 'block';
 
-            // مراقبة نظام الحماية (Anti-Cheat)
             document.addEventListener('visibilitychange', () => {
                 if(document.visibilityState === 'hidden' && document.getElementById('quiz-section').style.display === 'block') {
                     cheatAttempts++;
                     if(cheatAttempts > 2) {
                         alert("⚠️ تم رصد خروج متكرر من الصفحة ومحاولة تلاعب. سيتم إنهاء الاختبار وتسجيل رسوب فوراً!");
-                        submitQuiz(true); // الإرسال الفوري كراسب
+                        submitQuiz(true);
                     } else {
                         alert(`⚠️ تحذير نظامي: يمنع مغادرة نافذة الاختبار. (المحاولة ${cheatAttempts}/2)`);
                     }
                 }
             });
 
-            // خلط بنك الأسئلة والخيارات عشوائياً
             let allQ = [...currentCourseData.questions];
             selectedQuestions = allQ.sort(() => 0.5 - Math.random()).slice(0, 10);
 
