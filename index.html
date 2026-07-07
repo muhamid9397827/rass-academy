@@ -23,10 +23,13 @@
         .input-group { margin-bottom: 15px; }
         .input-group label { display: block; margin-bottom: 5px; color: var(--text-muted); font-weight: bold; }
         .input-group input, .input-group select { width: 100%; padding: 12px; background: #0F172A; border: 1px solid var(--border-color); color: white; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 1em; box-sizing: border-box;}
-        
+        .input-group select optgroup { background: #1F2937; color: var(--accent-gold); font-weight: bold; }
+        .input-group select option { background: #0F172A; color: white; }
+
         .btn { width: 100%; padding: 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em; transition: 0.3s; color: white; font-family: 'Cairo'; margin-top: 10px; }
         .btn-primary { background: var(--primary); }
         .btn-success { background: var(--success); }
+        .btn-danger { background: var(--danger); }
         .btn:disabled { background: #374151; color: #9CA3AF; cursor: not-allowed; }
         .btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
 
@@ -35,6 +38,7 @@
         
         .info-box { background: rgba(59, 130, 246, 0.1); border: 1px solid var(--primary); padding: 15px; border-radius: 8px; margin-bottom: 20px; line-height: 1.8; }
         .timer-box { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); color: var(--danger); padding: 15px; border-radius: 8px; text-align: center; font-size: 1.2em; font-weight: bold; margin-bottom: 20px; }
+        .no-quiz-box { background: rgba(245, 158, 11, 0.1); border: 1px solid var(--accent-gold); color: var(--accent-gold); padding: 15px; border-radius: 8px; text-align: center; font-size: 1.2em; font-weight: bold; margin-bottom: 20px; display: none; }
 
         .question-block { background: #151F32; padding: 25px; border-radius: 12px; border-right: 5px solid var(--primary); margin-bottom: 25px; }
         .option-label { display: block; padding: 15px; margin: 10px 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; display: flex; align-items: center; }
@@ -72,31 +76,30 @@
             </div>
         </div>
         
-        <div class="input-group">
-            <label>اختر رتبتك العسكرية الحالية (لإظهار الدورة المستحقة للترقية):</label>
-            <select id="t-rank" onchange="checkRankCourse()">
-                <option value="">-- اختر الرتبة --</option>
-                <option value="جندي">جندي</option>
-                <option value="جندي أول">جندي أول</option>
-                <option value="عريف">عريف</option>
-                <option value="وكيل رقيب">وكيل رقيب</option>
-                <option value="رقيب">رقيب</option>
-                <option value="رقيب أول">رقيب أول</option>
-                <option value="رئيس رقباء">رئيس رقباء</option>
-                <option value="ملازم">ملازم</option>
-                <option value="ملازم أول">ملازم أول</option>
-                <option value="نقيب">نقيب</option>
-                <option value="رائد">رائد</option>
-                <option value="مقدم">مقدم</option>
-                <option value="عقيد">عقيد</option>
-                <option value="عميد">عميد</option>
-                <option value="لواء">لواء</option>
-                <option value="فريق">فريق</option>
-                <option value="فريق أول">فريق أول</option>
-            </select>
+        <div class="grid">
+            <div class="input-group">
+                <label>الرتبة العسكرية الحالية (للتوثيق):</label>
+                <input type="text" id="t-rank" placeholder="مثال: جندي، وكيل رقيب، ملازم...">
+            </div>
+            <div class="input-group">
+                <label>اختر الدورة أو المرجع المطلوب:</label>
+                <select id="t-course" onchange="checkCourse()">
+                    <option value="">-- اضغط هنا لاختيار الدورة --</option>
+                    <optgroup label="📋 الدورات الميدانية (تتضمن اختبار وتوقيت):">
+                        <option value="دورة العمليات">دورة العمليات (مطلوبة من جندي إلى جندي أول)</option>
+                        <option value="دورة الشخصية العسكرية">دورة الشخصية العسكرية (مطلوبة من جندي أول إلى عريف)</option>
+                        <option value="دورة الجناح الجوي">دورة الجناح الجوي (مطلوبة من عريف إلى وكيل رقيب)</option>
+                        <option value="دورة ضابط منطقة">دورة ضابط منطقة (مطلوبة من رقيب أول إلى رئيس رقباء)</option>
+                        <option value="دورة السوات">دورة السوات (مطلوبة لرتبة رئيس رقباء)</option>
+                    </optgroup>
+                    <optgroup label="📚 أدلة ومراجع (قراءة فقط - بدون اختبار):">
+                        <option value="دليل الترقيات">دليل ترقيات أمن المنشآت للأفراد والضباط</option>
+                        <option value="المرجع المعتمد">مرجع أمن المنشآت المعتمد</option>
+                    </optgroup>
+                </select>
+            </div>
         </div>
 
-        <div id="course-assigned-msg" style="text-align: center; margin: 20px 0; font-size: 1.2em; font-weight: bold; color: var(--primary);"></div>
         <button id="btn-enter" class="btn btn-primary" onclick="enterAcademy()" disabled>تأكيد ودخول لغرفة الدراسة</button>
     </div>
 
@@ -104,7 +107,7 @@
     <div id="study-section" class="container card">
         <h2 style="text-align: center; color: var(--primary);" id="study-title"></h2>
         
-        <div class="alert-box" style="text-align: right; color: var(--text-main); border-color: var(--danger); background: rgba(239, 68, 68, 0.1);">
+        <div class="alert-box" id="rules-box" style="text-align: right; color: var(--text-main); border-color: var(--danger); background: rgba(239, 68, 68, 0.1);">
             <h3 style="color: var(--danger); margin-top: 0;">⚠️ تنبيهات وقوانين صارمة:</h3>
             <ul style="margin-bottom: 0;">
                 <li style="margin-bottom: 10px;"><strong>سياسة الرسوب:</strong> في حال عدم اجتياز الاختبار من المحاولة الأولى، يُمنع منعاً باتاً إعادة الاختبار أو تكرار المحاولة إلا بعد انقضاء (24 ساعة). مخالفة هذا القرار ستؤدي إلى رفض جميع تقديماتك لمدة (أسبوع كامل).</li>
@@ -113,18 +116,24 @@
         </div>
 
         <div class="info-box">
-            <h4 style="margin-top: 0; color: var(--primary);">💡 تعليمات التنقل:</h4>
+            <h4 style="margin-top: 0; color: var(--primary);">💡 تعليمات التنقل بداخل المستند:</h4>
             للتنقل بين صفحات المستند التوضيحي داخل الدورة، استخدم مفاتيح الأسهم في لوحة المفاتيح:<br>
             • ⬆️ / ⬇️ : للانتقال للأعلى وللأسفل.<br>
             • ⬅️ / ➡️ : للانتقال بين الشرائح يميناً ويساراً.
         </div>
 
+        <!-- عداد الدورات التي تتطلب اختبار -->
         <div class="timer-box" id="study-timer">
             يجب قراءة الدليل بالكامل بتركيز. سيتم تفعيل زر البدء بعد: <span id="time-left">13:00</span>
         </div>
+
+        <!-- رسالة المراجع التي لا تتطلب اختبار -->
+        <div class="no-quiz-box" id="no-quiz-msg"></div>
         
         <div class="study-content" id="study-content"></div>
+        
         <button id="btn-start-quiz" class="btn btn-success" onclick="startQuiz()" disabled style="margin-top: 20px;">أنا جاهز، ابدأ الاختبار الفعلي</button>
+        <button id="btn-back-home" class="btn btn-danger" onclick="location.reload()" style="display: none; margin-top: 20px;">إنهاء القراءة والعودة للقائمة الرئيسية</button>
     </div>
 
     <!-- 3. واجهة الاختبار -->
@@ -144,21 +153,9 @@
     </div>
 
     <script>
-        // خريطة الرتب لضمان عدم دخول أحد لدورة غير مخصصة له
-        const rankMapping = {
-            "جندي": "دورة العمليات",
-            "جندي أول": "دورة الشخصية العسكرية",
-            "عريف": "دورة الجناح الجوي",
-            "وكيل رقيب": "دورة خفر السواحل",
-            "رقيب": "دورة ضابط منطقة",
-            "رقيب أول": "لا يوجد دورات مطلوبة حالياً",
-            "رئيس رقباء": "دورة السوات", "ملازم": "دورة السوات", "ملازم أول": "دورة السوات", "نقيب": "دورة السوات",
-            "رائد": "دورة السوات", "مقدم": "دورة السوات", "عقيد": "دورة السوات", "عميد": "دورة السوات",
-            "لواء": "دورة السوات", "فريق": "دورة السوات", "فريق أول": "دورة السوات"
-        };
-
         const coursesData = {
             "دورة العمليات": {
+                hasQuiz: true,
                 embedUrl: "https://docs.google.com/presentation/d/1sPZamlwqbxReuBo426kltMOt78wW6NWfHpv9C-HNwHA/embed?rm=minimal",
                 questions: [
                     { q: "كم المدة الزمنية الواجب تركها بين البلاغات عبر الراديو لمنع مقاطعة الإرسال؟", options: ["ثانيتان (2 ثانية)", "5 ثوانٍ", "10 ثوانٍ"], a: "5 ثوانٍ" },
@@ -174,6 +171,7 @@
                 ]
             },
             "دورة الشخصية العسكرية": {
+                hasQuiz: true,
                 embedUrl: "https://docs.google.com/presentation/d/1SVPPDv5hJvP9fU5c05Aq6isSgRkdwEvzJM6v9M4zSTI/embed?rm=minimal",
                 questions: [
                     { q: "من رتبة جندي إلى رقيب، ما هو غطاء الرأس المطلوب ارتداؤه؟", options: ["البريهة السوداء دائماً", "كاب حرس الحدود أو قوات الطوارئ حسب النوبة", "لا يشترط غطاء رأس للميدان"], a: "كاب حرس الحدود أو قوات الطوارئ حسب النوبة" },
@@ -189,6 +187,7 @@
                 ]
             },
             "دورة الجناح الجوي": {
+                hasQuiz: true,
                 embedUrl: "https://docs.google.com/presentation/d/1CgwHOf4GyIbgogM9zRR0IA_kqMUr9ere2RCX7TyGrAg/embed?rm=minimal",
                 questions: [
                     { q: "ما هو الارتفاع النظامي المحدد لتمشيط الميناء الجوي بواسطة المروحية؟", options: ["50 متر عن الأرض", "100 متر عن سطح الأرض في حالة التمشيط", "150 متر مع حرية الحركة"], a: "100 متر عن سطح الأرض في حالة التمشيط" },
@@ -204,6 +203,7 @@
                 ]
             },
             "دورة ضابط منطقة": {
+                hasQuiz: true,
                 embedUrl: "https://docs.google.com/presentation/d/1Q-ZlZLRo_vd2dcXinvt4eD_ZgZW4YZYwjWEwNuonf28/embed?rm=minimal",
                 questions: [
                     { q: "ما هو الشرط الأساسي لفتح الميناء والتواقت المعتمد لضابط المنطقة؟", options: ["التواجد قبل ساعة", "التواجد قبل ساعتين وتوافر 3 وحدات كحد أدنى", "فور فتح الميناء مباشرة"], a: "التواجد قبل ساعتين وتوافر 3 وحدات كحد أدنى" },
@@ -219,6 +219,7 @@
                 ]
             },
             "دورة السوات": {
+                hasQuiz: true,
                 embedUrl: "https://docs.google.com/presentation/d/1dW07y5vwfV6WAhohx48C8WXdfA6cihFSbte_NwnJw80/embed?rm=minimal",
                 questions: [
                     { q: "ما هو الحد الأدنى والحد الأقصى لعدد أفراد فرقة السوات المسموح به للخروج كقوة مهام؟", options: ["فردان أدنى و 8 أقصى", "3 أشخاص كحد أدنى و 6 أشخاص كحد أقصى", "5 أدنى و 10 أقصى"], a: "3 أشخاص كحد أدنى و 6 أشخاص كحد أقصى" },
@@ -232,6 +233,16 @@
                     { q: "ما هي الموجة اللاسلكية الرسمية للسوات أثناء العمليات؟", options: ["موجة الأمن العام (5)", "موجة أمن المنشآت الرسمية (موجة 10)", "موجة مفتوحة"], a: "موجة أمن المنشآت الرسمية (موجة 10)" },
                     { q: "من يتولى قيادة فرقة السوات ميدانياً وإصدار أوامر المداهمة؟", options: ["أقدم فرد", "أعلى رتبة عسكرية موجودة ضمن الفريق الميداني", "مسؤول النداءات"], a: "أعلى رتبة عسكرية موجودة ضمن الفريق الميداني" }
                 ]
+            },
+            "دليل الترقيات": {
+                hasQuiz: false,
+                embedUrl: "https://docs.google.com/presentation/d/1nKD9kZpstydj7yT_fz4nAmy7scMN2qMz4Ki56Ed-zqM/embed?rm=minimal",
+                message: "⚠️ تنبيه: هذا الدليل (مطلوب للترقية). قراءة واطلاع فقط بدون وقت محدد أو اختبار."
+            },
+            "المرجع المعتمد": {
+                hasQuiz: false,
+                embedUrl: "https://docs.google.com/presentation/d/1oeBI5tahnGt1ICyqexje5ijxgCL0iF84HkoEz-s3TFA/embed?rm=minimal",
+                message: "⚠️ تنبيه: هذا المرجع (مطلوب للترقية). قراءة واطلاع فقط بدون وقت محدد أو اختبار."
             }
         };
 
@@ -241,37 +252,23 @@
         const passingScore = 75;
         let cheatAttempts = 0;
 
-        // دالة فحص الرتبة الذكية (القديمة)
-        function checkRankCourse() {
-            const rank = document.getElementById('t-rank').value;
-            const msgDiv = document.getElementById('course-assigned-msg');
+        function checkCourse() {
+            const course = document.getElementById('t-course').value;
             const btn = document.getElementById('btn-enter');
-            
-            if(!rank) { msgDiv.innerText = ""; btn.disabled = true; return; }
-            
-            const assignedCourse = rankMapping[rank];
-            
-            if(assignedCourse === "لا يوجد دورات مطلوبة حالياً" || !coursesData[assignedCourse]) {
-                msgDiv.innerHTML = `<span style="color: var(--danger);">رتبتك الحالية (${rank}) إما لا تتطلب دورة للأفراد حالياً، أو الدورة سرية.</span>`;
-                btn.disabled = true;
-            } else {
-                msgDiv.innerHTML = `الدورة الإلزامية المخصصة لترقيتك هي: <br><span style="font-size:1.5em; color:var(--accent-gold);">${assignedCourse}</span>`;
-                btn.disabled = false;
-            }
+            btn.disabled = course === "";
         }
 
         function enterAcademy() {
             const name = document.getElementById('t-name').value.trim();
             const discord = document.getElementById('t-discord').value.trim();
-            const rank = document.getElementById('t-rank').value;
+            const rank = document.getElementById('t-rank').value.trim();
+            const course = document.getElementById('t-course').value;
             
-            if(!name || !discord || isNaN(discord) || !rank) {
+            if(!name || !discord || isNaN(discord) || !rank || !course) {
                 alert("تنبيه أمني: يرجى تعبئة كافة الحقول (ومعرف الديسكورد أرقام فقط).");
                 return;
             }
 
-            // تحديد الدورة بناءً على الرتبة المعتمدة
-            const course = rankMapping[rank];
             currentTrainee = { name, discord, rank, courseName: course };
             currentCourseData = coursesData[course];
 
@@ -281,7 +278,22 @@
             
             document.getElementById('study-content').innerHTML = `<iframe src="${currentCourseData.embedUrl}" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>`;
             
-            startStudyTimer();
+            // تحقق ما إذا كان الاختيار يحتوي على اختبار أم هو مجرد مرجع (دليل)
+            if(currentCourseData.hasQuiz) {
+                document.getElementById('study-timer').style.display = 'block';
+                document.getElementById('btn-start-quiz').style.display = 'block';
+                document.getElementById('rules-box').style.display = 'block';
+                document.getElementById('no-quiz-msg').style.display = 'none';
+                document.getElementById('btn-back-home').style.display = 'none';
+                startStudyTimer();
+            } else {
+                document.getElementById('study-timer').style.display = 'none';
+                document.getElementById('btn-start-quiz').style.display = 'none';
+                document.getElementById('rules-box').style.display = 'none';
+                document.getElementById('no-quiz-msg').style.display = 'block';
+                document.getElementById('no-quiz-msg').innerText = currentCourseData.message;
+                document.getElementById('btn-back-home').style.display = 'block';
+            }
         }
 
         function startStudyTimer() {
