@@ -1,424 +1,467 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>أكاديمية أمن المنشآت | محافظة الرس</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-main: #070B19; --bg-card: #111827; --primary: #3B82F6; --primary-hover: #2563EB;
-            --accent-gold: #F59E0B; --success: #10B981; --danger: #EF4444; --text-main: #F8FAFC;
-            --text-muted: #94A3B8; --border-color: #1F2937;
-        }
-        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-main); color: var(--text-main); margin: 0; padding: 20px; user-select: none; }
-        .container { max-width: 1000px; margin: auto; }
-        .header-logo { text-align: center; margin-bottom: 30px; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; }
-        .header-logo h1 { color: var(--accent-gold); margin: 0; font-size: 2.5em; font-weight: 900; text-shadow: 0 0 10px rgba(245, 158, 11, 0.3); }
-        .header-logo h2 { color: var(--primary); margin: 5px 0 0; font-size: 1.5em; }
-        
-        .card { background: var(--bg-card); padding: 30px; border-radius: 16px; border: 1px solid var(--border-color); margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; margin-bottom: 5px; color: var(--text-muted); font-weight: bold; }
-        .input-group input, .input-group select { width: 100%; padding: 12px; background: #0F172A; border: 1px solid var(--border-color); color: white; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 1em; box-sizing: border-box;}
-        .input-group select optgroup { background: #1F2937; color: var(--accent-gold); font-weight: bold; }
-        .input-group select option { background: #0F172A; color: white; }
-
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em; transition: 0.3s; color: white; font-family: 'Cairo'; margin-top: 10px; }
-        .btn-primary { background: var(--primary); }
-        .btn-success { background: var(--success); }
-        .btn-danger { background: var(--danger); }
-        .btn:disabled { background: #374151; color: #9CA3AF; cursor: not-allowed; }
-        .btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
-
-        .study-content { background: #0F172A; padding: 0; border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; margin-bottom: 20px;}
-        .study-content iframe { width: 100%; height: 600px; border: none; }
-        
-        .info-box { background: rgba(59, 130, 246, 0.1); border: 1px solid var(--primary); padding: 15px; border-radius: 8px; margin-bottom: 20px; line-height: 1.8; }
-        .timer-box { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); color: var(--danger); padding: 15px; border-radius: 8px; text-align: center; font-size: 1.2em; font-weight: bold; margin-bottom: 20px; }
-        .no-quiz-box { background: rgba(245, 158, 11, 0.1); border: 1px solid var(--accent-gold); color: var(--accent-gold); padding: 15px; border-radius: 8px; text-align: center; font-size: 1.2em; font-weight: bold; margin-bottom: 20px; display: none; }
-
-        .question-block { background: #151F32; padding: 25px; border-radius: 12px; border-right: 5px solid var(--primary); margin-bottom: 25px; }
-        .option-label { display: block; padding: 15px; margin: 10px 0; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; display: flex; align-items: center; }
-        .option-label:hover { background: #1F2937; border-color: var(--primary); }
-        input[type="radio"] { transform: scale(1.3); margin-left: 15px; accent-color: var(--primary); }
-
-        .alert-box { background: rgba(245, 158, 11, 0.1); border: 1px solid var(--accent-gold); padding: 15px; border-radius: 8px; color: var(--accent-gold); margin-bottom: 20px; text-align: center; font-weight: bold; line-height: 1.6; }
-        
-        #login-section, #study-section, #quiz-section, #result-section { display: none; }
-        #login-section { display: block; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <meta name="description" content="أكاديمية تدريب واختبارات مخصصة لسيرفر محاكاة ورول بلاي">
+  <title>أكاديمية أمن المنشآت مركز التدريب</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/config.js" defer></script>
+  <script src="js/courses.js" defer></script>
+  <script src="js/banks/operations.js" defer></script>
+  <script src="js/banks/military-character.js" defer></script>
+  <script src="js/banks/air-wing.js" defer></script>
+  <script src="js/banks/zone-officer.js" defer></script>
+  <script src="js/banks/swat.js" defer></script>
+  <script src="js/app.js" defer></script>
 </head>
 <body>
+  <a class="skip-link" href="#main-content">انتقل إلى المحتوى الرئيسي</a>
+  <div class="page-glow page-glow--one" aria-hidden="true"></div>
+  <div class="page-glow page-glow--two" aria-hidden="true"></div>
 
-    <div class="header-logo">
-        <h1>أمن المنشآت</h1>
-        <h2>محافظة الرس - كلية التدريب الذكية</h2>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html" aria-label="العودة إلى الصفحة الرئيسية">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" role="img">
+            <path d="M24 3 40 9v12c0 11-6.8 19.7-16 24-9.2-4.3-16-13-16-24V9l16-6Z" fill="currentColor" opacity=".18"/>
+            <path d="M24 6.5 36.5 11v10c0 8.5-4.9 15.6-12.5 19.6C16.4 36.6 11.5 29.5 11.5 21V11L24 6.5Z" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="m17.5 24 4.2 4.2 9-10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6"/>
+          </svg>
+        </span>
+        <span>
+          <strong class="brand__title">أكاديمية أمن المنشآت</strong>
+          <span class="brand__subtitle">مركز التدريب الذكي</span>
+        </span>
+      </a>
+
+      <div class="header-meta">
+        <span class="simulation-badge">
+          <span class="simulation-badge__dot" aria-hidden="true"></span>
+          رئاسة كلية التدريب
+        </span>
+        <button class="icon-button" id="theme-button" type="button" aria-label="تبديل نمط الألوان" title="تبديل نمط الألوان">
+          <svg class="icon-button__moon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20.5 15.5A8.4 8.4 0 0 1 8.5 3.6 8.5 8.5 0 1 0 20.5 15.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg class="icon-button__sun" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.8" fill="none" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
     </div>
+  </header>
 
-    <!-- 1. واجهة الدخول -->
-    <div id="login-section" class="container card">
-        <div class="alert-box">
-            ⚠️ <strong>تنبيه أمني مشدد:</strong> هذا التقديم يرتبط مباشرة بالقيادة العليا. أي تلاعب بالبيانات سيتم تحويله فوراً للشرطة العسكرية.<br>
-            <span style="color: var(--danger);">يرجى العلم بأنه لن يتم ترقيتك دون الحصول على الدورة المخصصة لك.</span>
+  <main id="main-content" class="app-shell">
+    <nav class="progress-steps" aria-label="مراحل التدريب">
+      <ol>
+        <li class="progress-step is-active" data-step="entry" aria-current="step">
+          <span class="progress-step__number">١</span>
+          <span class="progress-step__label">البيانات</span>
+        </li>
+        <li class="progress-step" data-step="study">
+          <span class="progress-step__number">٢</span>
+          <span class="progress-step__label">المادة</span>
+        </li>
+        <li class="progress-step" data-step="quiz">
+          <span class="progress-step__number">٣</span>
+          <span class="progress-step__label">الاختبار</span>
+        </li>
+        <li class="progress-step" data-step="result">
+          <span class="progress-step__number">٤</span>
+          <span class="progress-step__label">النتيجة</span>
+        </li>
+      </ol>
+    </nav>
+
+    <div id="global-status" class="status-toast" role="status" aria-live="polite" hidden></div>
+
+    <section id="entry-view" class="view" aria-labelledby="entry-title">
+      <div id="resume-banner" class="resume-banner" hidden>
+        <div>
+          <span class="resume-banner__eyebrow">محاولة محفوظة</span>
+          <strong id="resume-title">لديك اختبار لم يكتمل</strong>
+          <p id="resume-details"></p>
         </div>
-        
-        <div class="grid">
-            <div class="input-group">
-                <label>الاسم الكامل (كما في القطاع):</label>
-                <input type="text" id="t-name" placeholder="أدخل اسمك الكامل...">
-            </div>
-            <div class="input-group">
-                <label>معرف الديسكورد (Discord ID):</label>
-                <input type="text" id="t-discord" placeholder="أدخل الـ ID الخاص بك (أرقام فقط)...">
-            </div>
+        <div class="resume-banner__actions">
+          <button id="resume-button" class="button button--small button--primary" type="button">متابعة المحاولة</button>
+          <button id="discard-session-button" class="button button--small button--ghost" type="button">حذفها</button>
         </div>
-        
-        <div class="grid">
-            <div class="input-group">
-                <label>الرتبة العسكرية الحالية (للتوثيق):</label>
-                <input type="text" id="t-rank" placeholder="مثال: جندي، وكيل رقيب، ملازم...">
+      </div>
+
+      <div class="entry-layout">
+        <div class="hero-panel">
+          <span class="eyebrow">منصة التدريب الموحدة</span>
+          <h1 id="entry-title">ارتق بمعرفتك<br><span>وطور خبرتك</span></h1>
+          <p class="hero-panel__lead">
+            الدورات طريقك لزيادة المعرفة وتنمية الخبرة وتعزيز جاهزيتك داخل القطاع
+          </p>
+
+          <div class="hero-stats" aria-label="معلومات المنصة">
+            <div class="hero-stat">
+              <strong id="courses-count">٥</strong>
+              <span>دورات ميدانية</span>
             </div>
-            <div class="input-group">
-                <label>اختر الدورة أو المرجع المطلوب:</label>
-                <select id="t-course" onchange="checkCourse()">
-                    <option value="">-- اضغط هنا لاختيار الدورة --</option>
-                    <optgroup label="📋 الدورات الميدانية (تتضمن اختبار وتوقيت):">
-                        <option value="دورة العمليات">دورة العمليات (مطلوبة من جندي إلى جندي أول)</option>
-                        <option value="دورة الشخصية العسكرية">دورة الشخصية العسكرية (مطلوبة من جندي أول إلى عريف)</option>
-                        <option value="دورة الجناح الجوي">دورة الجناح الجوي (مطلوبة من عريف إلى وكيل رقيب)</option>
-                        <option value="دورة ضابط منطقة">دورة ضابط منطقة (مطلوبة من رقيب أول إلى رئيس رقباء)</option>
-                        <option value="دورة السوات">دورة السوات (مطلوبة لرتبة رئيس رقباء)</option>
-                    </optgroup>
-                    <optgroup label="📚 أدلة ومراجع (قراءة فقط - بدون اختبار):">
-                        <option value="دليل الترقيات">دليل ترقيات أمن المنشآت للأفراد والضباط</option>
-                        <option value="المرجع المعتمد">مرجع أمن المنشآت المعتمد</option>
-                    </optgroup>
+            <div class="hero-stat">
+              <strong id="questions-count">٥٠</strong>
+              <span>سؤالاً تدريبياً</span>
+            </div>
+            <div class="hero-stat">
+              <strong>٨٠٪</strong>
+              <span>درجة الاجتياز</span>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="card entry-card">
+          <div class="card__header">
+            <span class="card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <div>
+              <h2>تسجيل المتدرب</h2>
+              <p>أدخل بيانات شخصيتك داخل السيرفر</p>
+            </div>
+          </div>
+
+          <form id="trainee-form" novalidate>
+            <div class="field">
+              <label for="trainee-name">اسم الشخصية الكامل</label>
+              <div class="field__control">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                </svg>
+                <input id="trainee-name" name="name" type="text" autocomplete="name" maxlength="60" placeholder="مثال مجاهد ال عباد" required>
+              </div>
+              <small id="trainee-name-error" class="field__error"></small>
+            </div>
+
+            <div class="field-grid">
+              <div class="field">
+                <label for="trainee-discord">معرّف Discord</label>
+                <div class="field__control">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8.2 7.6a11 11 0 0 1 7.6 0M9.2 15.4c2 1.1 3.6 1.1 5.6 0M8.5 14h.01M15.5 14h.01M7 5.2a18 18 0 0 1 10 0c1.8 2.5 2.8 5.6 3 9.1-1.2 1.6-2.7 2.7-4.4 3.4l-1.1-1.5M17 18.9c-3.3 1.4-6.7 1.4-10 0M7 5.2c-1.8 2.5-2.8 5.6-3 9.1 1.2 1.6 2.7 2.7 4.4 3.4l1.1-1.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                  </svg>
+                  <input id="trainee-discord" name="discord" type="text" dir="ltr" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="123456789012345678" required>
+                </div>
+                <small id="trainee-discord-error" class="field__error"></small>
+              </div>
+
+              <div class="field">
+                <label for="trainee-rank">الرتبة الحالية</label>
+                <div class="field__control field__control--select">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m12 3 2.4 4.8 5.3.8-3.8 3.7.9 5.2-4.8-2.4-4.8 2.4.9-5.2-3.8-3.7 5.3-.8L12 3Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                  </svg>
+                  <select id="trainee-rank" name="rank" required>
+                    <option value="">اختر الرتبة</option>
+                    <option>جندي</option>
+                    <option>جندي أول</option>
+                    <option>عريف</option>
+                    <option>وكيل رقيب</option>
+                    <option>رقيب</option>
+                    <option>رقيب أول</option>
+                    <option>رئيس رقباء</option>
+                    <option>ملازم</option>
+                    <option>ملازم أول</option>
+                    <option>نقيب</option>
+                    <option>رائد</option>
+                    <option>مقدم</option>
+                    <option>عقيد</option>
+                    <option>عميد</option>
+                  </select>
+                </div>
+                <small id="trainee-rank-error" class="field__error"></small>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="course-select">الدورة أو المرجع</label>
+              <div class="field__control field__control--select">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Zm0 12.8A3.2 3.2 0 0 1 8.2 14H19M9 8h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <select id="course-select" name="course" required>
+                  <option value="">اختر الدورة المطلوبة</option>
                 </select>
+              </div>
+              <small id="course-select-hint" class="field__hint">ستظهر مدة الدراسة والاختبار بعد اختيار الدورة</small>
+              <small id="course-select-error" class="field__error"></small>
             </div>
+
+            <label class="consent-control" for="simulation-consent">
+              <input id="simulation-consent" name="consent" type="checkbox" required>
+              <span class="consent-control__box" aria-hidden="true">
+                <svg viewBox="0 0 18 18">
+                  <path d="m4 9.2 3.1 3.1L14 5.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <span>أقر بأن البيانات تخص شخصيتي داخل سيرفر المحاكاة وأوافق على حفظ نتيجة المحاولة</span>
+            </label>
+            <small id="simulation-consent-error" class="field__error"></small>
+
+            <button class="button button--primary button--wide" type="submit">
+              دخول غرفة التدريب
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </form>
         </div>
+      </div>
+    </section>
 
-        <button id="btn-enter" class="btn btn-primary" onclick="enterAcademy()" disabled>تأكيد ودخول لغرفة الدراسة</button>
-    </div>
+    <section id="study-view" class="view" aria-labelledby="study-title" hidden>
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">المرحلة الثانية</span>
+          <h1 id="study-title">المادة التدريبية</h1>
+          <p id="study-description">اقرأ المادة بهدوء قبل بدء الاختبار</p>
+        </div>
+        <button id="leave-study-button" class="button button--ghost button--small" type="button">
+          العودة للبداية
+        </button>
+      </div>
 
-    <!-- 2. واجهة الدراسة وعرض الشرائح -->
-    <div id="study-section" class="container card">
-        <h2 style="text-align: center; color: var(--primary);" id="study-title"></h2>
-        
-        <div class="alert-box" id="rules-box" style="text-align: right; color: var(--text-main); border-color: var(--danger); background: rgba(239, 68, 68, 0.1);">
-            <h3 style="color: var(--danger); margin-top: 0;">⚠️ تنبيهات وقوانين صارمة:</h3>
-            <ul style="margin-bottom: 0;">
-                <li style="margin-bottom: 10px;"><strong>سياسة الرسوب:</strong> في حال عدم اجتياز الاختبار من المحاولة الأولى، يُمنع منعاً باتاً إعادة الاختبار أو تكرار المحاولة إلا بعد انقضاء (24 ساعة). مخالفة هذا القرار ستؤدي إلى رفض جميع تقديماتك لمدة (أسبوع كامل).</li>
-                <li><strong>نظام الحماية (Anti-Cheat):</strong> الموقع مزود بنظام مراقبة متطور. يُمنع التنقل أو الخروج من الصفحة لأكثر من مرتين أثناء الاختبار؛ حيث يعتبر النظام ذلك محاولة غش، مما يعرضك للمساءلة.</li>
+      <div class="study-grid">
+        <aside class="study-sidebar">
+          <div class="card compact-card">
+            <span class="compact-card__label">المتدرب</span>
+            <strong id="study-trainee-name"></strong>
+            <span id="study-trainee-meta" class="muted-text"></span>
+          </div>
+
+          <div id="study-timer-card" class="card timer-card">
+            <div class="timer-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 8v5l3 2M9 2h6M12 5a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <span>وقت الاطلاع المتبقي</span>
+            <strong id="study-time" class="timer-value" role="timer" aria-label="وقت الاطلاع المتبقي">13:00</strong>
+            <div class="progress-bar" aria-hidden="true">
+              <span id="study-progress-bar"></span>
+            </div>
+            <p>يمكنك بدء الاختبار بعد انتهاء مدة الاطلاع</p>
+          </div>
+
+          <div class="card rules-card">
+            <h2>تعليمات سريعة</h2>
+            <ul>
+              <li>استخدم الأسهم أو السحب للتنقل بين الشرائح</li>
+              <li>يُحفظ تقدم الاختبار تلقائياً على هذا الجهاز</li>
+              <li>تبديل النافذة يُسجل كملاحظة فقط ولا يسبب رسوباً تلقائياً</li>
             </ul>
+          </div>
+        </aside>
+
+        <div class="study-main">
+          <div class="document-card">
+            <div class="document-card__toolbar">
+              <div>
+                <span class="document-card__status" aria-hidden="true"></span>
+                <strong id="document-title">العرض التدريبي</strong>
+              </div>
+              <a id="slides-link" class="text-link" href="#" target="_blank" rel="noopener noreferrer">
+                فتح في نافذة مستقلة
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M14 5h5v5M13 11l6-6M19 14v5H5V5h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </a>
+            </div>
+            <div class="document-card__frame">
+              <iframe id="study-frame" title="العرض التدريبي للدورة المحددة" loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+              <div id="frame-fallback" class="frame-fallback">
+                <strong>تعذر عرض الشرائح؟</strong>
+                <span>استخدم رابط فتح في نافذة مستقلة أعلى العرض</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="study-action card">
+            <div>
+              <strong id="study-action-title">أكمل مدة الاطلاع أولاً</strong>
+              <span id="study-action-note">سيتفعّل زر الاختبار تلقائياً عند انتهاء المؤقت</span>
+            </div>
+            <button id="start-quiz-button" class="button button--success" type="button" disabled>
+              بدء الاختبار
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m9 7 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="quiz-view" class="view" aria-labelledby="quiz-title" hidden>
+      <div class="quiz-topbar">
+        <div>
+          <span class="eyebrow">الاختبار الميداني</span>
+          <h1 id="quiz-title">اختبار الدورة</h1>
+          <p id="quiz-trainee-line"></p>
         </div>
 
-        <div class="info-box">
-            <h4 style="margin-top: 0; color: var(--primary);">💡 تعليمات التنقل بداخل المستند:</h4>
-            للتنقل بين صفحات المستند التوضيحي داخل الدورة، استخدم مفاتيح الأسهم في لوحة المفاتيح:<br>
-            • ⬆️ / ⬇️ : للانتقال للأعلى وللأسفل.<br>
-            • ⬅️ / ➡️ : للانتقال بين الشرائح يميناً ويساراً.
+        <div class="quiz-metrics">
+          <div class="metric-card">
+            <span>الوقت المتبقي</span>
+            <strong id="quiz-time" class="metric-card__value" role="timer" aria-label="وقت الاختبار المتبقي">10:00</strong>
+          </div>
+          <div class="metric-card">
+            <span>تمت الإجابة</span>
+            <strong class="metric-card__value"><span id="answered-count">0</span>/<span id="total-count">10</span></strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="quiz-progress card">
+        <div>
+          <span>تقدمك في الاختبار</span>
+          <strong id="quiz-progress-text">٠٪</strong>
+        </div>
+        <div class="progress-bar progress-bar--quiz" role="progressbar" aria-label="نسبة الأسئلة المجابة" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span id="quiz-progress-bar"></span>
+        </div>
+      </div>
+
+      <div class="quiz-layout">
+        <aside class="question-map card" aria-label="خريطة الأسئلة">
+          <div class="question-map__header">
+            <h2>الأسئلة</h2>
+            <span><i aria-hidden="true"></i> مجاب</span>
+          </div>
+          <div id="question-map" class="question-map__grid"></div>
+          <div class="monitor-note">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Zm0-14v4m0 4h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div>
+              <strong>ملاحظات تبديل النافذة</strong>
+              <span><b id="visibility-count">0</b> ملاحظة — لا تسبب رسوباً تلقائياً</span>
+            </div>
+          </div>
+        </aside>
+
+        <div class="quiz-content">
+          <form id="quiz-form" novalidate></form>
+          <div class="quiz-actions card">
+            <p id="quiz-submit-hint">راجع إجاباتك جيداً ولا يمكن تعديلها بعد التسليم</p>
+            <div>
+              <button id="save-progress-button" class="button button--ghost" type="button">حفظ التقدم</button>
+              <button id="submit-quiz-button" class="button button--primary" type="button">
+                تسليم الإجابات
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m5 12 4 4L19 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="result-view" class="view" aria-labelledby="result-title" hidden>
+      <div class="result-card card">
+        <div id="result-emblem" class="result-emblem" aria-hidden="true">
+          <svg viewBox="0 0 48 48">
+            <path id="result-emblem-path" d="m14 25 7 7 14-17" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span id="result-kicker" class="eyebrow">اكتمل الاختبار</span>
+        <h1 id="result-title">أحسنت، تم اجتياز الدورة</h1>
+        <p id="result-message">تم تسجيل نتيجتك بنجاح على هذا الجهاز</p>
+
+        <div class="score-ring" id="score-ring">
+          <div>
+            <strong id="result-percentage">80%</strong>
+            <span>النتيجة النهائية</span>
+          </div>
         </div>
 
-        <!-- عداد الدورات التي تتطلب اختبار -->
-        <div class="timer-box" id="study-timer">
-            يجب قراءة الدليل بالكامل بتركيز. سيتم تفعيل زر البدء بعد: <span id="time-left">13:00</span>
+        <dl class="result-details">
+          <div>
+            <dt>المتدرب</dt>
+            <dd id="result-trainee"></dd>
+          </div>
+          <div>
+            <dt>الدورة</dt>
+            <dd id="result-course"></dd>
+          </div>
+          <div>
+            <dt>الإجابات الصحيحة</dt>
+            <dd id="result-score"></dd>
+          </div>
+          <div>
+            <dt>رقم المحاولة</dt>
+            <dd id="result-receipt" dir="ltr"></dd>
+          </div>
+          <div>
+            <dt>وقت التسليم</dt>
+            <dd id="result-date"></dd>
+          </div>
+          <div>
+            <dt>ملاحظات المراقبة</dt>
+            <dd id="result-notes"></dd>
+          </div>
+        </dl>
+
+        <div id="submission-status" class="submission-status" role="status" aria-live="polite">
+          <span class="submission-status__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M20 15.5A4.5 4.5 0 0 1 15.5 20H7a5 5 0 0 1-.8-9.9A7 7 0 0 1 19.6 8a4 4 0 0 1 .4 7.5ZM12 11v6m-2-2 2 2 2-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span id="submission-status-text">جاري حفظ النتيجة</span>
         </div>
 
-        <!-- رسالة المراجع التي لا تتطلب اختبار -->
-        <div class="no-quiz-box" id="no-quiz-msg"></div>
-        
-        <div class="study-content" id="study-content"></div>
-        
-        <button id="btn-start-quiz" class="btn btn-success" onclick="startQuiz()" disabled style="margin-top: 20px;">أنا جاهز، ابدأ الاختبار الفعلي</button>
-        <button id="btn-back-home" class="btn btn-danger" onclick="location.reload()" style="display: none; margin-top: 20px;">إنهاء القراءة والعودة للقائمة الرئيسية</button>
-    </div>
+        <div class="result-actions">
+          <button id="copy-result-button" class="button button--primary" type="button">
+            نسخ ملخص النتيجة
+          </button>
+          <button id="print-result-button" class="button button--ghost" type="button">
+            طباعة النتيجة
+          </button>
+          <button id="new-session-button" class="button button--ghost" type="button">
+            العودة للرئيسية
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
 
-    <!-- 3. واجهة الاختبار -->
-    <div id="quiz-section" class="container card">
-        <h2 style="color: var(--accent-gold); text-align: center;">الاختبار الميداني المؤتمت</h2>
-        <div id="questions-container"></div>
-        <button class="btn btn-primary" onclick="submitQuiz()">إنهاء وتسليم الإجابات</button>
-    </div>
+  <footer class="site-footer">
+    <p>رئاسة كلية التدريب محافظة الرس رول بلاي</p>
+    <span id="footer-version">الإصدار الثاني</span>
+  </footer>
 
-    <!-- 4. واجهة النتيجة -->
-    <div id="result-section" class="container card" style="text-align: center;">
-        <h2 style="color: var(--primary);">النتيجة النهائية للاختبار</h2>
-        <div style="font-size: 4em; font-weight: 900; margin: 20px 0;" id="result-score"></div>
-        <h2 id="result-status"></h2>
-        <p id="result-details" style="color: var(--text-muted); font-size: 1.2em;"></p>
-        <button class="btn btn-primary" onclick="location.reload()">تسجيل خروج وإنهاء الجلسة</button>
-    </div>
+  <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-title">
+    <form method="dialog">
+      <span class="confirm-dialog__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 8v4m0 4h.01M10.3 4.4 2.2 18.2A1.2 1.2 0 0 0 3.2 20h17.6a1.2 1.2 0 0 0 1-1.8L13.7 4.4a1.9 1.9 0 0 0-3.4 0Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <h2 id="confirm-title">تأكيد تسليم الاختبار</h2>
+      <p id="confirm-message">هل أنت متأكد من تسليم إجاباتك؟</p>
+      <div class="confirm-dialog__actions">
+        <button id="confirm-cancel-button" class="button button--ghost" value="cancel">مراجعة الإجابات</button>
+        <button id="confirm-submit-button" class="button button--primary" value="confirm">تأكيد التسليم</button>
+      </div>
+    </form>
+  </dialog>
 
-    <script>
-        const coursesData = {
-            "دورة العمليات": {
-                hasQuiz: true,
-                embedUrl: "https://docs.google.com/presentation/d/1sPZamlwqbxReuBo426kltMOt78wW6NWfHpv9C-HNwHA/embed?rm=minimal",
-                questions: [
-                    { q: "كم المدة الزمنية الواجب تركها بين البلاغات عبر الراديو لمنع مقاطعة الإرسال؟", options: ["ثانيتان (2 ثانية)", "5 ثوانٍ", "10 ثوانٍ"], a: "5 ثوانٍ" },
-                    { q: "وفقاً لقاعدة الغياب، متى يستلم نائب العمليات مهام العمليات بشكل كامل؟", options: ["في حال غياب المسؤول لأكثر من 15 دقيقة", "عند نهاية النوبة فقط", "فور خروج المسؤول للميدان مباشرة"], a: "في حال غياب المسؤول لأكثر من 15 دقيقة" },
-                    { q: "ما هو سلم أولويات التوجيه عند حدوث عجز ميداني مفاجئ؟", options: ["الأمن المباشر ثم الوحدات الحرة", "الوحدات الحرة، ثم الأمن المباشر، ثم الجناح الجوي (شاهين)", "الجناح الجوي أولاً لتغطية العجز سرياً"], a: "الوحدات الحرة، ثم الأمن المباشر، ثم الجناح الجوي (شاهين)" },
-                    { q: "كم مرة يجب إصدار تقرير العمليات ومطابقة الوحدات ميدانياً؟", options: ["كل نصف ساعة بشكل عاجل", "يجب إصدار تقرير كل ساعة ومطابقة الوحدات في الراديو", "مرة واحدة نهاية اليوم التدريبي"], a: "يجب إصدار تقرير كل ساعة ومطابقة الوحدات في الراديو" },
-                    { q: "ما هو الكود المعتمد الذي يستخدمه مسؤول العمليات لتغطية غيابه المؤقت بواسطة نائبه؟", options: ["Code 4", "Code 7", "Code 8"], a: "Code 7" },
-                    { q: "ما هي الطريقة النظامية الصحيحة المعتمدة لتوجيه القادة للبلاغات الميدانية؟", options: ["من عمليات إلى قيادة 1، يوجد بلاغ (نوعه) في حال رغبتكم بالتوجه", "توجيه القائد للبلاغ بشكل مباشر وإلزامه بالتحرك الفوري", "إرسال تفاصيل البلاغ في روم الشات العام دون نداء الراديو"], a: "من عمليات إلى قيادة 1، يوجد بلاغ (نوعه) في حال رغبتكم بالتوجه" },
-                    { q: "ما هو الإجراء الإلزامي المترتب على حامل الدورة في حال عدم وجود مسؤول عمليات بالميدان؟", options: ["يتوجب على حامل الدورة الاستلام فوراً لتجنب عقوبات الشرطة العسكرية", "النزول للميدان كدورية حرة ومغادرة غرفة العمليات", "إغلاق الراديو تماماً حتى يتم تعيين مسؤول جديد"], a: "يتوجب على حامل الدورة الاستلام فوراً لتجنب عقوبات الشرطة العسكرية" },
-                    { q: "هل يسمح للعمليات بإعطاء إذن مغادرة الموقع أو تعديل السيارات وقت فتح الميناء؟", options: ["نعم، يحق لها ذلك لتنظيم الحركة", "يُمنع منعاً باتاً ويُصنف كخطأ جسيم ومحظور", "يُسمح فقط للرتب الكبيرة من رتبة رقيب فما فوق"], a: "يُمنع منعاً باتاً ويُصنف كخطأ جسيم ومحظور" },
-                    { q: "ما هو اللقب الإذاعي المخصص لرتبة (ملازم، ملازم أول، نقيب)؟", options: ["صقر", "رعد", "ردع"], a: "صقر" },
-                    { q: "ما هو المسمى الإذاعي الصحيح لرتبة (جندي، جندي أول، عريف، وكيل رقيب) داخل الميناء؟", options: ["داخل الميناء: حرة | خارج الميناء: ساهر", "داخل الميناء: ساهر | خارج الميناء: حرة", "داخل وخارج الميناء يسمى: صقر"], a: "داخل الميناء: حرة | خارج الميناء: ساهر" }
-                ]
-            },
-            "دورة الشخصية العسكرية": {
-                hasQuiz: true,
-                embedUrl: "https://docs.google.com/presentation/d/1SVPPDv5hJvP9fU5c05Aq6isSgRkdwEvzJM6v9M4zSTI/embed?rm=minimal",
-                questions: [
-                    { q: "من رتبة جندي إلى رقيب، ما هو غطاء الرأس المطلوب ارتداؤه؟", options: ["البريهة السوداء دائماً", "كاب حرس الحدود أو قوات الطوارئ حسب النوبة", "لا يشترط غطاء رأس للميدان"], a: "كاب حرس الحدود أو قوات الطوارئ حسب النوبة" },
-                    { q: "متى يُسمح بارتداء الخوذة التكتيكية في الميدان؟", options: ["في جميع الأوقات", "يمنع منعاً باتاً باستثناء بلاغات السرقة والاشتباكات المسلحة", "فقط للضباط"], a: "يمنع منعاً باتاً باستثناء بلاغات السرقة والاشتباكات المسلحة" },
-                    { q: "ما هو الزي الإلزامي للمباشرة داخل منشأة الميناء؟", options: ["زي القوات الخاصة", "زي حرس الحدود", "زي قوات الطوارئ"], a: "زي حرس الحدود" },
-                    { q: "ما هي الصلاحية القصوى للأفراد في السجن الجنائي للمواطن؟", options: ["15 شهر/دقيقة (تصل لـ20 في الإهانة العسكرية)", "5 شهور فقط", "ليس لديهم صلاحية"], a: "15 شهر/دقيقة (تصل لـ20 في الإهانة العسكرية)" },
-                    { q: "ماذا يحدث في حال تعرض العسكري لإهانة لفظية أو حركية من مواطن؟", options: ["تجاهل المواطن", "مصادرة وسحب كافة أسلحة المواطن ورخصه فورا", "توجيه إنذار فقط"], a: "مصادرة وسحب كافة أسلحة المواطن ورخصه فورا" },
-                    { q: "إذا استخدم المجرم سلاحاً غير مرخص، ماذا يتم سحبه؟", options: ["جميع اسلحته حتى المرخصة", "سحب السلاح الذي استخدم في الجريمة فقط", "الرخص فقط"], a: "سحب السلاح الذي استخدم في الجريمة فقط" },
-                    { q: "ما هي عبارة التفتيش المهنية المعتمدة في بوابات الميناء؟", options: ["السلام عليكم يا مواطن، فضلا أعطني ظهرك للتفتيش", "ارفع يدك فورا", "توقف مكانك أو أطلق النار"], a: "السلام عليكم يا مواطن، فضلا أعطني ظهرك للتفتيش" },
-                    { q: "متى يمنع الفرد من طلب أو تقديم إجازة؟", options: ["إذا كان دون رتبة وكيل رقيب أو أثناء التدريب", "يمنع على الأفراد نهائياً", "يسمح للجميع بدون شروط"], a: "إذا كان دون رتبة وكيل رقيب أو أثناء التدريب" },
-                    { q: "عند التفاوض مع المهربين، من يحق له التفاوض كأولوية قصوى؟", options: ["أقدم فرد في الموقع", "مشرف المنطقة أو المشرف العام", "أي عسكري يحمل سلاح"], a: "مشرف المنطقة أو المشرف العام" },
-                    { q: "ما هو الحد المسموح به للتفاوض على الممنوعات مع المهربين؟", options: ["التفاوض على أخذ نصفها كغرامة", "التنازل عنها مقابل خروجه", "يمنع التفاوض على الممنوعات، التفاوض حصرا على حياة المجرم"], a: "يمنع التفاوض على الممنوعات، التفاوض حصرا على حياة المجرم" }
-                ]
-            },
-            "دورة الجناح الجوي": {
-                hasQuiz: true,
-                embedUrl: "https://docs.google.com/presentation/d/1CgwHOf4GyIbgogM9zRR0IA_kqMUr9ere2RCX7TyGrAg/embed?rm=minimal",
-                questions: [
-                    { q: "ما هو الارتفاع النظامي المحدد لتمشيط الميناء الجوي بواسطة المروحية؟", options: ["50 متر عن الأرض", "100 متر عن سطح الأرض في حالة التمشيط", "150 متر مع حرية الحركة"], a: "100 متر عن سطح الأرض في حالة التمشيط" },
-                    { q: "متى يُسمح للمروحية بالمقاومة الجوية والاشتباك باستخدام الأسلحة الرشاشة؟", options: ["دائماً عند التعرض لخطر", "بشرط وجود ضابط مرافق برتبة ملازم فما فوق حاصل على القوات الخاصة وبزيها", "يُمنع استخدام الرشاش من الجو نهائياً"], a: "بشرط وجود ضابط مرافق برتبة ملازم فما فوق حاصل على القوات الخاصة وبزيها" },
-                    { q: "هل يحق لمركز العمليات تعيين وتوجيه وحدة الشاهين بالرغم من وجود نقص في الوحدات الأرضية؟", options: ["نعم، ويجب توجيه وحدة شاهين أثناء فتح الميناء حتى مع النقص", "لا، الأولوية لسد النقص الأرضي أولاً", "يحق ذلك فقط في حالات التفتيش"], a: "نعم، ويجب توجيه وحدة شاهين أثناء فتح الميناء حتى مع النقص" },
-                    { q: "ما هي النتيجة النظامية المترتبة على مخالفة أحد قوانين قطاع الجناح الجوي؟", options: ["المحاسبة من الشرطة العسكرية وتسحب الرخصة بشكل فوري", "تنبيه شفهي", "خصم 50% من النقاط"], a: "المحاسبة من الشرطة العسكرية وتسحب الرخصة بشكل فوري" },
-                    { q: "هل يُسمح للكابتن طيار بالهبوط على الأراضي أو مواقع السرقات للتفاوض؟", options: ["نعم إذا تطلب الموقف", "يُمنع منعاً باتاً الهبوط على الأراضي أو مواقع السرقات بجميع الأحوال", "مسموح بالتنسيق الصوتي"], a: "يُمنع منعاً باتاً الهبوط على الأراضي أو مواقع السرقات بجميع الأحوال" },
-                    { q: "من هو الفرد المسؤول نظامياً عن تمرير البلاغات وتحديث مركز العمليات بالمروحية؟", options: ["الكابتن طيار", "مساعد الطيار (المساعد مكلف بجميع البلاغات والتحديث)", "مشرف المنطقة"], a: "مساعد الطيار (المساعد مكلف بجميع البلاغات والتحديث)" },
-                    { q: "هل يتم احتساب الكابتن طيار والمساعد (برتبة فرد) من ضمن وحدات السرقة بالميناء؟", options: ["نعم يحتسبون لتأمين الدعم", "لا يحتسبون من ضمن وحدات السرقة", "يحتسب الكابتن فقط"], a: "لا يحتسبون من ضمن وحدات السرقة" },
-                    { q: "ما هو الحد الأقصى المسموح به للارتفاع عند النزول بالحبل من المروحية؟", options: ["أن لا يزيد عن 30 متراً", "أن لا يزيد عن 50 متراً", "متروك لتقدير الكابتن"], a: "أن لا يزيد عن 30 متراً" },
-                    { q: "ما هي العضلة المعتمدة لتشغيل الرؤية الليلية أو الأشعة تحت البنفسجية في الطائرة؟", options: ["عضلة G", "عضلة E لفتح الكاميرا وكلك يمين للرؤية الليلية", "عضلة F11"], a: "عضلة E لفتح الكاميرا وكلك يمين للرؤية الليلية" },
-                    { q: "كيف يجب تأمين موقع الهبوط الاستثنائي على الأراضي بمرافقة ضابط المنطقة؟", options: ["الهبوط مباشرة", "بأخذ إذن من (مشرف المنطقة) وتأمين الموقع برمي شعلة الفلير والإقلاع فوراً", "انتظار سيارات الدعم"], a: "بأخذ إذن من (مشرف المنطقة) وتأمين الموقع برمي شعلة الفلير والإقلاع فوراً" }
-                ]
-            },
-            "دورة ضابط منطقة": {
-                hasQuiz: true,
-                embedUrl: "https://docs.google.com/presentation/d/1Q-ZlZLRo_vd2dcXinvt4eD_ZgZW4YZYwjWEwNuonf28/embed?rm=minimal",
-                questions: [
-                    { q: "ما هو الشرط الأساسي لفتح الميناء والتواقت المعتمد لضابط المنطقة؟", options: ["التواجد قبل ساعة", "التواجد قبل ساعتين وتوافر 3 وحدات كحد أدنى", "فور فتح الميناء مباشرة"], a: "التواجد قبل ساعتين وتوافر 3 وحدات كحد أدنى" },
-                    { q: "هل يحق لضابط المنطقة تنفيذ أوامر تصدر من رتب مساوية له داخل نطاقه؟", options: ["نعم", "لا، يُمنع تنفيذ أوامر من رتب مساوية داخل النطاق، الأوامر تصدر منه حصراً", "نعم بإذن العمليات"], a: "لا، يُمنع تنفيذ أوامر من رتب مساوية داخل النطاق، الأوامر تصدر منه حصراً" },
-                    { q: "كم عدد التقارير الموثقة لشرط الترقية لرتبة (رئيس رقباء)؟", options: ["3 تقارير", "5 تقارير", "7 تقارير استلام موثقة وصحيحة بلا ملاحظات"], a: "7 تقارير استلام موثقة وصحيحة بلا ملاحظات" },
-                    { q: "ما هي الصلاحية الممنوحة لضابط المنطقة عند رصد تحركات مشبوهة؟", options: ["فرض الصمت اللاسلكي على موجة العمليات لضمان صفاء القناة", "تعديل الزي الإداري", "مغادرة النطاق فوراً"], a: "فرض الصمت اللاسلكي على موجة العمليات لضمان صفاء القناة" },
-                    { q: "عند حدوث خرق أمني لنقطة التفتيش (أمن 1)، ما الإجراء الفوري؟", options: ["تراجع الوحدات للمكاتب", "إغلاق البوابات وتفعيل الدفاع فوراً من قبل أمن 2", "فتح كاميرات المراقبة وانتظار"], a: "إغلاق البوابات وتفعيل الدفاع فوراً من قبل أمن 2" },
-                    { q: "من الجهة الوحيدة المخولة بإعطاء الإذن لتعديل تقرير ضابط المنطقة؟", options: ["غرفة العمليات", "الشرطة العسكرية", "نائب العمليات"], a: "الشرطة العسكرية" },
-                    { q: "ما المعدل الزمني لتسيير الدوريات الراجلة لتأمين القطاعات؟", options: ["دورية كل 10 دقائق، وإدارة المشهد عبر F11", "دورية كل 30 دقيقة", "دورية كل ساعة"], a: "دورية كل 10 دقائق، وإدارة المشهد عبر F11" },
-                    { q: "ما هي المدة النظامية لعقوبة السجن التأديبية للقطاع؟", options: ["أقل مدة شهرين وأقصى 10", "أقل مدة 5 شهور وأقصى مدة 20 شهراً، ويُمنع التلاعب بالمدة", "من سنة إلى 3 سنوات"], a: "أقل مدة 5 شهور وأقصى مدة 20 شهراً، ويُمنع التلاعب بالمدة" },
-                    { q: "ما التغطية الزمنية المستمرة لتقرير ضابط المنطقة ليُحتسب كساعة؟", options: ["30 دقيقة", "45 دقيقة", "60 دقيقة من العمل المستمر دون انقطاع"], a: "60 دقيقة من العمل المستمر دون انقطاع" },
-                    { q: "ما السياسة المعتمدة لتحركات (الدوريات الحرة) داخل الميناء؟", options: ["التمركز الثابت والترصد", "الالتزام بالتنقل المستمر ويُمنع الترصد أو التمركز الثابت الطويل", "التحرك عند البلاغ فقط"], a: "الالتزام بالتنقل المستمر ويُمنع الترصد أو التمركز الثابت الطويل" }
-                ]
-            },
-            "دورة السوات": {
-                hasQuiz: true,
-                embedUrl: "https://docs.google.com/presentation/d/1dW07y5vwfV6WAhohx48C8WXdfA6cihFSbte_NwnJw80/embed?rm=minimal",
-                questions: [
-                    { q: "ما هو الحد الأدنى والحد الأقصى لعدد أفراد فرقة السوات المسموح به للخروج كقوة مهام؟", options: ["فردان أدنى و 8 أقصى", "3 أشخاص كحد أدنى و 6 أشخاص كحد أقصى", "5 أدنى و 10 أقصى"], a: "3 أشخاص كحد أدنى و 6 أشخاص كحد أقصى" },
-                    { q: "من هو الشخص الوحيد المصرح له بمخاطبة المواطنين من داخل مركبة السوات؟", options: ["مسؤول البلاغات", "مسؤول النداءات", "قائد الفرقة (السائق) حصرياً له الحق"], a: "قائد الفرقة (السائق) حصرياً له الحق" },
-                    { q: "ما الموقف القانوني لفرقة السوات بخصوص التدرج في السلاح الناري؟", options: ["ملزمون بالتدرج دائماً", "غير ملزمين بقانون التدرج، ويحق لهم إطلاق النار فوراً على المسلح (أبيض أو ناري)", "التدرج مطلوب داخل המيناء فقط"], a: "غير ملزمين بقانون التدرج، ويحق لهم إطلاق النار فوراً على المسلح (أبيض أو ناري)" },
-                    { q: "ما هي المركبات الرسمية المعتمدة للسوات في الميدان؟", options: ["دوريات الأمن العام", "فان السوات، المروحية، والقارب (ويجب شراؤها)", "أي مركبة متوفرة"], a: "فان السوات، المروحية، والقارب (ويجب شراؤها)" },
-                    { q: "متى يحق لفرقة السوات استخدام سلاح القناصة (السنايبر)؟", options: ["في جميع المداهمات", "يُمنع استخدامه نهائياً", "يُسمح به في حالة واحدة فقط: إذا كان الطرف الآخر يستخدم سلاح سنايبر ضد الفرقة"], a: "يُسمح به في حالة واحدة فقط: إذا كان الطرف الآخر يستخدم سلاح سنايبر ضد الفرقة" },
-                    { q: "ما الإجراء الصحيح مع المجرمين بعد السيطرة الكاملة عليهم بواسطة السوات؟", options: ["التحقيق معهم", "تسليمهم لأي عسكري آخر (أمن عام، أفواج، أمن منشآت) لاستكمال السجن", "نقلهم لمقر سري"], a: "تسليمهم لأي عسكري آخر (أمن عام، أفواج، أمن منشآت) لاستكمال السجن" },
-                    { q: "أي من الخيارات يعد مخالفة لملابس السوات الرسمي؟", options: ["نزع الخوذة", "ارتداء سترة إضافية فوق الزي الرسمي", "جميع ما سبق صحيح ويُعد مخالفة عسكرية"], a: "جميع ما سبق صحيح ويُعد مخالفة عسكرية" },
-                    { q: "متى يحق للسوات سجن المواطنين بأنفسهم؟", options: ["يحق لهم سجن المواطنين استثنائياً فقط في حال عدم توفر وحدات شاغرة من الأمن العام أو الأفواج", "دائماً", "يمنع تماماً"], a: "يحق لهم سجن المواطنين استثنائياً فقط في حال عدم توفر وحدات شاغرة من الأمن العام أو الأفواج" },
-                    { q: "ما هي الموجة اللاسلكية الرسمية للسوات أثناء العمليات؟", options: ["موجة الأمن العام (5)", "موجة أمن المنشآت الرسمية (موجة 10)", "موجة مفتوحة"], a: "موجة أمن المنشآت الرسمية (موجة 10)" },
-                    { q: "من يتولى قيادة فرقة السوات ميدانياً وإصدار أوامر المداهمة؟", options: ["أقدم فرد", "أعلى رتبة عسكرية موجودة ضمن الفريق الميداني", "مسؤول النداءات"], a: "أعلى رتبة عسكرية موجودة ضمن الفريق الميداني" }
-                ]
-            },
-            "دليل الترقيات": {
-                hasQuiz: false,
-                embedUrl: "https://docs.google.com/presentation/d/1nKD9kZpstydj7yT_fz4nAmy7scMN2qMz4Ki56Ed-zqM/embed?rm=minimal",
-                message: "⚠️ تنبيه: هذا الدليل (مطلوب للترقية). قراءة واطلاع فقط بدون وقت محدد أو اختبار."
-            },
-            "المرجع المعتمد": {
-                hasQuiz: false,
-                embedUrl: "https://docs.google.com/presentation/d/1oeBI5tahnGt1ICyqexje5ijxgCL0iF84HkoEz-s3TFA/embed?rm=minimal",
-                message: "⚠️ تنبيه: هذا المرجع (مطلوب للترقية). قراءة واطلاع فقط بدون وقت محدد أو اختبار."
-            }
-        };
-
-        let currentTrainee = {};
-        let currentCourseData = null;
-        let selectedQuestions = [];
-        const passingScore = 75;
-        let cheatAttempts = 0;
-
-        function checkCourse() {
-            const course = document.getElementById('t-course').value;
-            const btn = document.getElementById('btn-enter');
-            btn.disabled = course === "";
-        }
-
-        function enterAcademy() {
-            const name = document.getElementById('t-name').value.trim();
-            const discord = document.getElementById('t-discord').value.trim();
-            const rank = document.getElementById('t-rank').value.trim();
-            const course = document.getElementById('t-course').value;
-            
-            if(!name || !discord || isNaN(discord) || !rank || !course) {
-                alert("تنبيه أمني: يرجى تعبئة كافة الحقول (ومعرف الديسكورد أرقام فقط).");
-                return;
-            }
-
-            currentTrainee = { name, discord, rank, courseName: course };
-            currentCourseData = coursesData[course];
-
-            document.getElementById('login-section').style.display = 'none';
-            document.getElementById('study-section').style.display = 'block';
-            document.getElementById('study-title').innerText = currentTrainee.courseName;
-            
-            document.getElementById('study-content').innerHTML = `<iframe src="${currentCourseData.embedUrl}" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>`;
-            
-            // تحقق ما إذا كان الاختيار يحتوي على اختبار أم هو مجرد مرجع (دليل)
-            if(currentCourseData.hasQuiz) {
-                document.getElementById('study-timer').style.display = 'block';
-                document.getElementById('btn-start-quiz').style.display = 'block';
-                document.getElementById('rules-box').style.display = 'block';
-                document.getElementById('no-quiz-msg').style.display = 'none';
-                document.getElementById('btn-back-home').style.display = 'none';
-                startStudyTimer();
-            } else {
-                document.getElementById('study-timer').style.display = 'none';
-                document.getElementById('btn-start-quiz').style.display = 'none';
-                document.getElementById('rules-box').style.display = 'none';
-                document.getElementById('no-quiz-msg').style.display = 'block';
-                document.getElementById('no-quiz-msg').innerText = currentCourseData.message;
-                document.getElementById('btn-back-home').style.display = 'block';
-            }
-        }
-
-        function startStudyTimer() {
-            // العداد 13 دقيقة (780 ثانية)
-            let time = 780; 
-            const display = document.getElementById('time-left');
-            const btn = document.getElementById('btn-start-quiz');
-            
-            window.onbeforeunload = function() { return "تنبيه أمني!"; };
-
-            const studyInterval = setInterval(() => {
-                let m = Math.floor(time / 60);
-                let s = time % 60;
-                display.innerText = `${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
-                
-                if (time <= 0) {
-                    clearInterval(studyInterval);
-                    display.innerText = "00:00 - تم إتمام القراءة الفنية، يمكنك الاختبار الآن!";
-                    btn.disabled = false;
-                }
-                time--;
-            }, 1000);
-        }
-
-        function startQuiz() {
-            window.onbeforeunload = null; 
-            document.getElementById('study-section').style.display = 'none';
-            document.getElementById('quiz-section').style.display = 'block';
-
-            document.addEventListener('visibilitychange', () => {
-                if(document.visibilityState === 'hidden' && document.getElementById('quiz-section').style.display === 'block') {
-                    cheatAttempts++;
-                    if(cheatAttempts > 2) {
-                        alert("⚠️ تم رصد خروج متكرر من الصفحة ومحاولة تلاعب. سيتم إنهاء الاختبار وتسجيل رسوب فوراً!");
-                        submitQuiz(true);
-                    } else {
-                        alert(`⚠️ تحذير نظامي: يمنع مغادرة نافذة الاختبار. (المحاولة ${cheatAttempts}/2)`);
-                    }
-                }
-            });
-
-            let allQ = [...currentCourseData.questions];
-            selectedQuestions = allQ.sort(() => 0.5 - Math.random()).slice(0, 10);
-
-            const container = document.getElementById('questions-container');
-            container.innerHTML = selectedQuestions.map((q, i) => {
-                let shuffledOptions = [...q.options].sort(() => 0.5 - Math.random());
-                return `
-                <div class="question-block" id="qblock-${i}">
-                    <h3 style="color:#fff;">السؤال ${i+1}: ${q.q}</h3>
-                    ${shuffledOptions.map((opt, j) => `
-                        <label class="option-label">
-                            <input type="radio" name="q${i}" value="${opt}">
-                            <span style="font-size:1.1em; font-weight:bold; color:var(--text-muted);">${opt}</span>
-                        </label>
-                    `).join('')}
-                </div>`;
-            }).join('');
-            window.scrollTo(0, 0);
-        }
-
-        function submitQuiz(forceFail = false) {
-            let score = 0;
-            let unanswered = 0;
-
-            if(!forceFail) {
-                selectedQuestions.forEach((q, i) => {
-                    const checked = document.querySelector(`input[name="q${i}"]:checked`);
-                    if(!checked) {
-                        unanswered++;
-                        document.getElementById(`qblock-${i}`).style.borderColor = 'var(--danger)';
-                    } else {
-                        document.getElementById(`qblock-${i}`).style.borderColor = 'var(--primary)';
-                        if(checked.value === q.a) score++;
-                    }
-                });
-
-                if(unanswered > 0) {
-                    alert(`خطأ تكتيكي: يوجد لديك ${unanswered} أسئلة لم تقم بحلها!`);
-                    return;
-                }
-            }
-
-            const percentage = forceFail ? 0 : Math.round((score / selectedQuestions.length) * 100);
-            const isPassed = forceFail ? false : percentage >= passingScore;
-
-            document.getElementById('quiz-section').style.display = 'none';
-            document.getElementById('result-section').style.display = 'block';
-
-            const scoreDiv = document.getElementById('result-score');
-            const statusDiv = document.getElementById('result-status');
-            
-            scoreDiv.innerText = percentage + '%';
-            scoreDiv.style.color = isPassed ? 'var(--success)' : 'var(--danger)';
-            
-            if (forceFail) {
-                statusDiv.innerText = 'رسوب بسبب محاولة الغش (تم الرفع للقيادة) ❌';
-            } else {
-                statusDiv.innerText = isPassed ? 'اجتياز أمني بنجاح ✅' : 'رسوب في الاختبار ❌';
-            }
-            statusDiv.style.color = isPassed ? 'var(--success)' : 'var(--danger)';
-            
-            document.getElementById('result-details').innerHTML = `
-                اسم المتدرب المقيد: <b>${currentTrainee.rank} / ${currentTrainee.name}</b><br>
-                معرف الديسكورد: <b>${currentTrainee.discord}</b><br>
-                الدرجة الفنية المحققة: ${score} من أصل ${selectedQuestions.length} أسئلة صحيحة
-            `;
-
-            const webAppUrl = "https://script.google.com/macros/s/AKfycbzyImNuPcy9wUTkx3XuKtw-jH4tjrokhIWcQD4aYqrXBSoRR-WIqgqtsyixmE03jFFktw/exec"; 
-            
-            const payload = {
-                name: currentTrainee.name, rank: currentTrainee.rank, discord: currentTrainee.discord,
-                courseName: currentTrainee.courseName, score: score, total: selectedQuestions.length,
-                percentage: percentage, status: isPassed ? "اجتياز" : (forceFail ? "رسوب (غش)" : "رسوب")
-            };
-
-            fetch(webAppUrl, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
-            }).then(() => console.log("تم الترحيل بنجاح")).catch(e => console.error(e));
-            
-            window.scrollTo(0, 0);
-        }
-    </script>
+  <noscript>
+    <div class="noscript-message">تحتاج هذه المنصة إلى تفعيل JavaScript لتشغيل الاختبارات</div>
+  </noscript>
 </body>
 </html>
