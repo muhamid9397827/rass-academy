@@ -1112,8 +1112,12 @@
 
     const course = getCurrentCourse();
     const result = state.result;
+    const sectorName =
+      state.sector === "security_regiments"
+        ? "الأفواج الأمنية"
+        : "أمن المنشآت";
     const lines = [
-      "نتيجة أكاديمية أمن المنشآت — محاكاة رول بلاي",
+      `نتيجة الأكاديمية التدريبية المشتركة — ${sectorName}`,
       `المتدرب: ${state.trainee.rank} / ${state.trainee.name}`,
       `Discord ID: ${state.trainee.discord}`,
       `الدورة: ${course.title}`,

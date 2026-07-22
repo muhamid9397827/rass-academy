@@ -97,7 +97,7 @@
       studyMinutes: 13,
       quizMinutes: 10,
       slideUrl: "https://docs.google.com/presentation/d/1x4cL365QXt7Vfl1adJe7ToGel1IV9r7QHrfJoK55clo/embed?rm=minimal",
-      description: "مادة تدريبية خاصة بقطاع الأفواج الأمنية. سيُضاف الاختبار في مرحلة لاحقة.",
+      description: "مادة تدريبية واختبار ميداني خاصان بقطاع الأفواج الأمنية.",
       questions: []
     },
 
@@ -110,7 +110,7 @@
       studyMinutes: 13,
       quizMinutes: 10,
       slideUrl: "https://docs.google.com/presentation/d/1cw7qCOUuLne3r2uzES4Pce17Usn00lyp9p6J1m7Aooo/embed?rm=minimal",
-      description: "مادة تدريبية خاصة بقطاع الأفواج الأمنية. سيُضاف الاختبار في مرحلة لاحقة.",
+      description: "مادة تدريبية واختبار ميداني خاصان بقطاع الأفواج الأمنية.",
       questions: []
     },
 
@@ -123,7 +123,7 @@
       studyMinutes: 13,
       quizMinutes: 10,
       slideUrl: "https://docs.google.com/presentation/d/179FJ4RIqfNtvJW_KCeLobJ0_fd3TDQcgdXPtXTXkSQU/embed?rm=minimal",
-      description: "مادة تدريبية خاصة بقطاع الأفواج الأمنية. سيُضاف الاختبار في مرحلة لاحقة.",
+      description: "مادة تدريبية واختبار ميداني خاصان بقطاع الأفواج الأمنية.",
       questions: []
     },
 
@@ -136,7 +136,7 @@
       studyMinutes: 13,
       quizMinutes: 10,
       slideUrl: "https://docs.google.com/presentation/d/1HunXm8fWHJ935Y3pdBAcRJxQsE7UFgMIXfpRrPPjp7c/embed?rm=minimal",
-      description: "مادة تدريبية خاصة بقطاع الأفواج الأمنية. سيُضاف الاختبار في مرحلة لاحقة.",
+      description: "مادة تدريبية واختبار ميداني خاصان بقطاع الأفواج الأمنية.",
       questions: []
     },
 
@@ -149,7 +149,7 @@
       studyMinutes: 13,
       quizMinutes: 10,
       slideUrl: "https://docs.google.com/presentation/d/1G22IQ-3XJ5DGgEECDRjHcP69vZf_RoEzUj-8SVlHc6A/embed?rm=minimal",
-      description: "مادة تدريبية خاصة بقطاع الأفواج الأمنية. سيُضاف الاختبار في مرحلة لاحقة.",
+      description: "مادة تدريبية واختبار ميداني خاصان بقطاع الأفواج الأمنية.",
       questions: []
     }
   };
