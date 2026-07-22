@@ -284,13 +284,10 @@
     elements.selectedSectorLabel.textContent = selectedSector
       ? `القطاع المختار: ${getSectorLabel()}`
       : "";
-    elements.courseField.hidden = !isFacilities;
-    elements.sectorCourseNotice.hidden = isFacilities;
-    elements.courseSelect.disabled = !isFacilities;
-    elements.entrySubmitButton.disabled = !isFacilities;
-    if (!isFacilities) {
-      elements.courseSelect.value = "";
-    }
+    elements.courseField.hidden = false;
+    elements.sectorCourseNotice.hidden = true;
+    elements.courseSelect.disabled = false;
+    elements.entrySubmitButton.disabled = false;
     populateCourseSelect();
     updatePlatformStats();
     updateCourseHint();
@@ -329,18 +326,20 @@
     showToast(next === "light" ? "تم تفعيل النمط الفاتح" : "تم تفعيل النمط الداكن");
   }
 
+  function getAvailableCourses() {
+    return COURSE_LIST.filter((course) => course.sector === selectedSector);
+  }
+
   function populateCourseSelect() {
     elements.courseSelect.querySelectorAll("optgroup").forEach((group) => group.remove());
-    if (selectedSector !== FACILITIES_SECURITY) {
-      return;
-    }
+    elements.courseSelect.value = "";
 
     const quizGroup = document.createElement("optgroup");
     quizGroup.label = "الدورات الميدانية";
     const referenceGroup = document.createElement("optgroup");
     referenceGroup.label = "الأدلة والمراجع";
 
-    COURSE_LIST.forEach((course) => {
+    getAvailableCourses().forEach((course) => {
       const option = document.createElement("option");
       option.value = course.id;
       option.textContent = `${course.title} — ${course.requiredRank}`;
@@ -351,7 +350,7 @@
   }
 
   function updatePlatformStats() {
-    const availableCourses = selectedSector === FACILITIES_SECURITY ? COURSE_LIST : [];
+    const availableCourses = getAvailableCourses();
     const quizCourses = availableCourses.filter((course) => course.hasQuiz);
     const questionCount = quizCourses.reduce((sum, course) => sum + course.questions.length, 0);
     elements.coursesCount.textContent = formatNumber(quizCourses.length);
@@ -372,8 +371,8 @@
 
   function handleEntrySubmit(event) {
     event.preventDefault();
-    if (selectedSector !== FACILITIES_SECURITY) {
-      showToast("دورات الأفواج الأمنية قيد التجهيز وستُضاف في المرحلة التالية", "error");
+    if (!isKnownSector(selectedSector)) {
+      showToast("اختر قطاعك العسكري قبل بدء التدريب", "error");
       return;
     }
     const formData = new FormData(elements.traineeForm);
@@ -424,8 +423,8 @@
     clearAllErrors();
     let valid = true;
 
-    if (selectedSector !== FACILITIES_SECURITY) {
-      showToast("اختر قطاعاً تتوفر له دورات قبل بدء التدريب", "error");
+    if (!isKnownSector(selectedSector)) {
+      showToast("اختر قطاعك العسكري قبل بدء التدريب", "error");
       return false;
     }
 
@@ -448,7 +447,8 @@
       valid = false;
     }
 
-    if (!COURSE_MAP.has(courseId)) {
+    const selectedCourse = COURSE_MAP.get(courseId);
+    if (!selectedCourse || selectedCourse.sector !== selectedSector) {
       setFieldError(elements.courseSelect, "اختر دورة أو مرجعاً من القائمة");
       valid = false;
     }
@@ -1277,6 +1277,7 @@
       typeof value.trainee?.rank !== "string" ||
       !COURSE_MAP.has(value.courseId) ||
       (value.sector && !isKnownSector(value.sector)) ||
+      (value.sector && COURSE_MAP.get(value.courseId).sector !== value.sector) ||
       !["study", "quiz", "result"].includes(value.stage)
     ) {
       return false;
@@ -1467,7 +1468,8 @@
   }
 
   function getCurrentCourse() {
-    return COURSE_MAP.get(state.courseId);
+    const course = COURSE_MAP.get(state.courseId);
+    return course && course.sector === state.sector ? course : null;
   }
 
   function getSelectedQuestions() {
