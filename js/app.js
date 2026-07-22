@@ -1056,6 +1056,11 @@
       total: result.total,
       percentage: result.percentage,
       status: result.passed ? "اجتياز" : "رسوب",
+      sector: state.sector || "facilities_security",
+      sectorName:
+        state.sector === "security_regiments"
+          ? "الأفواج الأمنية"
+          : "أمن المنشآت",
       schemaVersion: 2,
       sessionId: state.sessionId,
       receipt: result.receipt,
