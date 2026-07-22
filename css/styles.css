@@ -1928,26 +1928,49 @@ a {
   gap: 9px;
 }
 
+.landing-hero__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.landing-location {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding-inline: 10px;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: 999px;
+  background: var(--gold-soft);
+  color: var(--gold);
+  font-size: .67rem;
+  font-weight: 900;
+}
+
 .site-footer {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  min-height: 66px;
-  padding: 15px;
+  gap: 7px;
+  min-height: 82px;
+  padding: 18px 15px;
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 0.66rem;
+  line-height: 1.9;
   text-align: center;
 }
 
-.site-footer p {
+.site-footer__copyright {
+  max-width: 920px;
   margin: 0;
 }
 
-.site-footer span {
-  padding-inline-start: 14px;
-  border-inline-start: 1px solid var(--line);
+.site-footer__version {
+  color: var(--text-soft);
+  font-size: .61rem;
+  font-weight: 800;
 }
 
 .noscript-message {
