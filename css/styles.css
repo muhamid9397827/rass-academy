@@ -240,6 +240,109 @@ a {
   box-shadow: 0 0 0 5px rgba(52, 211, 153, 0.12);
 }
 
+.sector-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-soft);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.sector-view {
+  display: grid;
+  min-height: 610px;
+  place-items: center;
+}
+
+.sector-card {
+  width: min(100%, 820px);
+  padding: clamp(28px, 5vw, 52px);
+  text-align: center;
+}
+
+.sector-card h1 {
+  margin: 10px 0 8px;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+}
+
+.sector-card > p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.sector-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-block-start: 30px;
+  text-align: start;
+}
+
+.sector-option {
+  display: flex;
+  min-height: 150px;
+  align-items: center;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  color: var(--text);
+  text-align: inherit;
+  transition: 160ms ease;
+}
+
+.sector-option:hover,
+.sector-option:focus-visible {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  box-shadow: 0 0 0 4px var(--primary-soft);
+  transform: translateY(-2px);
+}
+
+.sector-option__icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--gold-soft);
+  color: var(--gold);
+  font-size: 1.2rem;
+}
+
+.sector-option strong,
+.sector-option small {
+  display: block;
+}
+
+.sector-option strong {
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.sector-option small {
+  margin-block-start: 3px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.sector-course-notice {
+  margin: -2px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 12px;
+  background: var(--gold-soft);
+  color: var(--text-soft);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
 .icon-button {
   display: grid;
   width: 40px;
@@ -1688,6 +1791,10 @@ a {
 }
 
 @media (max-width: 980px) {
+  .sector-view {
+    min-height: auto;
+  }
+
   .entry-layout {
     grid-template-columns: 1fr;
     min-height: auto;
@@ -1767,6 +1874,22 @@ a {
     padding: 0;
     justify-content: center;
     font-size: 0;
+  }
+
+  .sector-indicator {
+    max-width: 110px;
+    gap: 4px;
+    font-size: 0.58rem;
+  }
+
+  .sector-indicator .button {
+    min-height: 32px;
+    padding: 5px 8px;
+    font-size: 0.62rem;
+  }
+
+  .sector-options {
+    grid-template-columns: 1fr;
   }
 
   .app-shell {
