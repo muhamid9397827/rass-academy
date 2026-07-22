@@ -15,13 +15,16 @@
   const CONFIG = Object.freeze({ ...DEFAULT_CONFIG, ...(window.APP_CONFIG || {}) });
   const COURSE_LIST = Object.values(window.COURSES || {});
   const COURSE_MAP = new Map(COURSE_LIST.map((course) => [course.id, course]));
+  const FACILITIES_SECURITY = "facilities_security";
+  const SECURITY_REGIMENTS = "security_regiments";
   const STORAGE = {
     session: "rp-academy-v2:active-session",
     lastResult: "rp-academy-v2:last-result",
     attempts: "rp-academy-v2:attempts",
     history: "rp-academy-v2:history",
     questionPools: "rp-academy-v2:question-pools",
-    theme: "rp-academy-v2:theme"
+    theme: "rp-academy-v2:theme",
+    sector: "rp-academy-v2:selected-sector"
   };
   const STAGES = ["entry", "study", "quiz", "result"];
   const DEMO_MODE =
@@ -30,6 +33,7 @@
 
   const elements = {};
   let state = createEmptyState();
+  let selectedSector = "";
   let pendingSession = null;
   let studyTicker = null;
   let quizTicker = null;
@@ -42,6 +46,7 @@
       schemaVersion: 2,
       sessionId: "",
       stage: "entry",
+      sector: "",
       trainee: null,
       courseId: "",
       questionIds: [],
@@ -61,11 +66,19 @@
 
   function cacheElements() {
     const ids = [
+      "sector-view",
       "entry-view",
       "study-view",
       "quiz-view",
       "result-view",
       "global-status",
+      "progress-steps",
+      "sector-indicator",
+      "selected-sector-label",
+      "change-sector-button",
+      "course-field",
+      "sector-course-notice",
+      "entry-submit-button",
       "theme-button",
       "footer-version",
       "courses-count",
@@ -143,10 +156,16 @@
   function boot() {
     cacheElements();
     restoreTheme();
-    populateCourseSelect();
-    updatePlatformStats();
+    migrateLegacySessions();
+    selectedSector = getStoredSector();
     bindEvents();
-    checkForSavedSession();
+    if (selectedSector) {
+      applySectorSelection();
+      checkForSavedSession();
+      showView("entry");
+    } else {
+      showView("sector");
+    }
     elements.footerVersion.textContent = DEMO_MODE
       ? "الإصدار الثاني وضع العرض"
       : "الإصدار الثاني";
@@ -159,6 +178,10 @@
 
   function bindEvents() {
     elements.themeButton.addEventListener("click", toggleTheme);
+    document.querySelectorAll("[data-sector]").forEach((button) => {
+      button.addEventListener("click", () => selectSector(button.dataset.sector));
+    });
+    elements.changeSectorButton.addEventListener("click", changeSector);
     elements.traineeForm.addEventListener("submit", handleEntrySubmit);
     elements.courseSelect.addEventListener("change", updateCourseHint);
     elements.resumeButton.addEventListener("click", resumeSavedSession);
@@ -188,6 +211,107 @@
     window.addEventListener("beforeunload", handleBeforeUnload);
   }
 
+  function isKnownSector(value) {
+    return value === FACILITIES_SECURITY || value === SECURITY_REGIMENTS;
+  }
+
+  function getSectorLabel(sector = selectedSector) {
+    return sector === SECURITY_REGIMENTS ? "الأفواج الأمنية" : "أمن المنشآت";
+  }
+
+  function getStoredSector() {
+    try {
+      const sector = window.sessionStorage.getItem(STORAGE.sector) || "";
+      return isKnownSector(sector) ? sector : "";
+    } catch {
+      return "";
+    }
+  }
+
+  function storeSector(sector) {
+    try {
+      window.sessionStorage.setItem(STORAGE.sector, sector);
+    } catch {
+      // يبقى القطاع في حالة التطبيق عند تعذر تخزين الجلسة.
+    }
+  }
+
+  function clearStoredSector() {
+    try {
+      window.sessionStorage.removeItem(STORAGE.sector);
+    } catch {
+      // التخزين ميزة مساعدة ولا يمنع تعذرها اختيار القطاع.
+    }
+  }
+
+  function migrateLegacySessions() {
+    ["session", "lastResult"].forEach((key) => {
+      const saved = storageGet(STORAGE[key], null);
+      if (saved && !isKnownSector(saved.sector)) {
+        saved.sector = FACILITIES_SECURITY;
+        storageSet(STORAGE[key], saved);
+      }
+    });
+    const activeSession = storageGet(STORAGE.session, null);
+    const lastResult = storageGet(STORAGE.lastResult, null);
+    if (!getStoredSector() && (activeSession?.sector || lastResult?.sector)) {
+      const legacySector = activeSession?.sector || lastResult?.sector;
+      if (isKnownSector(legacySector)) {
+        storeSector(legacySector);
+      }
+    }
+  }
+
+  function selectSector(sector) {
+    if (!isKnownSector(sector)) {
+      return;
+    }
+    selectedSector = sector;
+    storeSector(sector);
+    applySectorSelection();
+    checkForSavedSession();
+    if (selectedSector) {
+      applySectorSelection();
+      showView("entry");
+    } else {
+      showView("sector");
+    }
+  }
+
+  function applySectorSelection() {
+    const isFacilities = selectedSector === FACILITIES_SECURITY;
+    elements.sectorIndicator.hidden = !selectedSector;
+    elements.selectedSectorLabel.textContent = selectedSector
+      ? `القطاع المختار: ${getSectorLabel()}`
+      : "";
+    elements.courseField.hidden = !isFacilities;
+    elements.sectorCourseNotice.hidden = isFacilities;
+    elements.courseSelect.disabled = !isFacilities;
+    elements.entrySubmitButton.disabled = !isFacilities;
+    if (!isFacilities) {
+      elements.courseSelect.value = "";
+    }
+    populateCourseSelect();
+    updatePlatformStats();
+    updateCourseHint();
+  }
+
+  function changeSector() {
+    clearInterval(studyTicker);
+    clearInterval(quizTicker);
+    storageRemove(STORAGE.session);
+    state = createEmptyState();
+    state.sector = selectedSector;
+    pendingSession = null;
+    isSubmitting = false;
+    elements.traineeForm.reset();
+    clearAllErrors();
+    selectedSector = "";
+    clearStoredSector();
+    elements.sectorIndicator.hidden = true;
+    showView("sector");
+  }
+
   function restoreTheme() {
     const saved = storageGet(STORAGE.theme, "");
     const preferred =
@@ -206,6 +330,11 @@
   }
 
   function populateCourseSelect() {
+    elements.courseSelect.querySelectorAll("optgroup").forEach((group) => group.remove());
+    if (selectedSector !== FACILITIES_SECURITY) {
+      return;
+    }
+
     const quizGroup = document.createElement("optgroup");
     quizGroup.label = "الدورات الميدانية";
     const referenceGroup = document.createElement("optgroup");
@@ -222,7 +351,8 @@
   }
 
   function updatePlatformStats() {
-    const quizCourses = COURSE_LIST.filter((course) => course.hasQuiz);
+    const availableCourses = selectedSector === FACILITIES_SECURITY ? COURSE_LIST : [];
+    const quizCourses = availableCourses.filter((course) => course.hasQuiz);
     const questionCount = quizCourses.reduce((sum, course) => sum + course.questions.length, 0);
     elements.coursesCount.textContent = formatNumber(quizCourses.length);
     elements.questionsCount.textContent = formatNumber(questionCount);
@@ -242,6 +372,10 @@
 
   function handleEntrySubmit(event) {
     event.preventDefault();
+    if (selectedSector !== FACILITIES_SECURITY) {
+      showToast("دورات الأفواج الأمنية قيد التجهيز وستُضاف في المرحلة التالية", "error");
+      return;
+    }
     const formData = new FormData(elements.traineeForm);
     const trainee = {
       name: String(formData.get("name") || "").trim().replace(/\s+/g, " "),
@@ -271,6 +405,7 @@
       ...createEmptyState(),
       sessionId: createId("SESSION"),
       stage: "study",
+      sector: selectedSector,
       trainee,
       courseId,
       studyStartedAt: now,
@@ -288,6 +423,11 @@
   function validateEntry(trainee, courseId) {
     clearAllErrors();
     let valid = true;
+
+    if (selectedSector !== FACILITIES_SECURITY) {
+      showToast("اختر قطاعاً تتوفر له دورات قبل بدء التدريب", "error");
+      return false;
+    }
 
     if (
       trainee.name.length < 3 ||
@@ -1077,6 +1217,7 @@
       return;
     }
 
+    saved.sector = isKnownSector(saved.sector) ? saved.sector : FACILITIES_SECURITY;
     pendingSession = saved;
     const course = COURSE_MAP.get(saved.courseId);
     elements.resumeTitle.textContent = saved.stage === "result"
@@ -1135,6 +1276,7 @@
       typeof value.trainee?.discord !== "string" ||
       typeof value.trainee?.rank !== "string" ||
       !COURSE_MAP.has(value.courseId) ||
+      (value.sector && !isKnownSector(value.sector)) ||
       !["study", "quiz", "result"].includes(value.stage)
     ) {
       return false;
@@ -1279,12 +1421,12 @@
   }
 
   function showView(stage) {
-    if (!STAGES.includes(stage)) {
+    if (stage !== "sector" && !STAGES.includes(stage)) {
       return;
     }
 
-    state.stage = stage;
     const viewMap = {
+      sector: elements.sectorView,
       entry: elements.entryView,
       study: elements.studyView,
       quiz: elements.quizView,
@@ -1294,16 +1436,20 @@
       view.hidden = name !== stage;
     });
 
-    const currentIndex = STAGES.indexOf(stage);
-    document.querySelectorAll(".progress-step").forEach((step, index) => {
-      step.classList.toggle("is-active", index === currentIndex);
-      step.classList.toggle("is-complete", index < currentIndex);
-      if (index === currentIndex) {
-        step.setAttribute("aria-current", "step");
-      } else {
-        step.removeAttribute("aria-current");
-      }
-    });
+    elements.progressSteps.hidden = stage === "sector";
+    if (stage !== "sector") {
+      state.stage = stage;
+      const currentIndex = STAGES.indexOf(stage);
+      document.querySelectorAll(".progress-step").forEach((step, index) => {
+        step.classList.toggle("is-active", index === currentIndex);
+        step.classList.toggle("is-complete", index < currentIndex);
+        if (index === currentIndex) {
+          step.setAttribute("aria-current", "step");
+        } else {
+          step.removeAttribute("aria-current");
+        }
+      });
+    }
 
     window.scrollTo({ top: 0, behavior: "smooth" });
     const heading = viewMap[stage].querySelector("h1");
