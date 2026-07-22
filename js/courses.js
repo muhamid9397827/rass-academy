@@ -3,6 +3,7 @@
 
   window.COURSES = {
     operations: {
+      sector: "facilities_security",
       id: "operations",
       title: "دورة العمليات",
       requiredRank: "من جندي إلى جندي أول",
@@ -14,6 +15,7 @@
     },
 
     militaryCharacter: {
+      sector: "facilities_security",
       id: "military-character",
       title: "دورة الشخصية العسكرية",
       requiredRank: "من جندي أول إلى عريف",
@@ -25,6 +27,7 @@
     },
 
     airWing: {
+      sector: "facilities_security",
       id: "air-wing",
       title: "دورة الجناح الجوي",
       requiredRank: "من عريف إلى وكيل رقيب",
@@ -36,6 +39,7 @@
     },
 
     zoneOfficer: {
+      sector: "facilities_security",
       id: "zone-officer",
       title: "دورة ضابط منطقة",
       requiredRank: "من رقيب أول إلى رئيس رقباء",
@@ -47,6 +51,7 @@
     },
 
     swat: {
+      sector: "facilities_security",
       id: "swat",
       title: "دورة السوات",
       requiredRank: "رئيس رقباء",
@@ -58,6 +63,7 @@
     },
 
     promotionsGuide: {
+      sector: "facilities_security",
       id: "promotions-guide",
       title: "دليل الترقيات",
       requiredRank: "الأفراد والضباط",
@@ -70,6 +76,7 @@
     },
 
     approvedReference: {
+      sector: "facilities_security",
       id: "approved-reference",
       title: "المرجع المعتمد",
       requiredRank: "جميع الرتب",
@@ -78,6 +85,71 @@
       quizMinutes: 0,
       slideUrl: "https://docs.google.com/presentation/d/1oeBI5tahnGt1ICyqexje5ijxgCL0iF84HkoEz-s3TFA/embed?rm=minimal",
       description: "هذا المرجع مطلوب للترقية وهو للقراءة والاطلاع فقط من دون وقت محدد أو اختبار",
+      questions: []
+    },
+
+    regimentsZoneOfficer: {
+      id: "regiments-zone-officer",
+      sector: "security_regiments",
+      title: "دورة ضابط منطقة — الأفواج الأمنية",
+      requiredRank: "جميع الرتب",
+      hasQuiz: false,
+      studyMinutes: 0,
+      quizMinutes: 0,
+      slideUrl: "https://docs.google.com/presentation/d/1x4cL365QXt7Vfl1adJe7ToGel1IV9r7QHrfJoK55clo/embed?rm=minimal",
+      description: "مادة تدريبية خاصة بقطاع الأفواج الأمنية. سيُضاف الاختبار في مرحلة لاحقة.",
+      questions: []
+    },
+
+    regimentsRecruitment: {
+      id: "regiments-recruitment",
+      sector: "security_regiments",
+      title: "توظيف الأفواج الأمنية",
+      requiredRank: "جميع الرتب",
+      hasQuiz: false,
+      studyMinutes: 0,
+      quizMinutes: 0,
+      slideUrl: "https://docs.google.com/presentation/d/1cw7qCOUuLne3r2uzES4Pce17Usn00lyp9p6J1m7Aooo/embed?rm=minimal",
+      description: "مادة تدريبية خاصة بقطاع الأفواج الأمنية. سيُضاف الاختبار في مرحلة لاحقة.",
+      questions: []
+    },
+
+    regimentsOperations: {
+      id: "regiments-operations",
+      sector: "security_regiments",
+      title: "دورة العمليات — الأفواج الأمنية",
+      requiredRank: "جميع الرتب",
+      hasQuiz: false,
+      studyMinutes: 0,
+      quizMinutes: 0,
+      slideUrl: "https://docs.google.com/presentation/d/179FJ4RIqfNtvJW_KCeLobJ0_fd3TDQcgdXPtXTXkSQU/embed?rm=minimal",
+      description: "مادة تدريبية خاصة بقطاع الأفواج الأمنية. سيُضاف الاختبار في مرحلة لاحقة.",
+      questions: []
+    },
+
+    regimentsPrisonTransfer: {
+      id: "regiments-prison-transfer",
+      sector: "security_regiments",
+      title: "نقل السجون — الأفواج الأمنية",
+      requiredRank: "جميع الرتب",
+      hasQuiz: false,
+      studyMinutes: 0,
+      quizMinutes: 0,
+      slideUrl: "https://docs.google.com/presentation/d/1HunXm8fWHJ935Y3pdBAcRJxQsE7UFgMIXfpRrPPjp7c/embed?rm=minimal",
+      description: "مادة تدريبية خاصة بقطاع الأفواج الأمنية. سيُضاف الاختبار في مرحلة لاحقة.",
+      questions: []
+    },
+
+    regimentsAirSupport: {
+      id: "regiments-air-support",
+      sector: "security_regiments",
+      title: "دورة الدعم الجوي — الأفواج الأمنية",
+      requiredRank: "جميع الرتب",
+      hasQuiz: false,
+      studyMinutes: 0,
+      quizMinutes: 0,
+      slideUrl: "https://docs.google.com/presentation/d/1G22IQ-3XJ5DGgEECDRjHcP69vZf_RoEzUj-8SVlHc6A/embed?rm=minimal",
+      description: "مادة تدريبية خاصة بقطاع الأفواج الأمنية. سيُضاف الاختبار في مرحلة لاحقة.",
       questions: []
     }
   };
