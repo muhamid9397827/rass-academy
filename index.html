@@ -41,6 +41,10 @@
       </a>
 
       <div class="header-meta">
+        <div id="sector-indicator" class="sector-indicator" hidden>
+          <span id="selected-sector-label"></span>
+          <button id="change-sector-button" class="button button--ghost button--small" type="button">تغيير القطاع</button>
+        </div>
         <span class="simulation-badge">
           <span class="simulation-badge__dot" aria-hidden="true"></span>
           رئاسة كلية التدريب
@@ -59,7 +63,7 @@
   </header>
 
   <main id="main-content" class="app-shell">
-    <nav class="progress-steps" aria-label="مراحل التدريب">
+    <nav id="progress-steps" class="progress-steps" aria-label="مراحل التدريب">
       <ol>
         <li class="progress-step is-active" data-step="entry" aria-current="step">
           <span class="progress-step__number">١</span>
@@ -81,6 +85,24 @@
     </nav>
 
     <div id="global-status" class="status-toast" role="status" aria-live="polite" hidden></div>
+
+    <section id="sector-view" class="view sector-view" aria-labelledby="sector-title" hidden>
+      <div class="sector-card card">
+        <span class="eyebrow">بوابة التدريب</span>
+        <h1 id="sector-title">اختر قطاعك العسكري</h1>
+        <p>اختر القطاع للوصول إلى دوراته ومواده التدريبية</p>
+        <div class="sector-options">
+          <button class="sector-option" type="button" data-sector="facilities_security">
+            <span class="sector-option__icon" aria-hidden="true">✦</span>
+            <span><strong>أمن المنشآت</strong><small>الدورات والمواد التدريبية المتاحة حالياً</small></span>
+          </button>
+          <button class="sector-option" type="button" data-sector="security_regiments">
+            <span class="sector-option__icon" aria-hidden="true">✦</span>
+            <span><strong>الأفواج الأمنية</strong><small>ستظهر الدورات التدريبية عند إضافتها</small></span>
+          </button>
+        </div>
+      </div>
+    </section>
 
     <section id="entry-view" class="view" aria-labelledby="entry-title">
       <div id="resume-banner" class="resume-banner" hidden>
@@ -185,7 +207,7 @@
               </div>
             </div>
 
-            <div class="field">
+            <div id="course-field" class="field">
               <label for="course-select">الدورة أو المرجع</label>
               <div class="field__control field__control--select">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -198,6 +220,7 @@
               <small id="course-select-hint" class="field__hint">ستظهر مدة الدراسة والاختبار بعد اختيار الدورة</small>
               <small id="course-select-error" class="field__error"></small>
             </div>
+            <p id="sector-course-notice" class="sector-course-notice" hidden>دورات الأفواج الأمنية قيد التجهيز وستُضاف في المرحلة التالية</p>
 
             <label class="consent-control" for="simulation-consent">
               <input id="simulation-consent" name="consent" type="checkbox" required>
@@ -210,7 +233,7 @@
             </label>
             <small id="simulation-consent-error" class="field__error"></small>
 
-            <button class="button button--primary button--wide" type="submit">
+            <button id="entry-submit-button" class="button button--primary button--wide" type="submit">
               دخول غرفة التدريب
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5 12h14m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
