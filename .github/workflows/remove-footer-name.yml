@@ -1,0 +1,38 @@
+name: Remove footer name
+
+on:
+  push:
+    paths:
+      - '.github/workflows/remove-footer-name.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update-footer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Remove personal name from footer
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+          old = '© 2026 مجاهد ال عباد — الأكاديمية التدريبية المشتركة — محافظة الرس.'
+          new = '© 2026 — الأكاديمية التدريبية المشتركة — محافظة الرس.'
+          if old not in text:
+              raise SystemExit('Footer text was not found')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          Path('.github/workflows/remove-footer-name.yml').unlink()
+          PY
+
+      - name: Commit update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html .github/workflows/remove-footer-name.yml
+          git commit -m "إزالة الاسم من تذييل الموقع"
+          git push
