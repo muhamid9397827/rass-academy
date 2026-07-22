@@ -93,9 +93,9 @@
       sector: "security_regiments",
       title: "دورة ضابط منطقة — الأفواج الأمنية",
       requiredRank: "جميع الرتب",
-      hasQuiz: false,
-      studyMinutes: 0,
-      quizMinutes: 0,
+      hasQuiz: true,
+      studyMinutes: 13,
+      quizMinutes: 10,
       slideUrl: "https://docs.google.com/presentation/d/1x4cL365QXt7Vfl1adJe7ToGel1IV9r7QHrfJoK55clo/embed?rm=minimal",
       description: "مادة تدريبية خاصة بقطاع الأفواج الأمنية. سيُضاف الاختبار في مرحلة لاحقة.",
       questions: []
