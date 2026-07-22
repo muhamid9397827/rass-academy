@@ -77,7 +77,6 @@
       "selected-sector-label",
       "change-sector-button",
       "course-field",
-      "sector-course-notice",
       "entry-submit-button",
       "theme-button",
       "footer-version",
@@ -279,13 +278,11 @@
   }
 
   function applySectorSelection() {
-    const isFacilities = selectedSector === FACILITIES_SECURITY;
     elements.sectorIndicator.hidden = !selectedSector;
     elements.selectedSectorLabel.textContent = selectedSector
       ? `القطاع المختار: ${getSectorLabel()}`
       : "";
     elements.courseField.hidden = false;
-    elements.sectorCourseNotice.hidden = true;
     elements.courseSelect.disabled = false;
     elements.entrySubmitButton.disabled = false;
     populateCourseSelect();
