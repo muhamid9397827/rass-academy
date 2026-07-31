@@ -5,7 +5,7 @@
     appName: "أكاديمية أمن المنشآت",
     version: "2.0.0",
     environment: "simulation",
-    passingPercentage: 80,
+    passingPercentage: 70,
     retakeHours: 24,
     questionsPerQuiz: 10,
 
