@@ -4,7 +4,7 @@
   const DEFAULT_CONFIG = {
     appName: "أكاديمية أمن المنشآت",
     version: "2.0.0",
-    passingPercentage: 80,
+    passingPercentage: 70,
     retakeHours: 24,
     questionsPerQuiz: 10,
     resultsEndpoint: "",
