@@ -2,7 +2,7 @@
   "use strict";
 
   const DEFAULT_CONFIG = {
-    appName: "ط£ظƒط§ط¯ظٹظ…ظٹط© ط£ظ…ظ† ط§ظ„ظ…ظ†ط´ط¢طھ",
+    appName: "أكاديمية أمن المنشآت",
     version: "2.0.0",
     passingPercentage: 70,
     retakeHours: 24,
@@ -170,11 +170,11 @@
       showView("sector");
     }
     elements.footerVersion.textContent = DEMO_MODE
-      ? "ط§ظ„ط¥طµط¯ط§ط± ط§ظ„ط«ط§ظ†ظٹ ظˆط¶ط¹ ط§ظ„ط¹ط±ط¶"
-      : "ط§ظ„ط¥طµط¯ط§ط± ط§ظ„ط«ط§ظ†ظٹ";
+      ? "الإصدار الثاني وضع العرض"
+      : "الإصدار الثاني";
 
     if (!COURSE_LIST.length) {
-      showToast("طھط¹ط°ط± طھط­ظ…ظٹظ„ ط¨ظٹط§ظ†ط§طھ ط§ظ„ط¯ظˆط±ط§طھ طھط£ظƒط¯ ظ…ظ† ظˆط¬ظˆط¯ ظ…ظ„ظپ ط§ظ„ط¯ظˆط±ط§طھ", "error", 10000);
+      showToast("تعذر تحميل بيانات الدورات تأكد من وجود ملف الدورات", "error", 10000);
       elements.traineeForm.querySelector('button[type="submit"]').disabled = true;
     }
   }
@@ -193,7 +193,7 @@
     elements.leaveStudyButton.addEventListener("click", leaveStudy);
     elements.saveProgressButton.addEventListener("click", () => {
       saveSession();
-      showToast("طھظ… ط­ظپط¸ طھظ‚ط¯ظ…ظƒ ط¹ظ„ظ‰ ظ‡ط°ط§ ط§ظ„ط¬ظ‡ط§ط²", "success");
+      showToast("تم حفظ تقدمك على هذا الجهاز", "success");
     });
     elements.submitQuizButton.addEventListener("click", requestQuizSubmission);
     elements.confirmDialog.addEventListener("close", () => {
@@ -224,12 +224,12 @@
 
   function getSectorLabel(sector = selectedSector) {
     if (sector === SECURITY_REGIMENTS) {
-      return "ط§ظ„ط£ظپظˆط§ط¬ ط§ظ„ط£ظ…ظ†ظٹط©";
+      return "الأفواج الأمنية";
     }
     if (sector === PUBLIC_SECURITY) {
-      return "ط§ظ„ط£ظ…ظ† ط§ظ„ط¹ط§ظ…";
+      return "الأمن العام";
     }
-    return "ط£ظ…ظ† ط§ظ„ظ…ظ†ط´ط¢طھ";
+    return "أمن المنشآت";
   }
 
   function getStoredSector() {
@@ -245,7 +245,7 @@
     try {
       window.sessionStorage.setItem(STORAGE.sector, sector);
     } catch {
-      // ظٹط¨ظ‚ظ‰ ط§ظ„ظ‚ط·ط§ط¹ ظپظٹ ط­ط§ظ„ط© ط§ظ„طھط·ط¨ظٹظ‚ ط¹ظ†ط¯ طھط¹ط°ط± طھط®ط²ظٹظ† ط§ظ„ط¬ظ„ط³ط©.
+      // يبقى القطاع في حالة التطبيق عند تعذر تخزين الجلسة.
     }
   }
 
@@ -253,7 +253,7 @@
     try {
       window.sessionStorage.removeItem(STORAGE.sector);
     } catch {
-      // ط§ظ„طھط®ط²ظٹظ† ظ…ظٹط²ط© ظ…ط³ط§ط¹ط¯ط© ظˆظ„ط§ ظٹظ…ظ†ط¹ طھط¹ط°ط±ظ‡ط§ ط§ط®طھظٹط§ط± ط§ظ„ظ‚ط·ط§ط¹.
+      // التخزين ميزة مساعدة ولا يمنع تعذرها اختيار القطاع.
     }
   }
 
@@ -294,7 +294,7 @@
   function applySectorSelection() {
     elements.sectorIndicator.hidden = !selectedSector;
     elements.selectedSectorLabel.textContent = selectedSector
-      ? `ط§ظ„ظ‚ط·ط§ط¹ ط§ظ„ظ…ط®طھط§ط±: ${getSectorLabel()}`
+      ? `القطاع المختار: ${getSectorLabel()}`
       : "";
     elements.courseField.hidden = false;
     elements.courseSelect.disabled = false;
@@ -334,7 +334,7 @@
     const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
     document.documentElement.dataset.theme = next;
     storageSet(STORAGE.theme, next);
-    showToast(next === "light" ? "طھظ… طھظپط¹ظٹظ„ ط§ظ„ظ†ظ…ط· ط§ظ„ظپط§طھط­" : "طھظ… طھظپط¹ظٹظ„ ط§ظ„ظ†ظ…ط· ط§ظ„ط¯ط§ظƒظ†");
+    showToast(next === "light" ? "تم تفعيل النمط الفاتح" : "تم تفعيل النمط الداكن");
   }
 
   function getAvailableCourses() {
@@ -346,16 +346,16 @@
     elements.courseSelect.value = "";
 
     const quizGroup = document.createElement("optgroup");
-    quizGroup.label = "ط§ظ„ط¯ظˆط±ط§طھ ط§ظ„ظ…ظٹط¯ط§ظ†ظٹط©";
+    quizGroup.label = "الدورات الميدانية";
     const applicantGroup = document.createElement("optgroup");
-    applicantGroup.label = "طھط£ظ‡ظٹظ„ ط§ظ„ظ…طھظ‚ط¯ظ…ظٹظ† ط§ظ„ط¬ط¯ط¯";
+    applicantGroup.label = "تأهيل المتقدمين الجدد";
     const referenceGroup = document.createElement("optgroup");
-    referenceGroup.label = "ط§ظ„ط£ط¯ظ„ط© ظˆط§ظ„ظ…ط±ط§ط¬ط¹";
+    referenceGroup.label = "الأدلة والمراجع";
 
     getAvailableCourses().forEach((course) => {
       const option = document.createElement("option");
       option.value = course.id;
-      option.textContent = `${course.title} â€” ${course.requiredRank}`;
+      option.textContent = `${course.title} — ${course.requiredRank}`;
       const group = course.applicantCourse
         ? applicantGroup
         : course.hasQuiz
@@ -382,15 +382,15 @@
     const course = COURSE_MAP.get(elements.courseSelect.value);
     syncRankField(course);
     if (!course) {
-      elements.courseSelectHint.textContent = "ط³طھط¸ظ‡ط± ظ…ط¯ط© ط§ظ„ط¯ط±ط§ط³ط© ظˆط§ظ„ط§ط®طھط¨ط§ط± ط¨ط¹ط¯ ط§ط®طھظٹط§ط± ط§ظ„ط¯ظˆط±ط©";
+      elements.courseSelectHint.textContent = "ستظهر مدة الدراسة والاختبار بعد اختيار الدورة";
       return;
     }
 
     elements.courseSelectHint.textContent = course.applicantCourse
-      ? `ظ…ط³ط§ط± ط§ظ„ظ…طھظ‚ط¯ظ…ظٹظ† ط§ظ„ط¬ط¯ط¯ â€” ط§ط·ظ„ط§ط¹ ${course.studyMinutes} ط¯ظ‚ط§ط¦ظ‚ â€” ط§ط®طھط¨ط§ط± ${course.questionsPerQuiz} ط³ط¤ط§ظ„ط§ظ‹ ط®ظ„ط§ظ„ ${course.quizMinutes} ط¯ظ‚ظٹظ‚ط© â€” ط§ظ„ظ†ط¬ط§ط­ ظٹط¨ط¯ط£ ظ…ظ† ${course.passingPercentage}ظھ`
+      ? `مسار المتقدمين الجدد — اطلاع ${course.studyMinutes} دقائق — اختبار ${course.questionsPerQuiz} سؤالاً خلال ${course.quizMinutes} دقيقة — النجاح يبدأ من ${course.passingPercentage}٪`
       : course.hasQuiz
-      ? `ط§ظ„ظپط¦ط© ${course.requiredRank} â€” ط§ط·ظ„ط§ط¹ ${course.studyMinutes} ط¯ظ‚ظٹظ‚ط© â€” ط§ط®طھط¨ط§ط± ${course.quizMinutes} ط¯ظ‚ط§ط¦ظ‚`
-      : `${course.requiredRank} â€” ظ‚ط±ط§ط،ط© ظˆط§ط·ظ„ط§ط¹ ظ…ظ† ط¯ظˆظ† ط§ط®طھط¨ط§ط±`;
+      ? `الفئة ${course.requiredRank} — اطلاع ${course.studyMinutes} دقيقة — اختبار ${course.quizMinutes} دقائق`
+      : `${course.requiredRank} — قراءة واطلاع من دون اختبار`;
   }
 
   function syncRankField(course) {
@@ -407,7 +407,7 @@
   function handleEntrySubmit(event) {
     event.preventDefault();
     if (!isKnownSector(selectedSector)) {
-      showToast("ط§ط®طھط± ظ‚ط·ط§ط¹ظƒ ط§ظ„ط¹ط³ظƒط±ظٹ ظ‚ط¨ظ„ ط¨ط¯ط، ط§ظ„طھط¯ط±ظٹط¨", "error");
+      showToast("اختر قطاعك العسكري قبل بدء التدريب", "error");
       return;
     }
     const formData = new FormData(elements.traineeForm);
@@ -418,7 +418,7 @@
       discord: normalizeDigits(String(formData.get("discord") || "").trim()),
       rank:
         selectedCourse?.requiresRank === false
-          ? "ظ…طھظ‚ط¯ظ… ط¬ط¯ظٹط¯"
+          ? "متقدم جديد"
           : String(formData.get("rank") || "").trim()
     };
 
@@ -431,9 +431,9 @@
       const remaining = Math.max(1, Math.ceil((lock.until - Date.now()) / 3600000));
       setFieldError(
         elements.courseSelect,
-        `ظ„ط§ طھط²ط§ظ„ ظپطھط±ط© ط§ظ„ط§ظ†طھط¸ط§ط± ظپط¹ط§ظ„ط© ظˆظٹظ…ظƒظ†ظƒ ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط© ط¨ط¹ط¯ ظ†ط­ظˆ ${formatNumber(remaining)} ط³ط§ط¹ط©`
+        `لا تزال فترة الانتظار فعالة ويمكنك إعادة المحاولة بعد نحو ${formatNumber(remaining)} ساعة`
       );
-      showToast("طھط¹ط°ط± ط¨ط¯ط، ظ…ط­ط§ظˆظ„ط© ط¬ط¯ظٹط¯ط© ط®ظ„ط§ظ„ ظپطھط±ط© ط§ظ„ط§ظ†طھط¸ط§ط±", "error");
+      showToast("تعذر بدء محاولة جديدة خلال فترة الانتظار", "error");
       return;
     }
 
@@ -463,38 +463,38 @@
     let valid = true;
 
     if (!isKnownSector(selectedSector)) {
-      showToast("ط§ط®طھط± ظ‚ط·ط§ط¹ظƒ ط§ظ„ط¹ط³ظƒط±ظٹ ظ‚ط¨ظ„ ط¨ط¯ط، ط§ظ„طھط¯ط±ظٹط¨", "error");
+      showToast("اختر قطاعك العسكري قبل بدء التدريب", "error");
       return false;
     }
 
     if (
       trainee.name.length < 3 ||
       trainee.name.length > 60 ||
-      !/^[\p{L}\p{M}\s.'â€™-]+$/u.test(trainee.name)
+      !/^[\p{L}\p{M}\s.'’-]+$/u.test(trainee.name)
     ) {
-      setFieldError(elements.traineeName, "ط£ط¯ط®ظ„ ط§ط³ظ…ط§ظ‹ طµط­ظٹط­ط§ظ‹ ظ…ظ† 3 ط¥ظ„ظ‰ 60 ط­ط±ظپط§ظ‹");
+      setFieldError(elements.traineeName, "أدخل اسماً صحيحاً من 3 إلى 60 حرفاً");
       valid = false;
     }
 
     if (!/^\d{15,20}$/.test(trainee.discord)) {
-      setFieldError(elements.traineeDiscord, "ط£ط¯ط®ظ„ ظ…ط¹ط±ظ‘ظپ Discord ط±ظ‚ظ…ظٹط§ظ‹ ظ…ظ† 15 ط¥ظ„ظ‰ 20 ط®ط§ظ†ط©");
+      setFieldError(elements.traineeDiscord, "أدخل معرّف Discord رقمياً من 15 إلى 20 خانة");
       valid = false;
     }
 
     const selectedCourse = COURSE_MAP.get(courseId);
     if (selectedCourse?.requiresRank !== false && !trainee.rank) {
-      setFieldError(elements.traineeRank, "ط§ط®طھط± ط§ظ„ط±طھط¨ط© ط§ظ„ط­ط§ظ„ظٹط©");
+      setFieldError(elements.traineeRank, "اختر الرتبة الحالية");
       valid = false;
     }
 
     if (!selectedCourse || selectedCourse.sector !== selectedSector) {
-      setFieldError(elements.courseSelect, "ط§ط®طھط± ط¯ظˆط±ط© ط£ظˆ ظ…ط±ط¬ط¹ط§ظ‹ ظ…ظ† ط§ظ„ظ‚ط§ط¦ظ…ط©");
+      setFieldError(elements.courseSelect, "اختر دورة أو مرجعاً من القائمة");
       valid = false;
     }
 
     if (!elements.simulationConsent.checked) {
       const error = document.getElementById("simulation-consent-error");
-      error.textContent = "ظٹظ„ط²ظ… ط§ظ„ط¥ظ‚ط±ط§ط± ط¨ط£ظ† ط§ظ„ط¨ظٹط§ظ†ط§طھ طھط®طµ ط´ط®طµظٹط© ط§ظ„ظ…ط­ط§ظƒط§ط©";
+      error.textContent = "يلزم الإقرار بأن البيانات تخص شخصية المحاكاة";
       elements.simulationConsent.setAttribute("aria-invalid", "true");
       valid = false;
     }
@@ -502,7 +502,7 @@
     if (!valid) {
       const firstInvalid = elements.traineeForm.querySelector('[aria-invalid="true"]');
       firstInvalid?.focus();
-      showToast("ط±ط§ط¬ط¹ ط§ظ„ط­ظ‚ظˆظ„ ط§ظ„ظ…ط­ط¯ط¯ط© ط«ظ… ط­ط§ظˆظ„ ظ…ط±ط© ط£ط®ط±ظ‰", "error");
+      showToast("راجع الحقول المحددة ثم حاول مرة أخرى", "error");
     }
 
     return valid;
@@ -543,7 +543,99 @@
     return DEMO_MODE ? 4000 : course.studyMinutes * 60 * 1000;
   }
 
-  function getQuizDurat…6470 tokens truncated…"",
+  function getQuizDuration(course) {
+    return DEMO_MODE ? 90000 : course.quizMinutes * 60 * 1000;
+  }
+
+  function renderStudy() {
+    const course = getCurrentCourse();
+    if (!course || !state.trainee) {
+      resetToEntry("تعذر استعادة بيانات الدورة");
+      return;
+    }
+
+    showView("study");
+    elements.studyTitle.textContent = course.title;
+    elements.studyDescription.textContent =
+      course.description || `الفئة المستهدفة ${course.requiredRank}`;
+    elements.studyTraineeName.textContent = state.trainee.name;
+    elements.studyTraineeMeta.textContent = course.applicantCourse
+      ? `متقدم جديد • ${state.trainee.discord}`
+      : `${state.trainee.rank} • ${state.trainee.discord}`;
+    elements.documentTitle.textContent = course.title;
+    elements.studyFrame.title = `العرض التدريبي: ${course.title}`;
+    elements.studyFrame.src = course.slideUrl;
+    elements.slidesLink.href = course.slideUrl;
+
+    clearInterval(studyTicker);
+
+    if (!course.hasQuiz) {
+      elements.studyTimerCard.hidden = true;
+      elements.studyActionTitle.textContent = "المادة جاهزة للاطلاع";
+      elements.studyActionNote.textContent = "بعد إنهاء القراءة اضغط لإتمام الاطلاع";
+      elements.startQuizButton.disabled = false;
+      elements.startQuizButton.firstChild.textContent = "إتمام الاطلاع ";
+      return;
+    }
+
+    elements.studyTimerCard.hidden = false;
+    elements.startQuizButton.firstChild.textContent = "بدء الاختبار ";
+    updateStudyTimer();
+    studyTicker = window.setInterval(updateStudyTimer, 500);
+  }
+
+  function updateStudyTimer() {
+    const course = getCurrentCourse();
+    if (!course || !course.hasQuiz || state.stage !== "study") {
+      clear…4836 tokens truncated…ة انسخ الملخص أو اطبعه الآن",
+          "error"
+        );
+      }
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  function buildResultPayload() {
+    const course = getCurrentCourse();
+    const result = state.result;
+    const resultRank = course.applicantCourse
+      ? result.assignedRank || "غير مؤهل"
+      : state.trainee.rank;
+    return {
+      name: state.trainee.name,
+      rank: resultRank,
+      discord: state.trainee.discord,
+      courseName: course.title,
+      score: result.score,
+      total: result.total,
+      percentage: result.percentage,
+      status: course.applicantCourse
+        ? result.passed
+          ? "مؤهل"
+          : "غير مؤهل"
+        : result.passed
+          ? "اجتياز"
+          : "رسوب",
+      sector: state.sector || "facilities_security",
+      sectorName:
+        course.applicantCourse
+          ? "تأهيل الأفراد"
+          : getSectorLabel(state.sector),
+      schemaVersion: 2,
+      sessionId: state.sessionId,
+      receipt: result.receipt,
+      trainee: {
+        name: state.trainee.name,
+        rank: resultRank,
+        discord: state.trainee.discord
+      },
+      course: {
+        id: course.id,
+        title: course.title,
+        applicantCourse: Boolean(course.applicantCourse)
+      },
+      assignedRank: result.assignedRank || "",
       answers: state.questionIds.map((questionId) => ({
         questionId,
         answerIndex: Object.prototype.hasOwnProperty.call(state.answers, questionId)
@@ -585,32 +677,32 @@
     const result = state.result;
     const sectorName =
       course.applicantCourse
-        ? "طھط£ظ‡ظٹظ„ ط§ظ„ط£ظپط±ط§ط¯"
+        ? "تأهيل الأفراد"
         : getSectorLabel(state.sector);
-    const traineeLabel = course.applicantCourse ? "ط§ظ„ظ…طھظ‚ط¯ظ…" : "ط§ظ„ظ…طھط¯ط±ط¨";
+    const traineeLabel = course.applicantCourse ? "المتقدم" : "المتدرب";
     const lines = [
-      `ظ†طھظٹط¬ط© ط§ظ„ط£ظƒط§ط¯ظٹظ…ظٹط© ط§ظ„طھط¯ط±ظٹط¨ظٹط© ط§ظ„ظ…ط´طھط±ظƒط© â€” ${sectorName}`,
+      `نتيجة الأكاديمية التدريبية المشتركة — ${sectorName}`,
       `${traineeLabel}: ${state.trainee.name}`,
       `Discord ID: ${state.trainee.discord}`,
-      `ط§ظ„ط¯ظˆط±ط©: ${course.title}`,
+      `الدورة: ${course.title}`,
       result.isReference
-        ? "ط§ظ„ط­ط§ظ„ط©: طھظ… ط¥طھظ…ط§ظ… ط§ظ„ط§ط·ظ„ط§ط¹"
-        : `ط§ظ„ظ†طھظٹط¬ط© ${result.score} ظ…ظ† ${result.total} ط¨ظ†ط³ط¨ط© ${result.percentage} ط¨ط§ظ„ظ…ط¦ط©`,
+        ? "الحالة: تم إتمام الاطلاع"
+        : `النتيجة ${result.score} من ${result.total} بنسبة ${result.percentage} بالمئة`,
       result.isReference
         ? ""
-        : `ط§ظ„ط­ط§ظ„ط©: ${result.passed ? "ط§ط¬طھظٹط§ط²" : "ظ„ظ… ظٹط¬طھط²"}${result.timedOut ? " â€” ط§ظ†طھظ‡ظ‰ ط§ظ„ظˆظ‚طھ" : ""}`,
+        : `الحالة: ${result.passed ? "اجتياز" : "لم يجتز"}${result.timedOut ? " — انتهى الوقت" : ""}`,
       course.applicantCourse && result.passed
-        ? `ط§ظ„ط±طھط¨ط© ط§ظ„ظ…ط¨ط¯ط¦ظٹط© ط§ظ„ظ…ظ‚طھط±ط­ط©: ${result.assignedRank}`
+        ? `الرتبة المبدئية المقترحة: ${result.assignedRank}`
         : "",
-      `ط±ظ‚ظ… ط§ظ„ظ…ط­ط§ظˆظ„ط©: ${result.receipt}`,
-      `ظˆظ‚طھ ط§ظ„طھط³ظ„ظٹظ…: ${formatDate(result.completedAt)}`
+      `رقم المحاولة: ${result.receipt}`,
+      `وقت التسليم: ${formatDate(result.completedAt)}`
     ].filter(Boolean);
 
     try {
       await copyText(lines.join("\n"));
-      showToast("طھظ… ظ†ط³ط® ظ…ظ„ط®طµ ط§ظ„ظ†طھظٹط¬ط©", "success");
+      showToast("تم نسخ ملخص النتيجة", "success");
     } catch {
-      showToast("طھط¹ط°ط± ط§ظ„ظ†ط³ط® ط§ظ„طھظ„ظ‚ط§ط¦ظٹ ط§ط³طھط®ط¯ظ… ط®ظٹط§ط± ط§ظ„ط·ط¨ط§ط¹ط©", "error");
+      showToast("تعذر النسخ التلقائي استخدم خيار الطباعة", "error");
     }
   }
 
@@ -655,7 +747,7 @@
 
   function leaveStudy() {
     const confirmed = window.confirm(
-        "ط³ظٹطھظ… ط­ط°ظپ ط¬ظ„ط³ط© ط§ظ„ط§ط·ظ„ط§ط¹ ط§ظ„ط­ط§ظ„ظٹط© ظˆط§ظ„ط¹ظˆط¯ط© ط¥ظ„ظ‰ ط§ظ„ط¨ط¯ط§ظٹط© ظ‡ظ„ طھط±ظٹط¯ ط§ظ„ظ…طھط§ط¨ط¹ط©طں"
+        "سيتم حذف جلسة الاطلاع الحالية والعودة إلى البداية هل تريد المتابعة؟"
     );
     if (!confirmed) {
       return;
@@ -702,23 +794,23 @@
     pendingSession = saved;
     const course = COURSE_MAP.get(saved.courseId);
     elements.resumeTitle.textContent = saved.stage === "result"
-      ? "ظ„ط¯ظٹظƒ ظ†طھظٹط¬ط© ظ…ط­ظپظˆط¸ط©"
+      ? "لديك نتيجة محفوظة"
       : saved.stage === "quiz"
-        ? "ظ„ط¯ظٹظƒ ط§ط®طھط¨ط§ط± ظ„ظ… ظٹظƒطھظ…ظ„"
-        : "ظ„ط¯ظٹظƒ ظ…ط§ط¯ط© طھط¯ط±ظٹط¨ظٹط© ظ…ظپطھظˆط­ط©";
+        ? "لديك اختبار لم يكتمل"
+        : "لديك مادة تدريبية مفتوحة";
     elements.resumeDetails.textContent = course.applicantCourse
-      ? `${course.title} â€” ظ…طھظ‚ط¯ظ… ط¬ط¯ظٹط¯ / ${saved.trainee.name}`
-      : `${course.title} â€” ${saved.trainee.rank} / ${saved.trainee.name}`;
+      ? `${course.title} — متقدم جديد / ${saved.trainee.name}`
+      : `${course.title} — ${saved.trainee.rank} / ${saved.trainee.name}`;
     elements.resumeButton.textContent = saved.stage === "result"
-      ? "ط¹ط±ط¶ ط§ظ„ظ†طھظٹط¬ط©"
-      : "ظ…طھط§ط¨ط¹ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©";
+      ? "عرض النتيجة"
+      : "متابعة المحاولة";
     elements.resumeBanner.hidden = false;
   }
 
   function resumeSavedSession() {
     if (!pendingSession || !isValidSession(pendingSession)) {
       discardSavedSession();
-      showToast("طھط¹ط°ط± ط§ط³طھط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط© ط§ظ„ظ…ط­ظپظˆط¸ط©", "error");
+      showToast("تعذر استعادة المحاولة المحفوظة", "error");
       return;
     }
 
@@ -728,7 +820,7 @@
 
     if (state.stage === "result") {
       renderResult();
-      setSubmissionStatus("طھظ… ط§ط³طھط¹ط§ط¯ط© ط§ظ„ظ†طھظٹط¬ط© ط§ظ„ظ…ط­ظپظˆط¸ط© ط¹ظ„ظ‰ ظ‡ط°ط§ ط§ظ„ط¬ظ‡ط§ط²", "success");
+      setSubmissionStatus("تم استعادة النتيجة المحفوظة على هذا الجهاز", "success");
     } else if (state.stage === "quiz") {
       if (Date.now() >= state.quizEndsAt) {
         state.stage = "quiz";
@@ -746,7 +838,7 @@
     storageRemove(STORAGE.lastResult);
     pendingSession = null;
     elements.resumeBanner.hidden = true;
-    showToast("طھظ… ط­ط°ظپ ط§ظ„ظ…ط­ط§ظˆظ„ط© ط§ظ„ظ…ط­ظپظˆط¸ط©");
+    showToast("تم حذف المحاولة المحفوظة");
   }
 
   function isValidSession(value) {
@@ -837,7 +929,7 @@
     if (!storageSet(STORAGE.session, state) && !hasShownStorageWarning) {
       hasShownStorageWarning = true;
       showToast(
-        "طھط¹ط°ط± ط§ظ„ط­ظپط¸ ط§ظ„طھظ„ظ‚ط§ط¦ظٹ ظپظٹ ط§ظ„ظ…طھطµظپط­ ظ„ط§ طھط؛ظ„ظ‚ ط§ظ„طµظپط­ط© ط£ط«ظ†ط§ط، ط§ظ„ظ…ط­ط§ظˆظ„ط©",
+        "تعذر الحفظ التلقائي في المتصفح لا تغلق الصفحة أثناء المحاولة",
         "error",
         7000
       );
@@ -900,7 +992,7 @@
     try {
       window.localStorage.removeItem(key);
     } catch {
-      // ط§ظ„طھط®ط²ظٹظ† ط§ظ„ظ…ط­ظ„ظٹ ظ…ظٹط²ط© ظ…ط³ط§ط¹ط¯ط©طŒ ظˆطھط¹ط·ظ„ظ‡ ظ„ط§ ظٹظ…ظ†ط¹ طھط´ط؛ظٹظ„ ط§ظ„ظ…ظ†طµط©.
+      // التخزين المحلي ميزة مساعدة، وتعطله لا يمنع تشغيل المنصة.
     }
   }
 
@@ -964,20 +1056,20 @@
 
   function getApplicantRank(percentage) {
     if (percentage >= 85) {
-      return "ظˆظƒظٹظ„ ط±ظ‚ظٹط¨";
+      return "وكيل رقيب";
     }
     if (percentage >= 70) {
-      return "ط¹ط±ظٹظپ";
+      return "عريف";
     }
     if (percentage >= 60) {
-      return "ط¬ظ†ط¯ظٹ ط£ظˆظ„";
+      return "جندي أول";
     }
-    return "ط¬ظ†ط¯ظٹ";
+    return "جندي";
   }
 
   function getTraineeDisplay(course) {
     return course?.applicantCourse
-      ? `ظ…طھظ‚ط¯ظ… ط¬ط¯ظٹط¯ / ${state.trainee.name}`
+      ? `متقدم جديد / ${state.trainee.name}`
       : `${state.trainee.rank} / ${state.trainee.name}`;
   }
 
@@ -1092,11 +1184,11 @@
   }
 
   function normalizeDigits(value) {
-    const arabic = "ظ ظ،ظ¢ظ£ظ¤ظ¥ظ¦ظ§ظ¨ظ©";
-    const eastern = "غ°غ±غ²غ³غ´غµغ¶غ·غ¸غ¹";
+    const arabic = "٠١٢٣٤٥٦٧٨٩";
+    const eastern = "۰۱۲۳۴۵۶۷۸۹";
     return value
-      .replace(/[ظ -ظ©]/g, (digit) => String(arabic.indexOf(digit)))
-      .replace(/[غ°-غ¹]/g, (digit) => String(eastern.indexOf(digit)));
+      .replace(/[٠-٩]/g, (digit) => String(arabic.indexOf(digit)))
+      .replace(/[۰-۹]/g, (digit) => String(eastern.indexOf(digit)));
   }
 
   function formatNumber(value) {
