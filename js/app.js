@@ -179,6 +179,7 @@
     }
   }
 
+
   function bindEvents() {
     elements.themeButton.addEventListener("click", toggleTheme);
     document.querySelectorAll("[data-sector]").forEach((button) => {
@@ -358,6 +359,7 @@
       option.textContent = `${course.title} — ${course.requiredRank}`;
       const group = course.applicantCourse
         ? applicantGroup
+
         : course.hasQuiz
           ? quizGroup
           : referenceGroup;
@@ -539,6 +541,7 @@
     elements.traineeForm.querySelectorAll("input, select").forEach(clearFieldError);
   }
 
+
   function getStudyDuration(course) {
     return DEMO_MODE ? 4000 : course.studyMinutes * 60 * 1000;
   }
@@ -587,7 +590,529 @@
   function updateStudyTimer() {
     const course = getCurrentCourse();
     if (!course || !course.hasQuiz || state.stage !== "study") {
-      clear…4836 tokens truncated…ة انسخ الملخص أو اطبعه الآن",
+      clearInterval(studyTicker);
+      return;
+    }
+
+    const remaining = Math.max(0, state.studyEndsAt - Date.now());
+    const total = Math.max(1, state.studyEndsAt - state.studyStartedAt);
+    const elapsedPercent = clamp(((total - remaining) / total) * 100, 0, 100);
+
+    elements.studyTime.textContent = formatDuration(remaining);
+    elements.studyProgressBar.style.width = `${elapsedPercent}%`;
+
+    if (remaining <= 0) {
+      clearInterval(studyTicker);
+      elements.studyTime.textContent = "00:00";
+      elements.startQuizButton.disabled = false;
+      elements.studyActionTitle.textContent = "أصبحت جاهزاً للاختبار";
+      elements.studyActionNote.textContent = "تأكد من فهم المادة ثم ابدأ عندما تكون مستعداً";
+    } else {
+      elements.startQuizButton.disabled = true;
+      elements.studyActionTitle.textContent = "أكمل مدة الاطلاع أولاً";
+      elements.studyActionNote.textContent = `يتبقى ${formatDuration(remaining)} قبل تفعيل زر الاختبار`;
+    }
+  }
+
+  function handleStudyAction() {
+    const course = getCurrentCourse();
+    if (!course) {
+      return;
+    }
+
+    if (!course.hasQuiz) {
+      completeReference();
+      return;
+    }
+
+    if (Date.now() < state.studyEndsAt && !DEMO_MODE) {
+      showToast("لم تنتهِ مدة الاطلاع بعد", "error");
+      return;
+    }
+
+    startQuiz();
+  }
+
+  function startQuiz() {
+    const course = getCurrentCourse();
+    if (!course?.hasQuiz) {
+      return;
+    }
+
+    const now = Date.now();
+    if (!state.questionIds.length) {
+      const requestedCount = Number(course.questionsPerQuiz) || CONFIG.questionsPerQuiz;
+      const questionCount = Math.min(requestedCount, course.questions.length);
+      const selected = selectQuestionsForAttempt(course, questionCount);
+      state.questionIds = selected.map((question) => question.id);
+      state.optionOrders = {};
+      selected.forEach((question) => {
+        state.optionOrders[question.id] = shuffle(
+          question.options.map((_, originalIndex) => originalIndex)
+        );
+      });
+    }
+
+    state.stage = "quiz";
+    state.quizStartedAt ||= now;
+    state.quizEndsAt ||= now + getQuizDuration(course);
+    state.updatedAt = now;
+    saveSession();
+    renderQuiz();
+  }
+
+  function renderQuiz() {
+    const course = getCurrentCourse();
+    const questions = getSelectedQuestions();
+    if (!course || !questions.length) {
+      resetToEntry("تعذر استعادة أسئلة المحاولة");
+      return;
+    }
+
+    showView("quiz");
+    elements.quizTitle.textContent = `اختبار ${course.title}`;
+    elements.quizTraineeLine.textContent = getTraineeDisplay(course);
+    elements.totalCount.textContent = formatNumber(questions.length);
+    elements.visibilityCount.textContent = formatNumber(state.visibilityCount);
+    elements.quizForm.replaceChildren();
+    elements.questionMap.replaceChildren();
+
+    questions.forEach((question, index) => {
+      elements.quizForm.append(createQuestionCard(question, index));
+      elements.questionMap.append(createQuestionMapButton(question, index));
+    });
+
+    updateQuizProgress();
+    clearInterval(quizTicker);
+    updateQuizTimer();
+    quizTicker = window.setInterval(updateQuizTimer, 500);
+  }
+
+  function createQuestionCard(question, index) {
+    const fieldset = document.createElement("fieldset");
+    fieldset.className = "question-card";
+    fieldset.id = `question-${question.id}`;
+
+    const legend = document.createElement("legend");
+    const number = document.createElement("span");
+    number.className = "question-number";
+    number.textContent = formatNumber(index + 1);
+    const text = document.createElement("span");
+    text.textContent = question.text;
+    legend.append(number, text);
+
+    const optionsList = document.createElement("div");
+    optionsList.className = "options-list";
+
+    const optionOrder =
+      state.optionOrders[question.id] ||
+      question.options.map((_, originalIndex) => originalIndex);
+
+    optionOrder.forEach((originalIndex) => {
+      const label = document.createElement("label");
+      label.className = "option-control";
+
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = `answer-${question.id}`;
+      input.value = String(originalIndex);
+      input.checked = Number(state.answers[question.id]) === originalIndex;
+      input.addEventListener("change", () => {
+        state.answers[question.id] = originalIndex;
+        state.updatedAt = Date.now();
+        fieldset.classList.remove("is-missing");
+
+        saveSession();
+        updateQuizProgress();
+      });
+
+      const radio = document.createElement("span");
+      radio.className = "option-control__radio";
+      radio.setAttribute("aria-hidden", "true");
+
+      const optionText = document.createElement("span");
+      optionText.textContent = question.options[originalIndex];
+      label.append(input, radio, optionText);
+      optionsList.append(label);
+    });
+
+    fieldset.append(legend, optionsList);
+    return fieldset;
+  }
+
+  function createQuestionMapButton(question, index) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "question-map__button";
+    button.dataset.questionId = question.id;
+    button.textContent = formatNumber(index + 1);
+    button.setAttribute("aria-label", `الانتقال إلى السؤال ${index + 1}`);
+    if (Object.prototype.hasOwnProperty.call(state.answers, question.id)) {
+      button.classList.add("is-answered");
+    }
+    button.addEventListener("click", () => {
+      document.getElementById(`question-${question.id}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    });
+    return button;
+  }
+
+  function updateQuizProgress() {
+    const questions = getSelectedQuestions();
+    const answered = questions.filter((question) =>
+      Object.prototype.hasOwnProperty.call(state.answers, question.id)
+    ).length;
+    const percent = questions.length ? Math.round((answered / questions.length) * 100) : 0;
+
+    elements.answeredCount.textContent = formatNumber(answered);
+    elements.quizProgressText.textContent = `${formatNumber(percent)}٪`;
+    elements.quizProgressBar.style.width = `${percent}%`;
+    elements.quizProgressBar.parentElement.setAttribute("aria-valuenow", String(percent));
+
+    questions.forEach((question) => {
+      const mapButton = elements.questionMap.querySelector(
+        `[data-question-id="${question.id}"]`
+      );
+      const isAnswered = Object.prototype.hasOwnProperty.call(state.answers, question.id);
+      mapButton?.classList.toggle("is-answered", isAnswered);
+      mapButton?.classList.remove("is-missing");
+    });
+  }
+
+  function updateQuizTimer() {
+    if (state.stage !== "quiz") {
+      clearInterval(quizTicker);
+      return;
+    }
+
+    const remaining = Math.max(0, state.quizEndsAt - Date.now());
+    elements.quizTime.textContent = formatDuration(remaining);
+
+    if (remaining <= 60000) {
+      elements.quizTime.style.color = "var(--danger)";
+    } else {
+      elements.quizTime.style.color = "";
+    }
+
+    if (remaining <= 0 && !isSubmitting) {
+      clearInterval(quizTicker);
+      state.timedOut = true;
+      showToast("انتهى وقت الاختبار وتم تسليم الإجابات الحالية", "error", 6000);
+      finalizeQuiz({ timedOut: true });
+    }
+  }
+
+  function requestQuizSubmission() {
+    if (isSubmitting) {
+      return;
+    }
+
+    const questions = getSelectedQuestions();
+    const unanswered = questions.filter(
+      (question) => !Object.prototype.hasOwnProperty.call(state.answers, question.id)
+    );
+
+    document.querySelectorAll(".question-card").forEach((card) => {
+      card.classList.remove("is-missing");
+    });
+    document.querySelectorAll(".question-map__button").forEach((button) => {
+      button.classList.remove("is-missing");
+    });
+
+    if (unanswered.length) {
+      unanswered.forEach((question) => {
+        document.getElementById(`question-${question.id}`)?.classList.add("is-missing");
+        elements.questionMap
+          .querySelector(`[data-question-id="${question.id}"]`)
+          ?.classList.add("is-missing");
+      });
+      document.getElementById(`question-${unanswered[0].id}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+      showToast(
+        `بقي ${formatNumber(unanswered.length)} من الأسئلة دون إجابة`,
+        "error",
+        5000
+      );
+      return;
+    }
+
+    elements.confirmMessage.textContent =
+      "سيتم اعتماد هذه الإجابات وحفظ المحاولة هل تريد المتابعة؟";
+    if (typeof elements.confirmDialog.showModal === "function") {
+      elements.confirmDialog.showModal();
+    } else if (window.confirm("هل أنت متأكد من تسليم إجاباتك؟")) {
+      finalizeQuiz({ timedOut: false });
+    }
+  }
+
+  async function finalizeQuiz({ timedOut }) {
+    if (isSubmitting || state.stage !== "quiz") {
+      return;
+    }
+    isSubmitting = true;
+    elements.submitQuizButton.disabled = true;
+    clearInterval(quizTicker);
+    if (elements.confirmDialog.open) {
+      elements.confirmDialog.close("timeout");
+    }
+
+    const course = getCurrentCourse();
+    const questions = getSelectedQuestions();
+    const score = questions.reduce((total, question) => {
+      return total + (Number(state.answers[question.id]) === question.answerIndex ? 1 : 0);
+    }, 0);
+    const rawPercentage = questions.length ? (score / questions.length) * 100 : 0;
+    const percentage = Math.round(rawPercentage);
+    const passingPercentage = getPassingPercentage(course);
+    const passed = rawPercentage >= passingPercentage;
+    const assignedRank =
+      course.applicantCourse && passed ? getApplicantRank(percentage) : "";
+    const completedAt = Date.now();
+
+    state.timedOut = Boolean(timedOut);
+    state.stage = "result";
+    state.result = {
+      receipt: createId("RP"),
+      score,
+      total: questions.length,
+      percentage,
+      passed,
+      passingPercentage,
+      assignedRank,
+      timedOut: Boolean(timedOut),
+      completedAt,
+      visibilityCount: state.visibilityCount,
+      localSaved: false
+    };
+    state.updatedAt = completedAt;
+
+    saveAttemptLock();
+    saveHistoryRecord();
+    persistLastResult();
+    storageRemove(STORAGE.session);
+    renderResult();
+    setResultActionsDisabled(true);
+    try {
+      await submitResult();
+    } finally {
+      isSubmitting = false;
+      setResultActionsDisabled(false);
+    }
+
+  }
+
+  async function completeReference() {
+    if (isSubmitting || state.stage !== "study") {
+      return;
+    }
+    isSubmitting = true;
+    elements.startQuizButton.disabled = true;
+    const now = Date.now();
+    state.stage = "result";
+    state.result = {
+      receipt: createId("READ"),
+      score: 0,
+      total: 0,
+      percentage: null,
+      passed: true,
+      isReference: true,
+      timedOut: false,
+      completedAt: now,
+      visibilityCount: 0,
+      localSaved: false
+    };
+    state.updatedAt = now;
+    saveHistoryRecord();
+    persistLastResult();
+    storageRemove(STORAGE.session);
+    renderResult();
+    setResultActionsDisabled(true);
+    try {
+      await submitResult();
+    } finally {
+      isSubmitting = false;
+      setResultActionsDisabled(false);
+    }
+  }
+
+  function renderResult() {
+    const course = getCurrentCourse();
+    const result = state.result;
+    if (!course || !result) {
+      resetToEntry("تعذر عرض نتيجة المحاولة");
+      return;
+    }
+
+    showView("result");
+    const isReference = Boolean(result.isReference);
+    const passed = result.passed;
+    const isApplicantCourse = Boolean(course.applicantCourse);
+
+    elements.resultEmblem.classList.toggle("is-failed", !passed);
+    elements.scoreRing.classList.toggle("is-failed", !passed);
+    elements.resultEmblemPath.setAttribute(
+      "d",
+      passed ? "m14 25 7 7 14-17" : "M16 16l16 16M32 16 16 32"
+    );
+
+    if (isReference) {
+      elements.resultKicker.textContent = "اكتمل الاطلاع";
+      elements.resultTitle.textContent = "تم إتمام قراءة المرجع";
+      elements.resultMessage.textContent = "يمكنك الآن العودة إلى القائمة الرئيسية";
+      elements.scoreRing.hidden = true;
+    } else if (isApplicantCourse) {
+      elements.scoreRing.hidden = false;
+      elements.resultKicker.textContent = result.timedOut
+        ? "انتهى وقت اختبار التأهيل"
+        : "اكتمل اختبار التأهيل";
+      elements.resultTitle.textContent = passed
+        ? "تم اجتياز اختبار تأهيل الأفراد"
+        : "لم يتم اجتياز اختبار التأهيل";
+      elements.resultMessage.textContent = passed
+        ? `تم تحديد رتبتك المبدئية حسب النتيجة: ${result.assignedRank}. تخضع الرتبة للاعتماد النهائي من قيادة أمن المنشآت.`
+        : `الحد الأدنى للتأهيل ${formatNumber(getPassingPercentage(course))}٪. راجع الدليل وحاول بعد انتهاء فترة الانتظار.`;
+      elements.resultPercentage.textContent = `${formatNumber(result.percentage)}٪`;
+      elements.scoreRing.style.setProperty(
+        "--score-angle",
+        `${clamp(result.percentage, 0, 100) * 3.6}deg`
+      );
+    } else {
+      elements.scoreRing.hidden = false;
+      elements.resultKicker.textContent = result.timedOut ? "انتهى وقت الاختبار" : "اكتمل الاختبار";
+      elements.resultTitle.textContent = passed
+        ? "أحسنت، تم اجتياز الدورة"
+        : "لم تحقق درجة الاجتياز";
+      elements.resultMessage.textContent = passed
+        ? "تم حفظ نتيجتك ويمكنك نسخ الملخص ومشاركته"
+        : `درجة الاجتياز المطلوبة ${formatNumber(getPassingPercentage(course))}٪ راجع المادة وحاول بعد انتهاء فترة الانتظار`;
+      elements.resultPercentage.textContent = `${formatNumber(result.percentage)}٪`;
+      elements.scoreRing.style.setProperty(
+        "--score-angle",
+        `${clamp(result.percentage, 0, 100) * 3.6}deg`
+      );
+    }
+
+    elements.resultTrainee.textContent = getTraineeDisplay(course);
+    elements.resultCourse.textContent = course.title;
+    elements.resultAssignedRankRow.hidden = !isApplicantCourse;
+    elements.resultAssignedRank.textContent = passed
+      ? result.assignedRank
+      : "غير مؤهل";
+    elements.resultScore.textContent = isReference
+      ? "اطلاع مكتمل"
+      : `${formatNumber(result.score)} من ${formatNumber(result.total)}`;
+    elements.resultReceipt.textContent = result.receipt;
+    elements.resultDate.textContent = formatDate(result.completedAt);
+    elements.resultNotes.textContent = result.visibilityCount
+      ? `${formatNumber(result.visibilityCount)} ملاحظة تبديل نافذة`
+      : "لا توجد ملاحظات";
+    setSubmissionStatus("جاري حفظ النتيجة", "");
+  }
+
+  async function submitResult() {
+    const payload = buildResultPayload();
+    const submittedSessionId = state.sessionId;
+    const submittedResult = state.result;
+
+    if (submittedResult.isReference) {
+      setSubmissionStatus(
+        submittedResult.localSaved
+          ? "تم إتمام الاطلاع وحفظه محليا دون إرساله إلى سجل الاختبارات"
+          : "تم إتمام الاطلاع وتعذر حفظه محليا",
+        submittedResult.localSaved ? "success" : "error"
+      );
+      return;
+    }
+
+    if (!CONFIG.resultsEndpoint) {
+      if (submittedResult.localSaved) {
+        setSubmissionStatus(
+          "تم حفظ النتيجة محلياً على هذا الجهاز ولم يتم ربط خادم النتائج بعد",
+          "success"
+        );
+      } else {
+        setSubmissionStatus(
+          "تعذر الحفظ المحلي انسخ النتيجة أو اطبعها قبل مغادرة الصفحة",
+          "error"
+        );
+      }
+      return;
+    }
+
+    if (CONFIG.submissionMode === "google-apps-script") {
+      try {
+        await fetch(CONFIG.resultsEndpoint, {
+          method: "POST",
+          mode: "no-cors",
+          keepalive: true,
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (state.sessionId === submittedSessionId) {
+          setSubmissionStatus(
+            submittedResult.localSaved
+              ? "تم إرسال النتيجة إلى سجل الإدارة وحفظ نسخة محلية"
+              : "تم إرسال النتيجة إلى سجل الإدارة",
+            "success"
+          );
+        }
+      } catch (error) {
+        console.error("Google Apps Script submission failed:", error);
+        if (state.sessionId === submittedSessionId) {
+          setSubmissionStatus(
+            submittedResult.localSaved
+              ? "تم حفظ النتيجة محليا لكن تعذر إرسالها إلى سجل الإدارة"
+              : "تعذر حفظ النتيجة وإرسالها إلى سجل الإدارة",
+            "error"
+          );
+        }
+      }
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 12000);
+
+    try {
+      const response = await fetch(CONFIG.resultsEndpoint, {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json().catch(() => ({}));
+      if (data.receipt) {
+        submittedResult.receipt = String(data.receipt);
+        if (state.sessionId === submittedSessionId && state.result === submittedResult) {
+          elements.resultReceipt.textContent = submittedResult.receipt;
+          storageSet(STORAGE.lastResult, state);
+        }
+      }
+      if (state.sessionId === submittedSessionId) {
+        setSubmissionStatus("تم حفظ النتيجة ورفعها إلى سجل الإدارة", "success");
+      }
+    } catch (error) {
+      console.error("Result submission failed:", error);
+      if (state.sessionId === submittedSessionId) {
+        setSubmissionStatus(
+          submittedResult.localSaved
+            ? "تم الحفظ محلياً لكن تعذر رفع النتيجة احتفظ برقم المحاولة وأبلغ الإدارة"
+            : "تعذر الحفظ المحلي ورفع النتيجة انسخ الملخص أو اطبعه الآن",
           "error"
         );
       }
@@ -739,6 +1264,7 @@
   function handleBeforeUnload(event) {
     if (state.stage !== "quiz") {
       return;
+
     }
     saveSession();
     event.preventDefault();
@@ -919,6 +1445,7 @@
       }
       return true;
     });
+
   }
 
   function saveSession() {
@@ -1099,6 +1626,7 @@
     const random =
       window.crypto?.randomUUID?.().replace(/-/g, "").slice(0, 10).toUpperCase() ||
       Math.random().toString(36).slice(2, 12).toUpperCase();
+
     return `${prefix}-${random}`;
   }
 
