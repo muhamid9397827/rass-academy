@@ -18,6 +18,7 @@
   const FACILITIES_SECURITY = "facilities_security";
   const SECURITY_REGIMENTS = "security_regiments";
   const PUBLIC_SECURITY = "public_security";
+  const PUBLIC_SECURITY_TEST_MODE = true;
   const STORAGE = {
     session: "rp-academy-v2:active-session",
     lastResult: "rp-academy-v2:last-result",
@@ -784,6 +785,14 @@
   function updateQuizTimer() {
     if (state.stage !== "quiz") {
       clearInterval(quizTicker);
+      return;
+    }
+
+    const course = getCurrentCourse();
+    if (PUBLIC_SECURITY_TEST_MODE && course?.sector === PUBLIC_SECURITY) {
+      clearInterval(quizTicker);
+      elements.quizTime.textContent = "متوقف مؤقتاً";
+      elements.quizTime.style.color = "";
       return;
     }
 
