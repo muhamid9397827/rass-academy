@@ -2,6 +2,23 @@
   "use strict";
 
   window.COURSES = {
+    individualQualification: {
+      sector: "facilities_security",
+      id: "individual-qualification",
+      title: "اختبار تأهيل الأفراد",
+      requiredRank: "المتقدمون الجدد",
+      applicantCourse: true,
+      requiresRank: false,
+      hasQuiz: true,
+      studyMinutes: 8,
+      quizMinutes: 15,
+      questionsPerQuiz: 20,
+      passingPercentage: 50,
+      slideUrl: "https://docs.google.com/presentation/d/1F570rL6gb4yFE8rTNraLOwByUlob1QMmyO4w7id5jNU/embed?rm=minimal",
+      description: "مسار مستقل لتأهيل المتقدمين الجدد وتحديد الرتبة المبدئية حسب نتيجة الاختبار.",
+      questions: []
+    },
+
     operations: {
       sector: "facilities_security",
       id: "operations",
