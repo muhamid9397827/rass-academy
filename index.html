@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="css/styles.css">
   <script src="js/config.js" defer></script>
   <script src="js/courses.js" defer></script>
+  <script src="js/banks/individual-qualification.js" defer></script>
   <script src="js/banks/regiments-zone-officer.js" defer></script>
   <script src="js/banks/regiments-recruitment.js" defer></script>
   <script src="js/banks/regiments-operations.js" defer></script>
@@ -258,15 +259,13 @@
                 <small id="trainee-discord-error" class="field__error"></small>
               </div>
 
-              <div class="field">
+              <div id="rank-field" class="field">
                 <label for="trainee-rank">الرتبة الحالية</label>
                 <div class="field__control field__control--select">
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="m12 3 2.4 4.8 5.3.8-3.8 3.7.9 5.2-4.8-2.4-4.8 2.4.9-5.2-3.8-3.7 5.3-.8L12 3Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
                   </svg>
-                  <select id="trainee-rank" name="rank" required>
-                    <option value="">اختر الرتبة</option>
-                    <option>جندي</option>
+                  …41 tokens truncated…               <option>جندي</option>
                     <option>جندي أول</option>
                     <option>عريف</option>
                     <option>وكيل رقيب</option>
@@ -497,6 +496,10 @@
           <div>
             <dt>الدورة</dt>
             <dd id="result-course"></dd>
+          </div>
+          <div id="result-assigned-rank-row" hidden>
+            <dt>الرتبة المبدئية</dt>
+            <dd id="result-assigned-rank"></dd>
           </div>
           <div>
             <dt>الإجابات الصحيحة</dt>
