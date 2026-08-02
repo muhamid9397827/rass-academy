@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=20260802-3">
+  <link rel="stylesheet" href="css/styles.css?v=20260802-4">
   <script src="js/config.js" defer></script>
   <script src="js/courses.js?v=20260802-3" defer></script>
   <script src="js/banks/individual-qualification.js" defer></script>
@@ -101,107 +101,66 @@
 
     <section id="sector-view" class="view sector-view" aria-labelledby="sector-title" hidden>
       <div class="sector-landing">
-        <section class="landing-hero" aria-describedby="sector-subtitle">
-          <div class="landing-hero__content">
-            <div class="landing-hero__meta">
-              <span class="eyebrow">بوابة التدريب</span>
-              <span class="landing-location">محافظة الرس</span>
+        <header class="portal-heading" aria-describedby="sector-subtitle">
+          <span class="eyebrow">الأكاديمية التدريبية المشتركة</span>
+          <h1 id="sector-title">كل الخدمات من نقطة واحدة</h1>
+          <p id="sector-subtitle">اختر التدريب أو التقديم الإداري، وانتقل مباشرة إلى المسار المطلوب.</p>
+        </header>
+
+        <div class="portal-services">
+          <section class="portal-service portal-service--training" aria-labelledby="training-service-title">
+            <div class="portal-service__heading">
+              <span class="portal-service__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="m3 9 9-5 9 5-9 5-9-5Zm4 2.3V16c3 2.5 7 2.5 10 0v-4.7M20 10v6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <div>
+                <h2 id="training-service-title">التدريب والاختبارات</h2>
+                <p>اختر القطاع لعرض الدورات والمواد المتاحة.</p>
+              </div>
             </div>
-            <h1 id="sector-title">الأكاديمية التدريبية المشتركة</h1>
-            <p id="sector-subtitle">منصة التدريب الموحدة للقطاعات الأمنية</p>
-            <div class="landing-hero__actions">
-              <a class="button button--primary" href="#available-sectors">
-                ابدأ التدريب
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M5 12h14m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-              </a>
-              <a class="button button--ghost" href="#available-sectors">عرض القطاعات</a>
+
+            <div class="portal-routes">
+              <button class="portal-route" type="button" data-sector="facilities_security">
+                <span>
+                  <strong>أمن المنشآت</strong>
+                  <small>الدورات والمواد التدريبية</small>
+                </span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button class="portal-route" type="button" data-sector="security_regiments">
+                <span>
+                  <strong>الأفواج الأمنية</strong>
+                  <small>الدورات والاختبارات الميدانية</small>
+                </span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button class="portal-route" type="button" data-sector="public_security">
+                <span>
+                  <strong>الأمن العام</strong>
+                  <small>دورات متدرجة حسب الرتب</small>
+                </span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
             </div>
-          </div>
-          <div class="landing-hero__emblem" aria-hidden="true">
-            <svg viewBox="0 0 120 120">
-              <path d="M60 9 99 23v30c0 27-15.3 47.7-39 58-23.7-10.3-39-31-39-58V23L60 9Z" fill="currentColor" opacity=".1"/>
-              <path d="M60 15 93 27v26c0 22.3-12.5 40.3-33 50-20.5-9.7-33-27.7-33-50V27l33-12Z" fill="none" stroke="currentColor" stroke-width="2.4"/>
-              <path d="m42 60 11 11 25-28" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-        </section>
+          </section>
 
-        <section id="available-sectors" class="sectors-section" aria-labelledby="available-sectors-title">
-          <div class="sectors-section__heading">
-            <div>
-              <span class="eyebrow">القطاعات المتاحة</span>
-              <h2 id="available-sectors-title">اختر مسار التدريب المناسب</h2>
-            </div>
-            <p>مسارات تدريبية مستقلة، مصممة لتجربة واضحة ومنظمة.</p>
-          </div>
-
-          <div class="sector-grid">
-            <article class="sector-card sector-card--facilities">
-              <div class="sector-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M12 3 20 6v5c0 5.5-3.4 9.5-8 11-4.6-1.5-8-5.5-8-11V6l8-3Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
-                  <path d="m8.5 12 2.1 2.1 4.8-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-              <div class="sector-card__content">
-                <span class="sector-card__eyebrow">قطاع تدريبي</span>
-                <h3>أمن المنشآت</h3>
-                <p>الدورات والمواد التدريبية المتاحة لمنسوبي أمن المنشآت.</p>
-              </div>
-              <button class="button button--primary sector-card__action" type="button" data-sector="facilities_security">دخول القطاع</button>
-            </article>
-
-            <article class="sector-card sector-card--regiments">
-              <div class="sector-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M4 20V9l8-5 8 5v11M8 20v-5h8v5M12 4v11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-              <div class="sector-card__content">
-                <span class="sector-card__eyebrow">قطاع تدريبي</span>
-                <h3>الأفواج الأمنية</h3>
-                <p>دورات ومواد واختبارات ميدانية خاصة بقطاع الأفواج الأمنية.</p>
-              </div>
-              <button class="button button--primary sector-card__action" type="button" data-sector="security_regiments">استعراض الدورات</button>
-            </article>
-
-            <article class="sector-card sector-card--public">
-              <div class="sector-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M12 3v18M5 8l7-5 7 5M6 21h12M8 11h8v7H8z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-              <div class="sector-card__content">
-                <span class="sector-card__eyebrow">قطاع تدريبي</span>
-                <h3>الأمن العام</h3>
-                <p>دورات واختبارات ميدانية متدرجة حسب الرتب لمنسوبي الأمن العام.</p>
-              </div>
-              <button class="button button--primary sector-card__action" type="button" data-sector="public_security">استعراض الدورات</button>
-            </article>
-
-            <article id="application-card" class="sector-card sector-card--application">
-              <div class="sector-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M8 4h8m-7 0v3h6V4m-9 3h12v14H6V7Zm3 5h6m-6 4h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-              <div class="sector-card__content">
-                <span id="application-card-status" class="sector-card__status">جاري التحقق من حالة التقديم</span>
-                <h3>التقديم على إدارة محافظة الرس</h3>
-                <p id="application-card-note">بوابة استقبال طلبات المتقدمين الجدد لفريق الدعم والمساعدة.</p>
-              </div>
-              <button id="open-application-button" class="button button--primary sector-card__action" type="button">دخول بوابة التقديم</button>
-            </article>
-          </div>
-        </section>
-
-        <section class="sector-stats" aria-label="إحصائيات القطاعات المتاحة">
-          <div><strong>٣</strong><span>قطاعات في المنصة</span></div>
-          <div><strong>١٩</strong><span>دورة ومرجع تدريبي</span></div>
-          <div><strong>١٧</strong><span>بنوك أسئلة مستقلة</span></div>
-        </section>
+          <section id="application-card" class="portal-service portal-service--application" aria-labelledby="application-service-title">
+            <span id="application-card-status" class="sector-card__status">جاري التحقق من حالة التقديم</span>
+            <span class="portal-application__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M8 4h8m-7 0v3h6V4m-9 3h12v14H6V7Zm3 5h6m-6 4h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <h2 id="application-service-title">التقديم على إدارة محافظة الرس</h2>
+            <p id="application-card-note">بوابة منفصلة لاستقبال طلبات المتقدمين الجدد لفريق الدعم والمساعدة.</p>
+            <button id="open-application-button" class="button button--primary" type="button">
+              دخول بوابة التقديم
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </section>
+        </div>
       </div>
     </section>
 
