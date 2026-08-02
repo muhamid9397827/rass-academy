@@ -5,20 +5,21 @@
     isOpen: false,
     managerName: "خيرو بن طيب",
     endpoint: "",
-    accessCodeHash: "",
+    statusEndpoint: "",
     closedMessage: "التقديم مغلق الآن. راجع إعلانات فتح التقديم عبر الديسكورد."
   });
   const config = Object.freeze({
     ...DEFAULTS,
     ...((window.APP_CONFIG && window.APP_CONFIG.administrationApplications) || {})
   });
-  const ACCESS_KEY = "rass-administration-application:access";
-  const ATTEMPTS_KEY = "rass-administration-application:attempts";
   const RECEIPT_KEY = "rass-administration-application:receipt";
-  const MAX_ATTEMPTS = 5;
-  const BLOCK_DURATION = 15 * 60 * 1000;
   const elements = {};
   let isSubmitting = false;
+  let applicationState = {
+    isOpen: Boolean(config.isOpen),
+    managerName: config.managerName,
+    closedMessage: config.closedMessage
+  };
 
   function cacheElements() {
     const ids = [
@@ -39,12 +40,6 @@
       "application-success-panel",
       "application-receipt",
       "application-success-back-button",
-      "application-access-dialog",
-      "application-access-form",
-      "application-access-code",
-      "application-access-error",
-      "application-access-cancel",
-      "application-access-submit",
       "progress-steps",
       "sector-indicator",
       "sector-view"
@@ -68,15 +63,11 @@
     applyApplicationStatus();
     bindEvents();
     restoreSubmittedReceipt();
+    refreshApplicationStatus();
   }
 
   function bindEvents() {
-    elements.openApplicationButton.addEventListener("click", requestApplicationAccess);
-    elements.applicationAccessForm.addEventListener("submit", handleAccessSubmit);
-    elements.applicationAccessCancel.addEventListener("click", closeAccessDialog);
-    elements.applicationAccessCode.addEventListener("input", () => {
-      elements.applicationAccessError.textContent = "";
-    });
+    elements.openApplicationButton.addEventListener("click", showApplicationView);
     elements.applicationBackButton.addEventListener("click", returnToHome);
     elements.applicationSuccessBackButton.addEventListener("click", returnToHome);
     elements.administrationApplicationForm.addEventListener("submit", handleApplicationSubmit);
@@ -89,12 +80,12 @@
   }
 
   function applyApplicationStatus() {
-    elements.applicationManagerName.textContent = config.managerName;
-    elements.applicationClosedMessage.textContent = config.closedMessage;
-    elements.applicationCard.classList.toggle("is-closed", !config.isOpen);
-    elements.openApplicationButton.disabled = !config.isOpen;
+    elements.applicationManagerName.textContent = applicationState.managerName;
+    elements.applicationClosedMessage.textContent = applicationState.closedMessage;
+    elements.applicationCard.classList.toggle("is-closed", !applicationState.isOpen);
+    elements.openApplicationButton.disabled = !applicationState.isOpen;
 
-    if (config.isOpen) {
+    if (applicationState.isOpen) {
       elements.applicationCardStatus.textContent = "التقديم مفتوح الآن";
       elements.applicationCardStatus.classList.add("is-open");
       elements.applicationCardNote.textContent =
@@ -103,92 +94,57 @@
     } else {
       elements.applicationCardStatus.textContent = "التقديم مغلق";
       elements.applicationCardStatus.classList.remove("is-open");
-      elements.applicationCardNote.textContent = config.closedMessage;
+      elements.applicationCardNote.textContent = applicationState.closedMessage;
       elements.openApplicationButton.textContent = "التقديم مغلق حاليًا";
     }
   }
 
-  function requestApplicationAccess() {
-    if (!config.isOpen) {
+  async function refreshApplicationStatus() {
+    const statusEndpoint = config.statusEndpoint || config.endpoint;
+    if (!statusEndpoint) {
       return;
     }
 
-    if (hasApplicationAccess()) {
-      showApplicationView();
-      return;
-    }
-
-    const remaining = getBlockRemaining();
-    if (remaining > 0) {
-      elements.applicationAccessError.textContent =
-        `تم إيقاف المحاولات مؤقتًا. حاول بعد ${formatMinutes(remaining)} دقيقة.`;
-    } else {
-      elements.applicationAccessError.textContent = "";
-    }
-    elements.applicationAccessCode.value = "";
-    elements.applicationAccessDialog.showModal();
-    window.setTimeout(() => elements.applicationAccessCode.focus(), 50);
-  }
-
-  async function handleAccessSubmit(event) {
-    event.preventDefault();
-    const remaining = getBlockRemaining();
-    if (remaining > 0) {
-      elements.applicationAccessError.textContent =
-        `تم إيقاف المحاولات مؤقتًا. حاول بعد ${formatMinutes(remaining)} دقيقة.`;
-      return;
-    }
-
-    const code = elements.applicationAccessCode.value.trim();
-    if (!code) {
-      elements.applicationAccessError.textContent = "أدخل رمز الوصول.";
-      return;
-    }
-
-    elements.applicationAccessSubmit.disabled = true;
     try {
-      const hash = await sha256(code);
-      if (hash !== config.accessCodeHash) {
-        registerFailedAttempt();
-        const afterFailure = getBlockRemaining();
-        elements.applicationAccessError.textContent = afterFailure > 0
-          ? "تم تجاوز عدد المحاولات. أُوقف الدخول لمدة 15 دقيقة."
-          : "رمز الوصول غير صحيح.";
-        elements.applicationAccessCode.select();
+      const separator = statusEndpoint.includes("?") ? "&" : "?";
+      const response = await fetch(`${statusEndpoint}${separator}action=status&t=${Date.now()}`, {
+        method: "GET",
+        cache: "no-store",
+        redirect: "follow"
+      });
+      if (!response.ok) {
+        throw new Error(`Status request failed with ${response.status}`);
+      }
+
+      const payload = await response.json();
+      if (typeof payload.isOpen !== "boolean") {
         return;
       }
 
-      clearFailedAttempts();
-      setSessionValue(ACCESS_KEY, config.accessCodeHash);
-      closeAccessDialog();
-      showApplicationView();
+      applicationState = {
+        isOpen: payload.isOpen,
+        managerName: clean(payload.managerName) || config.managerName,
+        closedMessage: clean(payload.closedMessage) || config.closedMessage
+      };
+      applyApplicationStatus();
     } catch (error) {
-      console.error("Application access verification failed:", error);
-      elements.applicationAccessError.textContent = "تعذر التحقق من الرمز. أعد المحاولة.";
-    } finally {
-      elements.applicationAccessSubmit.disabled = false;
+      console.warn("Application status check failed; using local fallback.", error);
     }
-  }
-
-  function closeAccessDialog() {
-    if (elements.applicationAccessDialog.open) {
-      elements.applicationAccessDialog.close();
-    }
-  }
-
-  function hasApplicationAccess() {
-    return getSessionValue(ACCESS_KEY) === config.accessCodeHash && Boolean(config.accessCodeHash);
   }
 
   function showApplicationView() {
+    if (!applicationState.isOpen) {
+      return;
+    }
+
     document.querySelectorAll(".view").forEach((view) => {
       view.hidden = true;
     });
     elements.applicationView.hidden = false;
     elements.progressSteps.hidden = true;
     elements.sectorIndicator.hidden = true;
-    elements.applicationClosedPanel.hidden = config.isOpen;
-    elements.administrationApplicationForm.hidden = !config.isOpen;
+    elements.applicationClosedPanel.hidden = applicationState.isOpen;
+    elements.administrationApplicationForm.hidden = !applicationState.isOpen;
     window.scrollTo({ top: 0, behavior: "smooth" });
     const heading = elements.applicationView.querySelector("h1");
     heading.tabIndex = -1;
@@ -205,7 +161,7 @@
 
   async function handleApplicationSubmit(event) {
     event.preventDefault();
-    if (isSubmitting || !config.isOpen) {
+    if (isSubmitting || !applicationState.isOpen) {
       return;
     }
 
@@ -340,48 +296,6 @@
     elements.applicationFormStatus.classList.remove("is-error");
   }
 
-  async function sha256(value) {
-    const bytes = new TextEncoder().encode(value);
-    const digest = await window.crypto.subtle.digest("SHA-256", bytes);
-    return Array.from(new Uint8Array(digest))
-      .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join("");
-  }
-
-  function registerFailedAttempt() {
-    const current = getAttempts();
-    const count = current.count + 1;
-    const next = count >= MAX_ATTEMPTS
-      ? { count: 0, blockedUntil: Date.now() + BLOCK_DURATION }
-      : { count, blockedUntil: 0 };
-    setSessionValue(ATTEMPTS_KEY, JSON.stringify(next));
-  }
-
-  function clearFailedAttempts() {
-    removeSessionValue(ATTEMPTS_KEY);
-  }
-
-  function getBlockRemaining() {
-    const attempts = getAttempts();
-    return Math.max(0, attempts.blockedUntil - Date.now());
-  }
-
-  function getAttempts() {
-    try {
-      const saved = JSON.parse(getSessionValue(ATTEMPTS_KEY) || "{}");
-      return {
-        count: Number(saved.count) || 0,
-        blockedUntil: Number(saved.blockedUntil) || 0
-      };
-    } catch {
-      return { count: 0, blockedUntil: 0 };
-    }
-  }
-
-  function formatMinutes(milliseconds) {
-    return Math.max(1, Math.ceil(milliseconds / 60000));
-  }
-
   function useWesternDigits(value) {
     const digits = {
       "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4",
@@ -409,14 +323,6 @@
       window.sessionStorage.setItem(key, String(value));
     } catch {
       // تعطّل التخزين لا يمنع فتح النموذج أو إرساله.
-    }
-  }
-
-  function removeSessionValue(key) {
-    try {
-      window.sessionStorage.removeItem(key);
-    } catch {
-      // لا يلزم إجراء إضافي.
     }
   }
 

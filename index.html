@@ -29,7 +29,7 @@
   <script src="js/banks/air-wing.js" defer></script>
   <script src="js/banks/zone-officer.js" defer></script>
   <script src="js/banks/swat.js" defer></script>
-  <script src="js/application.js?v=20260802-1" defer></script>
+  <script src="js/application.js?v=20260802-2" defer></script>
   <script src="js/app.js?v=20260802-4" defer></script>
 </head>
 <body>
@@ -691,29 +691,6 @@
     </p>
     <span id="footer-version" class="site-footer__version">الإصدار الثاني</span>
   </footer>
-
-  <dialog id="application-access-dialog" class="confirm-dialog application-access-dialog" aria-labelledby="application-access-title">
-    <form id="application-access-form">
-      <span class="confirm-dialog__icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24">
-          <path d="M7 10V8a5 5 0 0 1 10 0v2m-11 0h12v10H6V10Zm6 4v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </span>
-      <h2 id="application-access-title">بوابة تقديم محمية</h2>
-      <p>أدخل رمز الوصول المعلن من إدارة محافظة الرس.</p>
-      <div class="field">
-        <label for="application-access-code">رمز الوصول</label>
-        <div class="field__control">
-          <input id="application-access-code" type="password" maxlength="40" autocomplete="off" required>
-        </div>
-        <small id="application-access-error" class="field__error"></small>
-      </div>
-      <div class="confirm-dialog__actions">
-        <button id="application-access-cancel" class="button button--ghost" type="button">إلغاء</button>
-        <button id="application-access-submit" class="button button--primary" type="submit">دخول التقديم</button>
-      </div>
-    </form>
-  </dialog>
 
   <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-title">
     <form method="dialog">

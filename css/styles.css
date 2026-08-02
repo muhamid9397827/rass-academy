@@ -2458,15 +2458,6 @@ a {
   font-size: .82rem;
 }
 
-.application-access-dialog .field {
-  margin-block: 18px;
-  text-align: start;
-}
-
-.application-access-dialog .confirm-dialog__actions {
-  margin-block-start: 8px;
-}
-
 .site-footer {
   display: flex;
   flex-direction: column;
