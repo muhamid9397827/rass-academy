@@ -367,7 +367,7 @@ a {
 
 .sector-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -411,6 +411,20 @@ a {
   color: #34d399;
 }
 
+.sector-card--application .sector-card__icon {
+  background: rgba(168, 85, 247, 0.14);
+  color: #c084fc;
+}
+
+.sector-card--application.is-closed {
+  border-style: dashed;
+}
+
+.sector-card--application.is-closed .sector-card__action {
+  cursor: not-allowed;
+  opacity: .58;
+}
+
 .sector-card--coming-soon .sector-card__icon {
   background: rgba(148, 163, 184, 0.12);
   color: var(--muted);
@@ -441,6 +455,11 @@ a {
 .sector-card__status {
   background: var(--gold-soft);
   color: var(--gold);
+}
+
+.sector-card__status.is-open {
+  background: var(--success-soft);
+  color: #34d399;
 }
 
 .sector-card h3 {
@@ -1962,6 +1981,296 @@ a {
   font-weight: 900;
 }
 
+.application-view {
+  display: block;
+}
+
+.application-shell {
+  width: min(100%, 980px);
+  margin-inline: auto;
+  padding-block: 12px 42px;
+}
+
+.application-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-block-end: 18px;
+}
+
+.application-manager {
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.application-manager strong {
+  color: var(--text);
+}
+
+.application-hero {
+  padding: clamp(26px, 5vw, 48px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background:
+    linear-gradient(115deg, rgba(168, 85, 247, 0.14), transparent 58%),
+    var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.application-hero h1 {
+  margin: 8px 0 10px;
+  font-size: clamp(1.8rem, 4vw, 3.1rem);
+  font-weight: 900;
+  letter-spacing: -.045em;
+}
+
+.application-hero p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--text-soft);
+  font-size: .86rem;
+  font-weight: 600;
+  line-height: 1.9;
+}
+
+.application-notices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-block: 16px;
+}
+
+.application-notices > div {
+  padding: 16px 18px;
+  border: 1px solid rgba(251, 191, 36, .24);
+  border-radius: var(--radius-lg);
+  background: var(--gold-soft);
+}
+
+.application-notices strong,
+.application-notices span {
+  display: block;
+}
+
+.application-notices strong {
+  margin-block-end: 4px;
+  color: var(--gold);
+  font-size: .76rem;
+  font-weight: 900;
+}
+
+.application-notices span {
+  color: var(--text-soft);
+  font-size: .7rem;
+  font-weight: 600;
+  line-height: 1.8;
+}
+
+.application-closed-panel {
+  margin-block-start: 18px;
+  padding: 24px;
+  border: 1px solid rgba(239, 68, 68, .35);
+  border-radius: var(--radius-lg);
+  background: var(--danger-soft);
+  text-align: center;
+}
+
+.application-closed-panel strong {
+  color: #fca5a5;
+  font-size: 1.05rem;
+}
+
+.application-closed-panel p {
+  margin: 6px 0 0;
+  color: var(--text-soft);
+  font-size: .76rem;
+}
+
+.application-form {
+  padding: clamp(22px, 4vw, 38px);
+}
+
+.application-section-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-block-end: 22px;
+}
+
+.application-section-heading--questions {
+  margin-block-start: 34px;
+  padding-block-start: 30px;
+  border-block-start: 1px solid var(--line);
+}
+
+.application-section-heading > span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--primary-soft);
+  color: #60a5fa;
+  font-size: .75rem;
+  font-weight: 900;
+}
+
+.application-section-heading h2,
+.application-section-heading p {
+  margin: 0;
+}
+
+.application-section-heading h2 {
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.application-section-heading p {
+  margin-block-start: 3px;
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 600;
+}
+
+.application-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
+}
+
+.application-questions {
+  display: grid;
+  gap: 4px;
+}
+
+.application-form textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 13px 15px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  outline: 0;
+  background: var(--surface-raised);
+  color: var(--text);
+  font: inherit;
+  font-size: .76rem;
+  line-height: 1.8;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.application-form textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.application-form textarea:invalid:not(:placeholder-shown) {
+  border-color: var(--danger);
+}
+
+.field__hint {
+  display: block;
+  margin-block-start: 5px;
+  color: var(--muted);
+  font-size: .6rem;
+}
+
+.application-declaration {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-block-start: 26px;
+  padding: 17px 18px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface-raised);
+  color: var(--text-soft);
+  cursor: pointer;
+  font-size: .73rem;
+  font-weight: 700;
+  line-height: 1.8;
+}
+
+.application-declaration input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin-block-start: 4px;
+  accent-color: var(--primary);
+}
+
+.application-form-status {
+  margin-block-start: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface-raised);
+  color: var(--text-soft);
+  font-size: .7rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.application-form-status.is-error {
+  border-color: rgba(239, 68, 68, .35);
+  background: var(--danger-soft);
+  color: #fca5a5;
+}
+
+.application-submit-button {
+  width: 100%;
+  margin-block-start: 16px;
+}
+
+.application-success-panel {
+  padding: clamp(28px, 5vw, 52px);
+  text-align: center;
+}
+
+.application-success-panel > span {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 14px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--success-soft);
+  color: #34d399;
+  font-size: 1.7rem;
+  font-weight: 900;
+}
+
+.application-success-panel h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.application-success-panel p {
+  margin: 8px auto 16px;
+  max-width: 560px;
+  color: var(--muted);
+  font-size: .76rem;
+  line-height: 1.9;
+}
+
+.application-success-panel strong {
+  display: block;
+  margin-block-end: 20px;
+  color: #60a5fa;
+  font-size: .82rem;
+}
+
+.application-access-dialog .field {
+  margin-block: 18px;
+  text-align: start;
+}
+
+.application-access-dialog .confirm-dialog__actions {
+  margin-block-start: 8px;
+}
+
 .site-footer {
   display: flex;
   flex-direction: column;
@@ -2071,6 +2380,20 @@ a {
   .sector-stats > div + div {
     border-block-start: 1px solid var(--line);
     border-inline-start: 0;
+  }
+
+  .application-topbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .application-manager {
+    text-align: center;
+  }
+
+  .application-notices,
+  .application-form-grid {
+    grid-template-columns: 1fr;
   }
 }
 

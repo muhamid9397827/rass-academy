@@ -17,6 +17,19 @@
     submissionMode: "google-apps-script",
 
     /*
+     * بوابة التقديم على إدارة محافظة الرس.
+     * غيّر isOpen إلى false لإغلاق التقديم من البطاقة والصفحة معًا.
+     * الرمز لا يُحفظ كنص صريح؛ الموجود أدناه هو بصمة SHA-256 فقط.
+     */
+    administrationApplications: Object.freeze({
+      isOpen: true,
+      managerName: "خيرو بن طيب",
+      endpoint: "https://script.google.com/macros/s/AKfycbwSUeJNtT9U8_kYm6jooerGatPvUeafRGSmPe_TxVUn30rkAK2yY_sMjG2RbZrIKDpz/exec",
+      accessCodeHash: "99d5425db8e02533b1590f721ade1d939d779c71b83f28b7462d893d547d8566",
+      closedMessage: "التقديم مغلق الآن. راجع إعلانات فتح التقديم عبر الديسكورد."
+    }),
+
+    /*
      * وضع العرض للاختبار المحلي:
      * أضف ?demo=1 إلى الرابط لتقليل المؤقتات إلى ثوانٍ معدودة.
      * لا يؤثر هذا على الرابط العادي المنشور للمتدربين.
