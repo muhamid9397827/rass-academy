@@ -417,6 +417,15 @@ a {
   border-style: dashed;
 }
 
+.portal-service--application.is-checking {
+  border-style: dashed;
+}
+
+.portal-service--application.is-checking .button {
+  cursor: wait;
+  opacity: .58;
+}
+
 .portal-application__icon {
   width: 64px;
   height: 64px;

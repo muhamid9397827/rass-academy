@@ -21,7 +21,8 @@
      * isOpen قيمة احتياطية فقط؛ الحالة الفعلية تُقرأ من Google Apps Script.
      */
     administrationApplications: Object.freeze({
-      isOpen: true,
+      // Fail closed: the button must stay disabled until the remote status is verified.
+      isOpen: false,
       managerName: "خيرو بن طيب",
       endpoint: "https://script.google.com/macros/s/AKfycbwSUeJNtT9U8_kYm6jooerGatPvUeafRGSmPe_TxVUn30rkAK2yY_sMjG2RbZrIKDpz/exec",
       statusEndpoint: "https://script.google.com/macros/s/AKfycbwSUeJNtT9U8_kYm6jooerGatPvUeafRGSmPe_TxVUn30rkAK2yY_sMjG2RbZrIKDpz/exec",

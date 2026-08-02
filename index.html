@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=20260802-4">
-  <script src="js/config.js" defer></script>
+  <link rel="stylesheet" href="css/styles.css?v=20260802-5">
+  <script src="js/config.js?v=20260802-3" defer></script>
   <script src="js/courses.js?v=20260802-3" defer></script>
   <script src="js/banks/individual-qualification.js" defer></script>
   <script src="js/banks/public-security-operations.js" defer></script>
@@ -29,7 +29,7 @@
   <script src="js/banks/air-wing.js" defer></script>
   <script src="js/banks/zone-officer.js" defer></script>
   <script src="js/banks/swat.js" defer></script>
-  <script src="js/application.js?v=20260802-2" defer></script>
+  <script src="js/application.js?v=20260802-3" defer></script>
   <script src="js/app.js?v=20260802-4" defer></script>
 </head>
 <body>
@@ -146,7 +146,7 @@
             </div>
           </section>
 
-          <section id="application-card" class="portal-service portal-service--application" aria-labelledby="application-service-title">
+          <section id="application-card" class="portal-service portal-service--application is-checking" aria-labelledby="application-service-title" aria-busy="true">
             <span id="application-card-status" class="sector-card__status">جاري التحقق من حالة التقديم</span>
             <span class="portal-application__icon" aria-hidden="true">
               <svg viewBox="0 0 24 24">
@@ -155,8 +155,8 @@
             </span>
             <h2 id="application-service-title">التقديم على إدارة محافظة الرس</h2>
             <p id="application-card-note">بوابة منفصلة لاستقبال طلبات المتقدمين الجدد لفريق الدعم والمساعدة.</p>
-            <button id="open-application-button" class="button button--primary" type="button">
-              دخول بوابة التقديم
+            <button id="open-application-button" class="button button--primary" type="button" disabled>
+              جاري التحقق...
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
           </section>
@@ -189,11 +189,11 @@
         </aside>
 
         <div id="application-closed-panel" class="application-closed-panel" hidden>
-          <strong>التقديم مغلق حاليًا</strong>
+          <strong id="application-closed-title">التقديم مغلق حاليًا</strong>
           <p id="application-closed-message">راجع إعلانات فتح التقديم عبر الديسكورد.</p>
         </div>
 
-        <form id="administration-application-form" class="card application-form" novalidate>
+        <form id="administration-application-form" class="card application-form" novalidate hidden>
           <div class="application-section-heading">
             <span>1</span>
             <div>

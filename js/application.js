@@ -13,10 +13,14 @@
     ...((window.APP_CONFIG && window.APP_CONFIG.administrationApplications) || {})
   });
   const RECEIPT_KEY = "rass-administration-application:receipt";
+  const STATUS_REFRESH_INTERVAL_MS = 15000;
   const elements = {};
   let isSubmitting = false;
+  let statusRequest = null;
   let applicationState = {
-    isOpen: Boolean(config.isOpen),
+    isOpen: false,
+    isVerified: false,
+    status: "checking",
     managerName: config.managerName,
     closedMessage: config.closedMessage
   };
@@ -31,6 +35,7 @@
       "application-back-button",
       "application-manager-name",
       "application-closed-panel",
+      "application-closed-title",
       "application-closed-message",
       "administration-application-form",
       "application-age",
@@ -64,6 +69,7 @@
     bindEvents();
     restoreSubmittedReceipt();
     refreshApplicationStatus();
+    window.setInterval(refreshApplicationStatus, STATUS_REFRESH_INTERVAL_MS);
   }
 
   function bindEvents() {
@@ -77,13 +83,36 @@
     elements.applicationDiscordId.addEventListener("input", () => {
       elements.applicationDiscordId.setCustomValidity("");
     });
+    window.addEventListener("focus", refreshApplicationStatus);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        refreshApplicationStatus();
+      }
+    });
   }
 
   function applyApplicationStatus() {
+    const isVerifiedOpen = applicationState.isVerified && applicationState.isOpen;
     elements.applicationManagerName.textContent = applicationState.managerName;
     elements.applicationClosedMessage.textContent = applicationState.closedMessage;
-    elements.applicationCard.classList.toggle("is-closed", !applicationState.isOpen);
-    elements.openApplicationButton.disabled = !applicationState.isOpen;
+    elements.applicationCard.classList.toggle("is-checking", !applicationState.isVerified);
+    elements.applicationCard.classList.toggle("is-closed", applicationState.isVerified && !applicationState.isOpen);
+    elements.applicationCard.setAttribute("aria-busy", String(!applicationState.isVerified));
+    elements.openApplicationButton.disabled = !isVerifiedOpen;
+
+    if (!applicationState.isVerified) {
+      const failed = applicationState.status === "error";
+      elements.applicationCardStatus.textContent = failed
+        ? "تعذر التحقق من حالة التقديم"
+        : "جاري التحقق من حالة التقديم";
+      elements.applicationCardStatus.classList.remove("is-open");
+      elements.applicationCardNote.textContent = failed
+        ? "تعذر الاتصال بخدمة التقديم. أعد تحميل الصفحة بعد قليل."
+        : "يرجى الانتظار حتى يتم التحقق من حالة التقديم.";
+      elements.openApplicationButton.textContent = failed ? "التقديم غير متاح حاليًا" : "جاري التحقق...";
+      syncApplicationView(false, failed ? "تعذر التحقق من حالة التقديم" : "جاري التحقق من حالة التقديم");
+      return;
+    }
 
     if (applicationState.isOpen) {
       elements.applicationCardStatus.textContent = "التقديم مفتوح الآن";
@@ -97,15 +126,43 @@
       elements.applicationCardNote.textContent = applicationState.closedMessage;
       elements.openApplicationButton.textContent = "التقديم مغلق حاليًا";
     }
+
+    syncApplicationView(isVerifiedOpen, isVerifiedOpen ? "" : "التقديم مغلق حاليًا");
   }
 
-  async function refreshApplicationStatus() {
-    const statusEndpoint = config.statusEndpoint || config.endpoint;
-    if (!statusEndpoint) {
+  function syncApplicationView(canApply, closedTitle) {
+    elements.applicationClosedTitle.textContent = closedTitle || "التقديم مغلق حاليًا";
+    elements.applicationClosedPanel.hidden = canApply;
+    if (!elements.applicationSuccessPanel.hidden) {
       return;
     }
+    elements.administrationApplicationForm.hidden = !canApply;
+    elements.applicationSubmitButton.disabled = !canApply || isSubmitting;
+  }
 
-    try {
+  async function refreshApplicationStatus(options = {}) {
+    const failClosedWhileChecking = options && options.failClosed === true;
+    if (statusRequest) {
+      if (failClosedWhileChecking) {
+        applicationState = { ...applicationState, isOpen: false, isVerified: false, status: "checking" };
+        applyApplicationStatus();
+      }
+      return statusRequest;
+    }
+
+    const statusEndpoint = config.statusEndpoint || config.endpoint;
+    if (!statusEndpoint) {
+      applicationState = { ...applicationState, isOpen: false, isVerified: false, status: "error" };
+      applyApplicationStatus();
+      return false;
+    }
+
+    if (failClosedWhileChecking || !applicationState.isVerified) {
+      applicationState = { ...applicationState, isOpen: false, isVerified: false, status: "checking" };
+      applyApplicationStatus();
+    }
+
+    statusRequest = (async () => {
       const separator = statusEndpoint.includes("?") ? "&" : "?";
       const response = await fetch(`${statusEndpoint}${separator}action=status&t=${Date.now()}`, {
         method: "GET",
@@ -118,22 +175,32 @@
 
       const payload = await response.json();
       if (typeof payload.isOpen !== "boolean") {
-        return;
+        throw new Error("Invalid application status response");
       }
 
       applicationState = {
         isOpen: payload.isOpen,
+        isVerified: true,
+        status: payload.isOpen ? "open" : "closed",
         managerName: clean(payload.managerName) || config.managerName,
         closedMessage: clean(payload.closedMessage) || config.closedMessage
       };
       applyApplicationStatus();
-    } catch (error) {
-      console.warn("Application status check failed; using local fallback.", error);
-    }
+      return true;
+    })().catch((error) => {
+      applicationState = { ...applicationState, isOpen: false, isVerified: false, status: "error" };
+      applyApplicationStatus();
+      console.warn("Application status check failed; access remains closed.", error);
+      return false;
+    }).finally(() => {
+      statusRequest = null;
+    });
+
+    return statusRequest;
   }
 
   function showApplicationView() {
-    if (!applicationState.isOpen) {
+    if (!applicationState.isVerified || !applicationState.isOpen) {
       return;
     }
 
@@ -143,8 +210,7 @@
     elements.applicationView.hidden = false;
     elements.progressSteps.hidden = true;
     elements.sectorIndicator.hidden = true;
-    elements.applicationClosedPanel.hidden = applicationState.isOpen;
-    elements.administrationApplicationForm.hidden = !applicationState.isOpen;
+    syncApplicationView(true, "");
     window.scrollTo({ top: 0, behavior: "smooth" });
     const heading = elements.applicationView.querySelector("h1");
     heading.tabIndex = -1;
@@ -161,12 +227,17 @@
 
   async function handleApplicationSubmit(event) {
     event.preventDefault();
-    if (isSubmitting || !applicationState.isOpen) {
+    if (isSubmitting) {
       return;
     }
 
     const form = elements.administrationApplicationForm;
     clearFormStatus();
+    const statusConfirmed = await refreshApplicationStatus({ failClosed: true });
+    if (!statusConfirmed || !applicationState.isVerified || !applicationState.isOpen) {
+      showFormStatus("التقديم مغلق أو تعذر التحقق من حالته. لم يتم إرسال الطلب.", true);
+      return;
+    }
     if (!validateApplication(form)) {
       return;
     }
