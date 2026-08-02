@@ -1151,7 +1151,9 @@
         : result.passed
           ? "اجتياز"
           : "رسوب",
-      sector: state.sector || "facilities_security",
+      sector: course.applicantCourse
+        ? "individual_qualification"
+        : state.sector || "facilities_security",
       sectorName:
         course.applicantCourse
           ? "تأهيل الأفراد"
