@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=20260802-5">
-  <script src="js/config.js?v=20260802-3" defer></script>
+  <link rel="stylesheet" href="css/styles.css?v=20260802-2">
+  <script src="js/config.js" defer></script>
   <script src="js/courses.js?v=20260802-3" defer></script>
   <script src="js/banks/individual-qualification.js" defer></script>
   <script src="js/banks/public-security-operations.js" defer></script>
@@ -29,7 +29,6 @@
   <script src="js/banks/air-wing.js" defer></script>
   <script src="js/banks/zone-officer.js" defer></script>
   <script src="js/banks/swat.js" defer></script>
-  <script src="js/application.js?v=20260802-3" defer></script>
   <script src="js/app.js?v=20260802-4" defer></script>
 </head>
 <body>
@@ -101,225 +100,93 @@
 
     <section id="sector-view" class="view sector-view" aria-labelledby="sector-title" hidden>
       <div class="sector-landing">
-        <header class="portal-heading" aria-describedby="sector-subtitle">
-          <span class="eyebrow">الأكاديمية التدريبية المشتركة</span>
-          <h1 id="sector-title">كل الخدمات من نقطة واحدة</h1>
-          <p id="sector-subtitle">اختر التدريب أو التقديم الإداري، وانتقل مباشرة إلى المسار المطلوب.</p>
-        </header>
-
-        <div class="portal-services">
-          <section class="portal-service portal-service--training" aria-labelledby="training-service-title">
-            <div class="portal-service__heading">
-              <span class="portal-service__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="m3 9 9-5 9 5-9 5-9-5Zm4 2.3V16c3 2.5 7 2.5 10 0v-4.7M20 10v6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+        <section class="landing-hero" aria-describedby="sector-subtitle">
+          <div class="landing-hero__content">
+            <div class="landing-hero__meta">
+              <span class="eyebrow">بوابة التدريب</span>
+              <span class="landing-location">محافظة الرس</span>
+            </div>
+            <h1 id="sector-title">الأكاديمية التدريبية المشتركة</h1>
+            <p id="sector-subtitle">منصة التدريب الموحدة للقطاعات الأمنية</p>
+            <div class="landing-hero__actions">
+              <a class="button button--primary" href="#available-sectors">
+                ابدأ التدريب
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 12h14m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>
-              </span>
-              <div>
-                <h2 id="training-service-title">التدريب والاختبارات</h2>
-                <p>اختر القطاع لعرض الدورات والمواد المتاحة.</p>
-              </div>
+              </a>
+              <a class="button button--ghost" href="#available-sectors">عرض القطاعات</a>
             </div>
-
-            <div class="portal-routes">
-              <button class="portal-route" type="button" data-sector="facilities_security">
-                <span>
-                  <strong>أمن المنشآت</strong>
-                  <small>الدورات والمواد التدريبية</small>
-                </span>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
-              <button class="portal-route" type="button" data-sector="security_regiments">
-                <span>
-                  <strong>الأفواج الأمنية</strong>
-                  <small>الدورات والاختبارات الميدانية</small>
-                </span>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
-              <button class="portal-route" type="button" data-sector="public_security">
-                <span>
-                  <strong>الأمن العام</strong>
-                  <small>دورات متدرجة حسب الرتب</small>
-                </span>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
-            </div>
-          </section>
-
-          <section id="application-card" class="portal-service portal-service--application is-checking" aria-labelledby="application-service-title" aria-busy="true">
-            <span id="application-card-status" class="sector-card__status">جاري التحقق من حالة التقديم</span>
-            <span class="portal-application__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="M8 4h8m-7 0v3h6V4m-9 3h12v14H6V7Zm3 5h6m-6 4h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-            <h2 id="application-service-title">التقديم على إدارة محافظة الرس</h2>
-            <p id="application-card-note">بوابة منفصلة لاستقبال طلبات المتقدمين الجدد لفريق الدعم والمساعدة.</p>
-            <button id="open-application-button" class="button button--primary" type="button" disabled>
-              جاري التحقق...
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-          </section>
-        </div>
-      </div>
-    </section>
-
-    <section id="application-view" class="view application-view" aria-labelledby="application-title" hidden>
-      <div class="application-shell">
-        <div class="application-topbar">
-          <button id="application-back-button" class="button button--ghost button--small" type="button">العودة إلى الصفحة الرئيسية</button>
-          <span class="application-manager">مسؤول الإدارة: <strong id="application-manager-name">خيرو بن طيب</strong></span>
-        </div>
-
-        <header class="application-hero">
-          <span class="eyebrow">بوابة التقديم الإداري</span>
-          <h1 id="application-title">التقديم على إدارة محافظة الرس</h1>
-          <p>أجب عن جميع الأسئلة بوضوح ودقة. تُراجع الطلبات من مسؤول الإدارة، ولا يعني إرسال الطلب القبول النهائي.</p>
-        </header>
-
-        <aside class="application-notices" aria-label="شروط وتنبيهات التقديم">
-          <div>
-            <strong>شروط القبول الأساسية</strong>
-            <span>العمر أكثر من 20 عامًا، وألا توجد لديك سجلات رقابية أو باندات.</span>
           </div>
-          <div>
-            <strong>سرية المعلومات</strong>
-            <span>يُمنع تسريب معلومات الإدارة أو أسئلة التقديم، وتتحمل مسؤولية صحة البيانات.</span>
+          <div class="landing-hero__emblem" aria-hidden="true">
+            <svg viewBox="0 0 120 120">
+              <path d="M60 9 99 23v30c0 27-15.3 47.7-39 58-23.7-10.3-39-31-39-58V23L60 9Z" fill="currentColor" opacity=".1"/>
+              <path d="M60 15 93 27v26c0 22.3-12.5 40.3-33 50-20.5-9.7-33-27.7-33-50V27l33-12Z" fill="none" stroke="currentColor" stroke-width="2.4"/>
+              <path d="m42 60 11 11 25-28" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </div>
-        </aside>
+        </section>
 
-        <div id="application-closed-panel" class="application-closed-panel" hidden>
-          <strong id="application-closed-title">التقديم مغلق حاليًا</strong>
-          <p id="application-closed-message">راجع إعلانات فتح التقديم عبر الديسكورد.</p>
-        </div>
-
-        <form id="administration-application-form" class="card application-form" novalidate hidden>
-          <div class="application-section-heading">
-            <span>1</span>
+        <section id="available-sectors" class="sectors-section" aria-labelledby="available-sectors-title">
+          <div class="sectors-section__heading">
             <div>
-              <h2>البيانات الأساسية</h2>
-              <p>اكتب بياناتك كما تظهر داخل السيرفر والديسكورد.</p>
+              <span class="eyebrow">القطاعات المتاحة</span>
+              <h2 id="available-sectors-title">اختر مسار التدريب المناسب</h2>
             </div>
+            <p>مسارات تدريبية مستقلة، مصممة لتجربة واضحة ومنظمة.</p>
           </div>
 
-          <div class="application-form-grid">
-            <div class="field">
-              <label for="application-full-name">الاسم داخل الديسكورد</label>
-              <div class="field__control">
-                <input id="application-full-name" name="fullName" type="text" maxlength="80" autocomplete="name" placeholder="مجاهد ال عباد" required>
+          <div class="sector-grid">
+            <article class="sector-card sector-card--facilities">
+              <div class="sector-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3 20 6v5c0 5.5-3.4 9.5-8 11-4.6-1.5-8-5.5-8-11V6l8-3Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                  <path d="m8.5 12 2.1 2.1 4.8-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
               </div>
-            </div>
-            <div class="field">
-              <label for="application-discord-id">معرف Discord</label>
-              <div class="field__control">
-                <input id="application-discord-id" name="discordId" type="text" maxlength="20" inputmode="numeric" dir="ltr" autocomplete="off" placeholder="829030001466671154" required>
+              <div class="sector-card__content">
+                <span class="sector-card__eyebrow">قطاع تدريبي</span>
+                <h3>أمن المنشآت</h3>
+                <p>الدورات والمواد التدريبية المتاحة لمنسوبي أمن المنشآت.</p>
               </div>
-            </div>
-            <div class="field">
-              <label for="application-server-name">1. الاسم داخل السيرفر</label>
-              <div class="field__control">
-                <input id="application-server-name" name="serverName" type="text" maxlength="80" required>
+              <button class="button button--primary sector-card__action" type="button" data-sector="facilities_security">دخول القطاع</button>
+            </article>
+
+            <article class="sector-card sector-card--regiments">
+              <div class="sector-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M4 20V9l8-5 8 5v11M8 20v-5h8v5M12 4v11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
               </div>
-            </div>
-            <div class="field">
-              <label for="application-age">2. كم عمرك الحقيقي؟</label>
-              <div class="field__control">
-                <input id="application-age" name="age" type="number" min="1" max="100" inputmode="numeric" required>
+              <div class="sector-card__content">
+                <span class="sector-card__eyebrow">قطاع تدريبي</span>
+                <h3>الأفواج الأمنية</h3>
+                <p>دورات ومواد واختبارات ميدانية خاصة بقطاع الأفواج الأمنية.</p>
               </div>
-              <small class="field__hint">عدم الإفصاح عن العمر الحقيقي يؤدي إلى رفض الطلب تلقائيًا.</small>
-            </div>
+              <button class="button button--primary sector-card__action" type="button" data-sector="security_regiments">استعراض الدورات</button>
+            </article>
+
+            <article class="sector-card sector-card--public">
+              <div class="sector-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3v18M5 8l7-5 7 5M6 21h12M8 11h8v7H8z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="sector-card__content">
+                <span class="sector-card__eyebrow">قطاع تدريبي</span>
+                <h3>الأمن العام</h3>
+                <p>دورات واختبارات ميدانية متدرجة حسب الرتب لمنسوبي الأمن العام.</p>
+              </div>
+              <button class="button button--primary sector-card__action" type="button" data-sector="public_security">استعراض الدورات</button>
+            </article>
           </div>
+        </section>
 
-          <div class="field">
-            <label for="application-pledge">هل أنت مستعد لحلف اليمين بعدم تسريب أي معلومات تخص الإدارة أو أسئلة التقديم؟</label>
-            <div class="field__control field__control--select">
-              <select id="application-pledge" name="confidentialityPledge" required>
-                <option value="">اختر الإجابة</option>
-                <option value="نعم، أتعهد بعدم التسريب">نعم، أتعهد بعدم التسريب</option>
-                <option value="لا">لا</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="application-section-heading application-section-heading--questions">
-            <span>2</span>
-            <div>
-              <h2>أسئلة التقديم</h2>
-              <p>اكتب إجابات واقعية ومفصلة؛ الإجابات القصيرة جدًا قد تؤثر في مراجعة الطلب.</p>
-            </div>
-          </div>
-
-          <div class="application-questions">
-            <div class="field">
-              <label for="application-experience">3. هل لديك خبرات إدارية أو في مجال الدعم والمساعدة؟ اذكرها بالتفصيل.</label>
-              <textarea id="application-experience" name="experience" rows="5" maxlength="1500" required></textarea>
-            </div>
-            <div class="field">
-              <label for="application-daily-hours">4. كم عدد ساعات تواجدك يوميًا؟</label>
-              <textarea id="application-daily-hours" name="dailyHours" rows="3" maxlength="500" required></textarea>
-            </div>
-            <div class="field">
-              <label for="application-join-reason">5. لماذا ترغب بالانضمام إلى فريق الدعم والمساعدة؟</label>
-              <textarea id="application-join-reason" name="joinReason" rows="4" maxlength="1000" required></textarea>
-            </div>
-            <div class="field">
-              <label for="application-angry-response">6. كيف تتعامل مع شخص غاضب أو غير متعاون؟</label>
-              <textarea id="application-angry-response" name="angryPersonResponse" rows="4" maxlength="1000" required></textarea>
-            </div>
-            <div class="field">
-              <label for="application-secret-response">7. ماذا ستفعل إذا طلب منك أحد اللاعبين معلومات سرية تخص الإدارة؟</label>
-              <textarea id="application-secret-response" name="secretInfoResponse" rows="4" maxlength="1000" required></textarea>
-            </div>
-            <div class="field">
-              <label for="application-unknown-response">8. كيف تتصرف إذا واجهت مشكلة لا تعرف حلها؟</label>
-              <textarea id="application-unknown-response" name="unknownProblemResponse" rows="4" maxlength="1000" required></textarea>
-            </div>
-            <div class="field">
-              <label for="application-punishments">9. هل سبق وأن تعرضت لعقوبة إدارية؟ إذا نعم، اذكر السبب.</label>
-              <textarea id="application-punishments" name="previousPunishments" rows="4" maxlength="1000" required></textarea>
-            </div>
-            <div class="field">
-              <label for="application-teamwork">10. هل تستطيع العمل ضمن فريق والالتزام بتعليمات الإدارة؟</label>
-              <div class="field__control field__control--select">
-                <select id="application-teamwork" name="teamworkCommitment" required>
-                  <option value="">اختر الإجابة</option>
-                  <option value="نعم">نعم</option>
-                  <option value="لا">لا</option>
-                </select>
-              </div>
-            </div>
-            <div class="field">
-              <label for="application-pressure">11. كيف تتعامل مع الضغط وكثرة البلاغات؟</label>
-              <textarea id="application-pressure" name="pressureResponse" rows="4" maxlength="1000" required></textarea>
-            </div>
-            <div class="field">
-              <label for="application-rules">12. هل توافق على الالتزام بجميع قوانين الإدارة، وفي حال مخالفتها تتحمل كامل المسؤولية؟</label>
-              <div class="field__control field__control--select">
-                <select id="application-rules" name="rulesAgreement" required>
-                  <option value="">اختر الإجابة</option>
-                  <option value="نعم، أوافق وأتحمل المسؤولية">نعم، أوافق وأتحمل المسؤولية</option>
-                  <option value="لا">لا</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <label class="application-declaration" for="application-no-bans">
-            <input id="application-no-bans" name="noBansDeclaration" type="checkbox" value="أقر بعدم وجود سجلات رقابية أو باندات" required>
-            <span>أقر بأن عمري أكثر من 20 عامًا، ولا توجد لدي سجلات رقابية أو باندات، وأن جميع البيانات المدخلة صحيحة.</span>
-          </label>
-
-          <div id="application-form-status" class="application-form-status" role="status" aria-live="polite" hidden></div>
-          <button id="application-submit-button" class="button button--primary application-submit-button" type="submit">إرسال طلب التقديم</button>
-        </form>
-
-        <div id="application-success-panel" class="card application-success-panel" hidden>
-          <span aria-hidden="true">✓</span>
-          <h2>تم إرسال طلبك بنجاح</h2>
-          <p>وصل الطلب إلى إدارة محافظة الرس للمراجعة. احتفظ برقم الطلب ولا تُعد الإرسال.</p>
-          <strong id="application-receipt" dir="ltr"></strong>
-          <button id="application-success-back-button" class="button button--ghost" type="button">العودة إلى الصفحة الرئيسية</button>
-        </div>
+        <section class="sector-stats" aria-label="إحصائيات القطاعات المتاحة">
+          <div><strong>٣</strong><span>قطاعات في المنصة</span></div>
+          <div><strong>١٩</strong><span>دورة ومرجع تدريبي</span></div>
+          <div><strong>١٧</strong><span>بنوك أسئلة مستقلة</span></div>
+        </section>
       </div>
     </section>
 

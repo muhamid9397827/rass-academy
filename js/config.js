@@ -17,19 +17,6 @@
     submissionMode: "google-apps-script",
 
     /*
-     * بوابة التقديم على إدارة محافظة الرس.
-     * isOpen قيمة احتياطية فقط؛ الحالة الفعلية تُقرأ من Google Apps Script.
-     */
-    administrationApplications: Object.freeze({
-      // Fail closed: the button must stay disabled until the remote status is verified.
-      isOpen: false,
-      managerName: "خيرو بن طيب",
-      endpoint: "https://script.google.com/macros/s/AKfycbwSUeJNtT9U8_kYm6jooerGatPvUeafRGSmPe_TxVUn30rkAK2yY_sMjG2RbZrIKDpz/exec",
-      statusEndpoint: "https://script.google.com/macros/s/AKfycbwSUeJNtT9U8_kYm6jooerGatPvUeafRGSmPe_TxVUn30rkAK2yY_sMjG2RbZrIKDpz/exec",
-      closedMessage: "التقديم مغلق الآن. راجع إعلانات فتح التقديم عبر الديسكورد."
-    }),
-
-    /*
      * وضع العرض للاختبار المحلي:
      * أضف ?demo=1 إلى الرابط لتقليل المؤقتات إلى ثوانٍ معدودة.
      * لا يؤثر هذا على الرابط العادي المنشور للمتدربين.
