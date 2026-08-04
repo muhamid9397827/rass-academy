@@ -24,6 +24,29 @@
     allowDemoMode: false
   });
 
+  /*
+   * تخفيض مدة الاطلاع لدورات الأفواج الأمنية فقط إلى خمس دقائق.
+   * يتم تطبيق الإعداد عند تحميل سجل الدورات، قبل تشغيل التطبيق.
+   */
+  const REGIMENTS_STUDY_MINUTES = 5;
+  let courseRegistry;
+
+  Object.defineProperty(window, "COURSES", {
+    configurable: true,
+    enumerable: true,
+    get() {
+      return courseRegistry;
+    },
+    set(value) {
+      Object.values(value || {}).forEach((course) => {
+        if (course && course.sector === "security_regiments" && course.hasQuiz) {
+          course.studyMinutes = REGIMENTS_STUDY_MINUTES;
+        }
+      });
+      courseRegistry = value;
+    }
+  });
+
   const DIGIT_MAP = Object.freeze({
     "٠": "0",
     "١": "1",
