@@ -1,0 +1,25 @@
+const { chromium } = require('playwright');
+const assert = require('node:assert/strict');
+(async () => {
+ const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ const page=await browser.newPage({viewport:{width:1280,height:900}});
+ const errors=[];
+ page.on('pageerror',err=>errors.push(err.message));
+ await page.goto('http://127.0.0.1:8000/portal/',{waitUntil:'domcontentloaded'});
+ await page.locator('#showLogin').click();
+ assert.equal(await page.locator('#authScreen').isVisible(),true,'login form');
+ await page.locator('#authToggle').click();
+ assert.equal(await page.locator('#registerFields').isVisible(),true,'registration form');
+ await page.locator('#authBack').click();
+ assert.equal(await page.locator('#welcome').isVisible(),true,'public welcome');
+ await page.goto('http://127.0.0.1:8000/portal/academy.html',{waitUntil:'domcontentloaded'});
+ await page.locator('#sector-view, #entry-view').first().waitFor({state:'attached'});
+ assert.equal(await page.locator('[data-sector="facilities_security"]').count(),1);
+ assert.equal(await page.locator('.sector-card--regiments').isVisible(),false,'regiments hidden');
+ assert.equal(await page.locator('.sector-card--public').isVisible(),false,'public security hidden');
+ await page.screenshot({path:'/tmp/asf-academy-smoke.png',fullPage:true});
+ const critical=errors.filter(e=>!e.includes('Failed to fetch'));
+ assert.deepEqual(critical,[],'unhandled browser errors');
+ await browser.close();
+ console.log('ASF smoke: portal login/register and public academy PASS');
+})().catch(err=>{console.error(err);process.exit(1)});
