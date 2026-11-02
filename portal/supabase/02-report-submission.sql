@@ -12,7 +12,7 @@ begin
  or length(trim(coalesce(p_title,''))) not between 3 and 180
  or p_body is null or jsonb_typeof(p_body)<>'object'
  or length(p_body::text)>40000 then raise exception 'Invalid report'; end if;
- if p_pdf_path !~ ('^'||auth.uid()::text||'/[a-f0-9-]{36}\\.pdf$') then raise exception 'Invalid PDF path'; end if;
+ if p_pdf_path !~ ('^'||auth.uid()::text||'/[a-f0-9-]{36}\.pdf$') then raise exception 'Invalid PDF path'; end if;
  if p_original_report_id is not null and not exists(
  select 1 from public.asf_reports where id=p_original_report_id and author_id=auth.uid() and kind=p_kind
  ) then raise exception 'Correction must reference your own original report'; end if;
