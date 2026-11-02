@@ -8,7 +8,7 @@ const STATES={new:'جديد',reviewing:'قيد المراجعة',reviewed:'تم�
 const RANKS=['جندي','جندي أول','عريف','وكيل رقيب','رقيب','رقيب أول','رئيس رقباء','ملازم','ملازم أول','نقيب','رائد','مقدم','عقيد','عميد','لواء','فريق','فريق أول'];
 const cfg=window.ASF_CONFIG||{}, ready=!!(cfg.supabaseUrl&&cfg.supabaseAnonKey&&window.supabase);
 let db=ready?window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey):null;
-let user=null, profile=null, commander=false, grants=[], pageName='dashboard', draftId=null, latestReports=[];
+let user=null, profile=null, commander=false, grants=[], pageName='dashboard', draftId=null, latestReports=[], correctionSource=null;
 const toast=(m,error=false)=>{const b=$('#toast');b.textContent=m;b.className='show'+(error?' error':'');clearTimeout(toast.t);toast.t=setTimeout(()=>b.className='',5800)};
 const set=(s,html)=>{$(s).innerHTML=html};
 const date=d=>d?new Date(d).toLocaleString('ar-SA',{dateStyle:'short',timeStyle:'short'}):'—';
@@ -179,7 +179,9 @@ async function renderCompose(){
  '<label>رقم النسخة الأصلية للتصحيح (UUID اختياري)<input name="original" placeholder="اتركه فارغًا للتقرير الجديد"></label>'+
  '<div class="row"><button class="btn primary" type="submit">إرسال وقفل التقرير</button><button class="btn ghost" type="button" id="saveDraft">حفظ مسودة</button></div></form></div>'+
  '<section class="section-card"><h3>مسوداتي</h3><div class="row">'+(drafts||[]).map(d=>btn(d.title||'مسودة بدون عنوان','load',d.id)).join('')+'</div></section>');
- const form=$('#reportForm');const toggle=()=>{$('#freeFields').hidden=$('#reportMode').value!=='free';$('#structuredFields').hidden=$('#reportMode').value==='free'};
+ const form=$('#reportForm');
+ if(correctionSource){form.elements.kind.value=correctionSource.kind;form.elements.original.value=correctionSource.id;form.elements.title.value='تصحيح: '+correctionSource.title;}
+ const toggle=()=>{$('#freeFields').hidden=$('#reportMode').value!=='free';$('#structuredFields').hidden=$('#reportMode').value==='free'};
  $('#reportMode').onchange=toggle;toggle();
  const collect=()=>{const f=new FormData(form),mode=f.get('mode'),body=mode==='free'?{text:String(f.get('text')||'')}:
  Object.fromEntries(['achievements','progress','needs','notes'].map(x=>[x,String(f.get(x)||'')]));
@@ -205,7 +207,7 @@ async function renderCompose(){
    let result='تم اعتماد إرسال التقرير '+code(data.report_number);
    try{const pdf=await buildPdf(report);const {error:up}=await db.storage.from('asf-reports').upload(path,pdf,{contentType:'application/pdf',upsert:false});if(up)throw up;result+=' وحفظ PDF بنجاح'}
    catch(pdfError){result+=' لكن تعذّر إنشاء/رفع PDF: '+pdfError.message+'. التقرير محفوظ في قاعدة البيانات، ويجب معالجة الملف.'}
-   if(draftId)await db.from('asf_drafts').delete().eq('id',draftId);draftId=null;
+   if(draftId)await db.from('asf_drafts').delete().eq('id',draftId);draftId=null;correctionSource=null;
    toast(result,result.includes('تعذّر'));form.reset();toggle();
    // Confidential sender does not retain read access even after submitting.
    if(v.kind!=='secret')navigate('reports');
