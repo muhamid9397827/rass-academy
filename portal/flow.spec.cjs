@@ -2,7 +2,7 @@
 // No credentials and no production database writes.
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
-const mockSupabase=String.raw\`
+const mockSupabase=String.raw`
 (() => {
  const userId='11111111-2222-4333-8444-555555555571';
  const state={
@@ -81,7 +81,7 @@ const mockSupabase=String.raw\`
  window.__asfTest={state};
  window.supabase={createClient(){return client}};
 })();
-\`;
+`;
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  const page=await browser.newPage({viewport:{width:1280,height:900},acceptDownloads:true});
