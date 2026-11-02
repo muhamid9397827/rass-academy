@@ -280,17 +280,45 @@ async function buildPdf(report){
  if(typeof window.html2pdf!=='function')throw Error('مكتبة PDF لم تُحمّل');
  return window.html2pdf().set({margin:5,filename:code(report.report_number)+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(renderPaper(report)).outputPdf('blob');
 }
-function renderPolice(){
+async function renderPolice(){
  const data=window.MP_DATA;
- if(!data)return set('#page',empty('تعذر تحميل قواعد المخالفات من الموقع القديم'));
+ if(!data)return set('#page',empty('تعذر تحميل قواعد مخالفات الشرطة العسكرية'));
  const list=[...(data.standardViolations||[]),...(data.fixedViolations||[])];
- set('#page','<div class="section-card"><h3>حساب العقوبة المقترحة</h3><p>البيانات مستقاة من قائمة مخالفات الشرطة العسكرية القديمة، مع استمرار الحفاظ على الموقع الأصلي دون تعديل.</p><form id="policeForm"><label>رتبة المخالف<select name="rank">'+opt(Object.keys(data.penaltyMatrix).map(r=>[r,r]))+'</select></label>'+
+ const overrides=await query('asf_police_overrides');
+ const ranks=Object.keys(data.penaltyMatrix);
+ const mayManage=commander||has('police.manage');
+ const penaltyFor=(v,rank)=>{
+  const custom=overrides.find(o=>o.rule_key===v.key&&o.rank_key===rank);
+  return custom?.penalty||(v?.calc?v.calc(rank):data.penaltyMatrix[rank]?.[v?.tier])||'تُحال للتقدير';
+ };
+ set('#page','<div class="section-card"><h3>حساب العقوبة المقترحة</h3><p>القواعد الأصلية محفوظة؛ التعديلات القيادية تظهر في البوابة فقط.</p><form id="policeForm"><label>رتبة المخالف<select name="rank">'+opt(ranks.map(r=>[r,r]))+'</select></label>'+
  '<label>المخالفة<select name="violation">'+opt(list.map((v,i)=>[String(i),String(v.id||'')+' — '+v.text]))+'</select></label><button class="btn primary" type="submit">احتساب العقوبة</button></form><div id="policeResult" class="notice" hidden></div></div>'+
+ (mayManage?'<section class="section-card"><h3>إدارة العقوبات المقترحة</h3><p>يمكنك تغيير العقوبة لمخالفة ورتبة محددتين. لا تتغير ملفات الشرطة العسكرية القديمة، ويمكن العودة إلى العقوبة الأصلية.</p><form id="policeAdminForm"><label>المخالفة<select name="rule">'+opt(list.map(v=>[v.key,String(v.id||'')+' — '+v.text]))+'</select></label>'+
+ '<label>الرتبة<select name="rank">'+opt(ranks.map(r=>[r,r]))+'</select></label>'+
+ '<label>العقوبة المقترحة<textarea name="penalty" maxlength="500" required></textarea></label><div class="row"><button class="btn primary" name="action" value="save" type="submit">حفظ التعديل</button><button class="btn ghost" name="action" value="reset" type="submit">استعادة العقوبة الأصلية</button></div></form></section>':'')+
  '<section class="section-card"><h3>إحالة قضية جديدة إلى مجلس القضاء</h3><form id="caseForm"><label>الموضوع<input name="subject" required maxlength="200"></label><label>التفاصيل<textarea name="details" required maxlength="12000"></textarea></label><button class="btn ghost" type="submit">إرسال للمجلس</button></form></section>');
- $('#policeForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),v=list[Number(f.get('violation'))],rank=f.get('rank');
- const penalty=v?.calc?v.calc(rank):data.penaltyMatrix[rank]?.[v?.tier]||'تُحال للتقدير';$('#policeResult').hidden=false;$('#policeResult').textContent='العقوبة المقترحة: '+penalty;};
+ $('#policeForm').onsubmit=e=>{
+  e.preventDefault();const f=new FormData(e.target),v=list[Number(f.get('violation'))],rank=f.get('rank');
+  $('#policeResult').hidden=false;$('#policeResult').textContent='العقوبة المقترحة: '+penaltyFor(v,rank);
+ };
+ if(mayManage){
+  const form=$('#policeAdminForm'),sync=()=>{
+   const rule=list.find(v=>v.key===form.elements.rule.value);
+   form.elements.penalty.value=penaltyFor(rule,form.elements.rank.value);
+  };
+  form.elements.rule.onchange=sync;form.elements.rank.onchange=sync;sync();
+  form.onsubmit=async e=>{
+   e.preventDefault();const sender=e.submitter||document.activeElement;
+   const erase=sender?.value==='reset',f=new FormData(form);
+   const {error}=await db.rpc('asf_set_police_override',{p_key:f.get('rule'),p_rank:f.get('rank'),p_penalty:erase?'':String(f.get('penalty')||'').trim()});
+   if(error)return toast(error.message,true);
+   toast(erase?'تمت استعادة العقوبة الأصلية':'تم تحديث العقوبة المقترحة');renderPolice();
+  };
+ }
  $('#caseForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);
- const {error}=await db.from('asf_court_cases').insert({submitted_by:user.id,subject:String(f.get('subject')).trim(),details:String(f.get('details')).trim()});if(error)return toast(error.message,true);toast('تم إرسال القضية لمجلس القضاء');e.target.reset();};
+ const {error}=await db.from('asf_court_cases').insert({submitted_by:user.id,subject:String(f.get('subject')).trim(),details:String(f.get('details')).trim()});
+ if(error)return toast(error.message,true);toast('تم إرسال القضية لمجلس القضاء');e.target.reset();
+ };
 }
 async function renderCourt(){
  if(!(commander||profile?.court_enabled||has('court.manage')))return set('#page',empty('مجلس القضاء يتطلب تفعيلًا خاصًا من القائد.'));
