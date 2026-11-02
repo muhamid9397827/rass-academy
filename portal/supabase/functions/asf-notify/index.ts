@@ -14,8 +14,16 @@ Deno.serve(async (request) => {
   let body;
   try{body=await request.json()}catch{return new Response('Bad JSON',{status:400})}
   if(body?.type!=='INSERT'||!['asf_reports','asf_profiles'].includes(body?.table))return new Response('Ignored',{status:200});
-  const key=Deno.env.get('RESEND_API_KEY'),to=Deno.env.get('ASF_COMMANDER_EMAIL'),from=Deno.env.get('RESEND_FROM');
-  if(!key||!to||!from)return Response.json({status:'email_provider_not_configured'},{status:202});
+  const key=Deno.env.get('RESEND_API_KEY');
+  // Resend's default sender is for owner-inbox TESTING only; set RESEND_FROM
+  // to a verified-domain address before delivering to other recipients.
+  const from=Deno.env.get('RESEND_FROM')?.trim()||'onboarding@resend.dev';
+  if(!key)return Response.json({status:'email_provider_not_configured'},{status:202});
+  // Resolve the verified commander account from server-only SQL: no recipient
+  // address in GitHub, user metadata, browser configuration, or webhook payload.
+  const {data:to,error:recipientError}=await admin.rpc('asf_commander_email_for_delivery');
+  if(recipientError||typeof to!=='string'||!to.includes('@'))
+    return new Response('Verified commander email unavailable',{status:503});
   const secretReport=body.table==='asf_reports'&&body.record?.kind==='secret';
   // Confidential reports: no title, name, rank, body, or PDF emailed.
   const subject=body.table==='asf_profiles'?'بوابة أمن المنشآت — طلب تفعيل جديد':
