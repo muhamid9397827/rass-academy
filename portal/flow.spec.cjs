@@ -9,7 +9,7 @@ const mockSupabase=String.raw`
   user:{id:userId,email:'qa-author@example.invalid'},
   profile:{user_id:userId,game_name:'QA Commander',discord_id:'123456789012345678',rank:'نقيب',
    military_code:'ASF-QA001',status:'approved',court_enabled:true,created_at:new Date().toISOString()},
-  reports:[],pdfs:new Map(),reviews:new Map(),audit:[],notifications:[],uploads:[],
+  reports:[],pdfs:new Map(),reviews:new Map(),history:[],audit:[],notifications:[],uploads:[],
   member:{user_id:'11111111-2222-4333-8444-555555555572',game_name:'QA Member',
    discord_id:'123456789012345679',rank:'جندي',military_code:'ASF-QA002',status:'approved',court_enabled:false}
  };
@@ -28,7 +28,7 @@ const mockSupabase=String.raw`
   async done(){
    let rows={
     asf_profiles:[state.profile,state.member],asf_delegations:[],asf_reports:state.reports,
-    asf_drafts:[],asf_notifications:state.notifications,asf_reviews:[...state.reviews.values()],
+    asf_drafts:[],asf_notifications:state.notifications,asf_reviews:[...state.reviews.values()],asf_review_history:state.history,
     asf_audit:state.audit,asf_change_requests:[],asf_court_cases:[],asf_court_decisions:[],
     asf_court_warnings:[],asf_police_overrides:[]
    }[this.table]||[];
@@ -61,6 +61,7 @@ const mockSupabase=String.raw`
    }
    if(name==='asf_review_report'){
     state.reviews.set(args.report,{report_id:args.report,state:args.new_state,note:args.new_note});
+    state.history.push({report_id:args.report,state:args.new_state,note:args.new_note,created_at:new Date().toISOString()});
     return {data:null,error:null};
    }
    if(name==='asf_trash_report'){
@@ -108,6 +109,8 @@ const mockSupabase=String.raw`
  await page.locator('#reviewForm textarea[name="note"]').fill('مراجعة ناجحة');
  await page.locator('#reviewForm button').click();
  await page.waitForFunction(()=>window.__asfTest.state.reviews.size===1);
+ await page.getByText('سجل مراجعات التقرير').waitFor({state:'visible'});
+ assert.equal(await page.locator('#page').getByText('مراجعة ناجحة').count()>0,true,'dated review shown');
  await page.locator('[data-action="back"]').click();
  await page.locator('#reportCards [data-action="trash"]').click();
  await page.getByText('لا توجد تقارير بعد').waitFor({state:'visible'});
