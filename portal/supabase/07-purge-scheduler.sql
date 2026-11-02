@@ -16,7 +16,7 @@ returns boolean language sql stable security definer set search_path=''
 as $fn$
  select length(coalesce(p_token,''))=64
  and exists(select 1 from app_private.asf_scheduler_keys where name='purge'
- and encode(digest(secret,'sha256'),'hex')=encode(digest(coalesce(p_token,''),'sha256'),'hex'));
+ and encode(extensions.digest(secret,'sha256'),'hex')=encode(extensions.digest(coalesce(p_token,''),'sha256'),'hex'));
 $fn$;
 revoke all on function public.asf_validate_purge_token(text) from public,anon,authenticated;
 grant execute on function public.asf_validate_purge_token(text) to service_role;
