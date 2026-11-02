@@ -10,6 +10,15 @@ const assert = require('node:assert/strict');
  assert.equal(await page.locator('#authScreen').isVisible(),true,'login form');
  await page.locator('#authToggle').click();
  assert.equal(await page.locator('#registerFields').isVisible(),true,'registration form');
+ const pdf=await page.evaluate(async()=>{
+  if(typeof window.html2pdf!=='function')throw Error('PDF library unavailable');
+  const element=document.createElement('article');
+  element.style.cssText='background:white;color:black;padding:20px;direction:rtl;font-size:20px';
+  element.textContent='تقرير إداري — أمن المنشآت';
+  const blob=await window.html2pdf().set({margin:5,jsPDF:{unit:'mm',format:'a4'},html2canvas:{scale:1}}).from(element).outputPdf('blob');
+  return {type:blob.type,size:blob.size};
+ });
+ assert.ok(pdf.size>1200,'nonempty PDF generated');
  await page.locator('#authBack').click();
  assert.equal(await page.locator('#welcome').isVisible(),true,'public welcome');
  await page.goto('http://127.0.0.1:8000/portal/academy.html',{waitUntil:'domcontentloaded'});
