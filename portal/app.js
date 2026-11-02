@@ -114,6 +114,15 @@ async function renderDashboard(){
  set('#page','<div class="grid four">'+info.map(([k,v])=>'<div class="metric"><div class="caption">'+esc(k)+'</div><div class="n" style="font-size:20px">'+esc(v)+'</div></div>').join('')+'</div>'+
  '<div class="grid two" style="margin-top:18px"><section class="section-card"><h3>التقارير</h3><p>إنشاء تقرير منظم أو حر، تحميل PDF، متابعة ملاحظات القائد.</p><button class="btn primary" id="dashCompose">إرسال تقرير</button></section><section class="section-card"><h3>الصلاحيات</h3><p>التقارير السرية للغاية تعرض للقائد فقط حتى مع وجود قيادات مفوضة.</p><button class="btn ghost" id="dashAccount">ملفي الشخصي</button></section></div>');
  $('#dashCompose').onclick=()=>navigate('compose');$('#dashAccount').onclick=()=>navigate('account');
+ if(commander){
+  const {data:notices,error:nerr}=await db.from('asf_notifications').select('*').order('created_at',{ascending:false}).limit(20);
+  if(!nerr){
+   const unread=(notices||[]).filter(n=>!n.read_at);
+   $('#page').insertAdjacentHTML('beforeend','<section class="section-card" style="margin-top:18px"><div class="row between"><h3>إشعارات القائد '+badge(String(unread.length)+' غير مقروء')+'</h3><button class="btn ghost small" id="markAllRead">تعليم كمقروء</button></div>'+
+   ((notices||[]).map(n=>'<div style="padding:10px;border-bottom:1px solid var(--line)">'+(n.read_at?'':'● ') +esc(n.message)+'<span class="muted" style="float:left">'+date(n.created_at)+'</span></div>').join('')||empty('لا توجد إشعارات'))+'</section>');
+   $('#markAllRead').onclick=async()=>{const {error}=await db.from('asf_notifications').update({read_at:new Date().toISOString()}).is('read_at',null);if(error)return toast(error.message,true);toast('تم تعليم الإشعارات كمقروءة');renderDashboard();};
+  }
+ }
 }
 function renderAcademy(){
  const courses=Object.values(window.COURSES||{}).filter(c=>c.sector==='facilities_security');
