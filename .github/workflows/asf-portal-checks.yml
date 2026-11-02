@@ -27,6 +27,8 @@ jobs:
           node portal/flow.spec.cjs
       - name: Server cleanup policy tests
         run: node portal/purge.spec.cjs
+      - name: Live Supabase Auth readiness
+        run: node portal/auth-health.spec.cjs
       - name: Security regression guards
         run: |
           grep -q "kind='secret' and public.asf_is_commander()" portal/supabase/schema.sql
