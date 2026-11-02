@@ -408,7 +408,7 @@ async function renderAudit(){
  const actors=new Map((users||[]).map(p=>[p.user_id,p]));
  const names={approve:'تفعيل عضو',suspend:'إيقاف عضو',reject:'رفض عضو',rank:'تعديل رتبة',court_on:'منح القضاء',court_off:'سحب القضاء',
  delegation:'تعديل صلاحية',review:'مراجعة تقرير',restore:'استعادة تقرير',trash:'حذف إلى السلة',
- police_rule_override:'تعديل عقوبة',court_warning_cancel:'إلغاء إنذار',pdf_finalized:'تأكيد ملف PDF',profile_change:'تعديل بيانات',commander_profile_init:'ملف القائد'};
+ police_rule_override:'تعديل عقوبة',court_warning_cancel:'إلغاء إنذار',pdf_finalized:'تأكيد ملف PDF',permanent_delete:'حذف نهائي تلقائي',profile_change:'تعديل بيانات',commander_profile_init:'ملف القائد'};
  set('#page','<section class="section-card"><h3>سجل الإجراءات الإدارية</h3>'+
  '<p>يُعرض للقائد فقط، ويحتفظ بتاريخ التعديلات دون منح صلاحية حذف السجل.</p>'+
  '<input id="auditSearch" placeholder="بحث بالعملية أو المستخدم أو السجل" style="margin-bottom:15px">'+
@@ -421,7 +421,7 @@ async function renderAudit(){
   });
   set('#auditRows',shown.map(x=>{
    const a=actors.get(x.actor_id);
-   return '<tr><td>'+date(x.created_at)+'</td><td>'+esc(a?.game_name||'حساب مؤرشف')+'</td><td>'+esc(names[x.action]||x.action)+'</td><td title="'+esc(x.target_id)+'">'+esc(String(x.target_id).slice(0,36))+'</td></tr>';
+   return '<tr><td>'+date(x.created_at)+'</td><td>'+esc(x.actor_id?a?.game_name||'حساب مؤرشف':'النظام تلقائيًا')+'</td><td>'+esc(names[x.action]||x.action)+'</td><td title="'+esc(x.target_id)+'">'+esc(String(x.target_id).slice(0,36))+'</td></tr>';
   }).join('')||'<tr><td colspan="4">لا توجد عمليات مطابقة</td></tr>');
  };
  $('#auditSearch').oninput=paint;paint();
