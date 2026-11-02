@@ -23,9 +23,15 @@ function showScreen(which){['welcome','authScreen','pendingScreen','workspace'].
 function openAcademy(){window.open('academy.html','_blank','noopener')}
 $('#openAcademy').onclick=openAcademy;
 let registering=false;
-function authForm(mode){registering=mode==='register';showScreen('authScreen');$('#authTitle').textContent=registering?'إنشاء حساب جديد':'تسجيل الدخول';$('#registerFields').hidden=!registering;$('#authSubmit').textContent=registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authToggle').textContent=registering?'لديك حساب بالفعل؟ تسجيل الدخول':'ليس لديك حساب؟ إنشاء حساب';['gameName','discordId','rank'].forEach(id=>$('#'+id).required=registering);}
+function authForm(mode){registering=mode==='register';showScreen('authScreen');$('#authTitle').textContent=registering?'إنشاء حساب جديد':'تسجيل الدخول';$('#registerFields').hidden=!registering;$('#authSubmit').textContent=registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authToggle').textContent=registering?'لديك حساب بالفعل؟ تسجيل الدخول':'ليس لديك حساب؟ إنشاء حساب';$('#forgotPassword').hidden=registering;['gameName','discordId','rank'].forEach(id=>$('#'+id).required=registering);}
 $('#showLogin').onclick=()=>authForm('login');$('#showRegister').onclick=()=>authForm('register');
-$('#authToggle').onclick=()=>authForm(registering?'login':'register');$('#authBack').onclick=()=>showScreen('welcome');
+$('#authToggle').onclick=()=>authForm(registering?'login':'register');
+$('#forgotPassword').onclick=async()=>{
+ if(!ready)return toast('ربط قاعدة البيانات غير متاح',true);
+ const email=$('#email').value.trim();if(!email)return toast('أدخل بريدك الإلكتروني أولًا',true);
+ const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});
+ toast(error?'تعذر إرسال رابط الاستعادة: '+error.message:'إذا كان البريد مسجلًا، سيتم إرسال رابط استعادة كلمة المرور.',!!error);
+};$('#authBack').onclick=()=>showScreen('welcome');
 $('#rank').innerHTML=opt(RANKS.map(r=>[r,r]));
 $('#signOut').onclick=async()=>{if(db)await db.auth.signOut();user=null;profile=null;commander=false;grants=[];showScreen('welcome');$('#signOut').hidden=true;$('#sessionLabel').textContent='';};
 $('#refreshProfile').onclick=()=>loadIdentity(true);
@@ -49,7 +55,7 @@ $('#authForm').onsubmit=async e=>{
 async function init(){
  if(!ready){showScreen('welcome');toast('البوابة التجريبية بحاجة لربط قاعدة البيانات لتفعيل الحسابات.',true);return}
  const {data}=await db.auth.getUser();if(data?.user){user=data.user;await loadIdentity()}else showScreen('welcome');
- db.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){user=null;showScreen('welcome')}});
+ db.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){user=null;showScreen('welcome')} if(event==='PASSWORD_RECOVERY'){const password=prompt('أدخل كلمة مرور جديدة (8 أحرف على الأقل):');if(password&&password.length>=8)db.auth.updateUser({password}).then(({error})=>toast(error?error.message:'تم تحديث كلمة المرور',!!error));}});
 }
 async function query(name,select='*'){const {data,error}=await db.from(name).select(select);if(error)throw error;return data||[]}
 async function loadIdentity(silent=false){
