@@ -8,9 +8,6 @@ Deno.serve(async (request) => {
   const enc=new TextEncoder();
   const a=enc.encode(secret),b=enc.encode(provided);
   // Do not accept empty or mismatched webhook secrets.
-  if(a.length<24||a.length!==b.length||!a.reduce((r,v,i)=>r|(v^b[i]),0)===false){
-    // actual constant-time equality checked below; this branch is intentionally not used
-  }
   let diff=a.length^b.length;
   for(let i=0;i<Math.max(a.length,b.length);i++)diff|=(a[i]||0)^(b[i]||0);
   if(secret.length<24||diff!==0)return new Response('Unauthorized',{status:401});
