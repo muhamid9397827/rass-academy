@@ -18,8 +18,10 @@ jobs:
           set -euo pipefail
           URL="https://muhamid9397827.github.io/rass-academy"
           for attempt in 1 2 3 4 5; do
-            if curl -fLsS --max-time 15 "$URL/portal/" | grep -q 'بوابة أمن المنشآت' &&
-               curl -fLsS --max-time 15 "$URL/portal/academy.html" | grep -q 'أكاديمية أمن المنشآت'; then
+            if curl -fLsS --max-time 15 -o /tmp/asf-portal.html "$URL/portal/" &&
+               curl -fLsS --max-time 15 -o /tmp/asf-academy.html "$URL/portal/academy.html" &&
+               grep -q 'بوابة أمن المنشآت' /tmp/asf-portal.html &&
+               grep -q 'أكاديمية أمن المنشآت' /tmp/asf-academy.html; then
               echo "ASF portal and academy are published and reachable"
               exit 0
             fi
