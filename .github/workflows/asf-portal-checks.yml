@@ -25,6 +25,8 @@ jobs:
           (python3 -m http.server 8000 >/tmp/asf-http.log 2>&1 &)
           node portal/smoke.spec.cjs
           node portal/flow.spec.cjs
+      - name: Server cleanup policy tests
+        run: node portal/purge.spec.cjs
       - name: Security regression guards
         run: |
           grep -q "kind='secret' and public.asf_is_commander()" portal/supabase/schema.sql
