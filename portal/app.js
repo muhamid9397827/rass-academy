@@ -73,9 +73,9 @@ async function loadIdentity(silent=false){
   $('#sessionLabel').textContent=p?.game_name||user.email;$('#signOut').hidden=false;
   if(commander||p?.status==='approved'){
    showScreen('workspace');$('#courtNav').hidden=!(commander||p.court_enabled);
-   $('#adminNav').hidden=!(commander||has('reports.read'));
+   $('#adminNav').hidden=!(commander||has('reports.read')||has('reports.review'));
    document.querySelectorAll('[data-page="members"],[data-page="changes"],[data-page="delegations"],[data-page="trash"]').forEach(n=>n.hidden=!commander);
-   document.querySelector('[data-page="inbox"]').hidden=!(commander||has('reports.read'));
+   document.querySelector('[data-page="inbox"]').hidden=!(commander||has('reports.read')||has('reports.review'));
    await navigate(pageName);
   }else{
    showScreen('pendingScreen');$('#pendingText').textContent=p?.status==='rejected'?'تم رفض الطلب. تواصل مع الإدارة.':p?.status==='suspended'?'الحساب موقوف حاليًا.':'الحساب بانتظار موافقة القائد. يمكنك دخول الدورات العامة من الصفحة الرئيسية.';
@@ -137,7 +137,7 @@ function cardReport(r,mode){
  '<div class="row" style="margin-top:12px">'+btn('عرض التفاصيل','detail',r.id)+btn('تنزيل PDF','pdf',r.id)+(commander?btn(mode==='trash'?'استعادة':'حذف','trash',r.id,mode==='trash'?'light':'warn'):'')+'</div></article>';
 }
 async function renderReports(mode){
- if(mode==='inbox'&&!has('reports.read'))return set('#page',empty('غير مصرح لك بعرض التقارير الواردة'));
+ if(mode==='inbox'&&!has('reports.read')&&!has('reports.review'))return set('#page',empty('غير مصرح لك بعرض التقارير الواردة'));
  if(mode==='trash'&&!commander)return set('#page',empty('سلة المحذوفات خاصة بالقائد'));
  let q=db.from('asf_reports').select('*').order('submitted_at',{ascending:false}).limit(300);
  if(mode==='reports')q=q.eq('author_id',user.id).is('deleted_at',null);
@@ -165,20 +165,34 @@ async function renderReports(mode){
  };
 }
 async function downloadPdf(r){
- const {data,error}=await db.storage.from('asf-reports').download(r.pdf_path);
+ let {data,error}=await db.storage.from('asf-reports').download(r.pdf_path);
+ if(error && commander && r.deleted_at===null){
+  try{
+   const pdf=await buildPdf(r);
+   const {error:uploadError}=await db.storage.from('asf-reports').upload(r.pdf_path,pdf,{contentType:'application/pdf',upsert:false});
+   if(uploadError)throw uploadError;
+   data=pdf;error=null;
+   toast('أُعيد إنشاء ملف PDF من بيانات التقرير المؤرشفة، وأُضيف إلى التخزين الخاص.');
+  }catch(repairError){toast('تعذر إصلاح ملف PDF: '+repairError.message,true)}
+ }
  if(error)return toast('ملف PDF غير جاهز أو ليس لديك صلاحية: '+error.message,true);
- const blobUrl=URL.createObjectURL(data);window.open(blobUrl,'_blank','noopener,noreferrer');setTimeout(()=>URL.revokeObjectURL(blobUrl),120000);
+ const blobUrl=URL.createObjectURL(data);
+ const opened=window.open(blobUrl,'_blank','noopener,noreferrer');
+ if(!opened){
+  const link=document.createElement('a');link.href=blobUrl;link.download=code(r.report_number)+'.pdf';link.click();
+ }
+ setTimeout(()=>URL.revokeObjectURL(blobUrl),120000);
 }
 async function detailReport(r,mode){
  const {data:rev}=await db.from('asf_reviews').select('*').eq('report_id',r.id).maybeSingle();
  const content=r.mode==='free'?'<p class="muted">نص التقرير</p><div style="white-space:pre-wrap">'+esc(r.body?.text||'')+'</div>':
  ['achievements','progress','needs','notes'].map((x,i)=>'<h4>'+['الإنجازات','التقدم','الاحتياجات','الملاحظات'][i]+'</h4><p style="white-space:pre-wrap">'+esc(r.body?.[x]||'—')+'</p>').join('');
  set('#page','<div class="section-card"><div class="row between"><h3>'+esc(r.title)+'</h3>'+badge(KINDS[r.kind],r.kind==='secret')+'</div><p class="muted">'+code(r.report_number)+' · '+date(r.submitted_at)+'</p><p>'+esc(r.sender_rank)+' / '+esc(r.sender_name)+' / '+esc(r.sender_code)+'</p><hr>'+content+'<hr><b>مراجعة القائد:</b> '+esc(STATES[rev?.state]||'جديد')+'<p>'+esc(rev?.note||'لا توجد ملاحظات')+'</p><div class="row">'+btn('عرض PDF','pdf',r.id)+(mode==='reports'&&r.kind!=='secret'?btn('تقديم تصحيح','correct',r.id):'')+btn('رجوع','back')+'</div></div>'+
- (commander?'<section class="section-card"><h3>مراجعة التقرير</h3><form id="reviewForm"><label>حالة التقرير<select name="state">'+opt(Object.entries(STATES),rev?.state||'new')+'</select></label><label>الملاحظات والتوجيهات<textarea name="note" maxlength="4000">'+esc(rev?.note||'')+'</textarea></label><button class="btn primary">حفظ المراجعة</button></form></section>':''));
+ ((commander||has('reports.review',r.kind))?'<section class="section-card"><h3>مراجعة التقرير</h3><form id="reviewForm"><label>حالة التقرير<select name="state">'+opt(Object.entries(STATES),rev?.state||'new')+'</select></label><label>الملاحظات والتوجيهات<textarea name="note" maxlength="4000">'+esc(rev?.note||'')+'</textarea></label><button class="btn primary">حفظ المراجعة</button></form></section>':''));
  $('#page').querySelector('[data-action="pdf"]').onclick=()=>downloadPdf(r);
  $('#page').querySelector('[data-action="back"]').onclick=()=>renderReports(mode);
  const fix=$('#page').querySelector('[data-action="correct"]');if(fix)fix.onclick=()=>{correctionSource=r;draftId=null;navigate('compose')};
- if(commander)$('#reviewForm').onsubmit=async e=>{
+ if(commander||has('reports.review',r.kind))$('#reviewForm').onsubmit=async e=>{
   e.preventDefault();const f=new FormData(e.currentTarget);
   const {error}=await db.rpc('asf_review_report',{report:r.id,new_state:f.get('state'),new_note:f.get('note')});
   if(error)return toast(error.message,true);toast('تم حفظ الملاحظات');detailReport(r,mode);
@@ -238,7 +252,7 @@ function renderPaper(r){
  el.innerHTML='<div style="display:flex;justify-content:space-between"><b>بوابة أمن المنشآت<br>القيادة العامة</b><b style="font-size:30px">◆</b></div><h2>تقرير إداري رسمي</h2><div style="text-align:center">'+esc(KINDS[r.kind])+(r.kind==='secret'?'<p><span class="stamp">سري للغاية</span></p>':'')+'</div>'+
  '<div class="paper-meta"><div>رقم التقرير: <b>'+code(r.report_number)+'</b></div><div>تاريخ الإرسال: '+esc(date(r.submitted_at))+'</div><div>اسم المرسل: '+esc(r.sender_name)+'</div><div>الرتبة: '+esc(r.sender_rank)+'</div><div>الكود: '+esc(r.sender_code)+'</div><div>الجهة المستلمة: القائد</div></div>'+
  '<h3>الموضوع: '+esc(r.title)+'</h3>'+sections+
- (r.original?'<p>تصحيح مرتبط بالتقرير: '+esc(r.original)+'</p>':'')+
+ (r.original||r.original_report_id?'<p>تصحيح مرتبط بالتقرير: '+esc(r.original||r.original_report_id)+'</p>':'')+
  '<div class="paper-footer">وثيقة إلكترونية لأغراض المحاكاة داخل سيرفر رول بلاي · رقم التقرير '+code(r.report_number)+'</div>';
  return el;
 }
@@ -332,13 +346,13 @@ async function renderDelegations(){
  const [people,rights]=await Promise.all([query('asf_profiles'),query('asf_delegations')]);
  set('#page','<div class="notice">لا توجد صلاحية يمكنها تجاوز حصرية «سري للغاية»؛ حتى تفويض قراءة جميع التقارير لا يشمله.</div>'+
  '<div class="section-card"><h3>إضافة أو سحب صلاحيات قيادية</h3><form id="grantsForm"><label>العضو<select name="user">'+opt(people.filter(p=>p.status==='approved').map(p=>[p.user_id,p.game_name+' — '+(p.military_code||'')]))+'</select></label>'+
- '<label>الأداة<select name="feature">'+opt([['reports.read','الاطلاع على التقارير العادية'],['police.manage','إدارة الشرطة العسكرية (تجهيز مستقبلي)'],['court.manage','إدارة مجلس القضاء (تجهيز مستقبلي)'],['users.review','مراجعة المستخدمين (تجهيز مستقبلي)']])+'</select></label>'+
+ '<label>الأداة<select name="feature">'+opt([['reports.read','الاطلاع على التقارير العادية'],['reports.review','مراجعة التقارير وإرسال ملاحظات عليها'],['police.manage','إدارة الشرطة العسكرية (تجهيز مستقبلي)'],['court.manage','إدارة مجلس القضاء (تجهيز مستقبلي)'],['users.review','مراجعة المستخدمين (تجهيز مستقبلي)']])+'</select></label>'+
  '<label>تصنيف التقارير<select name="kind">'+opt([['','جميع التقارير غير السرية'],...Object.entries(KINDS).filter(([k])=>k!=='secret')])+'</select></label>'+
  '<div class="row"><button type="submit" class="btn primary" name="enable" value="true">منح</button><button type="submit" class="btn warn" name="enable" value="false">سحب</button></div></form></div>'+
  '<div class="section-card"><h3>التفويضات الحالية</h3><div class="table-wrap"><table><thead><tr><th>العضو</th><th>الصلاحية</th><th>نوع التقرير</th></tr></thead><tbody>'+
  rights.map(r=>'<tr><td>'+esc(people.find(p=>p.user_id===r.user_id)?.game_name||r.user_id)+'</td><td>'+esc(r.permission)+'</td><td>'+esc(KINDS[r.report_kind]||'الكل ما عدا السري')+'</td></tr>').join('')+'</tbody></table></div></div>');
  let submitEnable=true;$('#grantsForm').querySelectorAll('button[type="submit"]').forEach(b=>b.addEventListener('click',()=>submitEnable=b.value==='true'));
- $('#grantsForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),feature=f.get('feature'),kind=feature==='reports.read'?(f.get('kind')||null):null;
+ $('#grantsForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),feature=f.get('feature'),kind=['reports.read','reports.review'].includes(feature)?(f.get('kind')||null):null;
  const {error}=await db.rpc('asf_set_delegation',{target:f.get('user'),feature,kind,enabled:submitEnable});
  if(error)return toast(error.message,true);toast('تم تحديث الصلاحيات');loadIdentity(true)};
 }
