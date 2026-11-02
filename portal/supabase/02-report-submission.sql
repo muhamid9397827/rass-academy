@@ -30,7 +30,7 @@ drop policy if exists "reports restricted read" on public.asf_reports;
 create policy "reports restricted read" on public.asf_reports for select to authenticated using(
  (kind='secret' and public.asf_is_commander())
  or (kind<>'secret' and (public.asf_is_commander() or
- (deleted_at is null and (author_id=auth.uid() or public.asf_can_read_kind(kind)))))
+ (deleted_at is null and public.asf_approved() and (author_id=auth.uid() or public.asf_can_read_kind(kind)))))
 );
 -- Delete from trash after 30 days needs a server job using service key and Storage API.
 -- Never expose service_role key in frontend config.
