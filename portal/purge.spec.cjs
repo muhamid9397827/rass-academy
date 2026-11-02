@@ -37,7 +37,6 @@ const path=require('node:path');
  assert.equal(typeof handler,'function');
  let response=await handler(new Request('https://example.test',{method:'GET'}));
  assert.equal(response.status,405);
- response=await handler(new Request('https://example.test',{method:'POST',headers:{authorization:'Bearer bad'}}));
  valid=false;response=await handler(new Request('https://example.test',{method:'POST',headers:{authorization:'Bearer bad'}}));
  assert.equal(response.status,401);
  assert.equal(removed.length,0);
