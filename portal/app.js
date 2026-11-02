@@ -20,7 +20,7 @@ const badge=(s,secret=false)=>'<span class="badge '+(secret?'secret':'')+'">'+es
 const empty=msg=>'<div class="empty">'+esc(msg)+'</div>';
 const has=(permission,kind=null)=>commander||grants.some(g=>g.permission===permission&&(kind===null||g.report_kind===null||g.report_kind===kind));
 function showScreen(which){['welcome','authScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which)}
-function openAcademy(){window.open('../index.html','_blank','noopener')}
+function openAcademy(){window.open('academy.html','_blank','noopener')}
 $('#openAcademy').onclick=openAcademy;
 let registering=false;
 function authForm(mode){registering=mode==='register';showScreen('authScreen');$('#authTitle').textContent=registering?'إنشاء حساب جديد':'تسجيل الدخول';$('#registerFields').hidden=!registering;$('#authSubmit').textContent=registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authToggle').textContent=registering?'لديك حساب بالفعل؟ تسجيل الدخول':'ليس لديك حساب؟ إنشاء حساب';['gameName','discordId','rank'].forEach(id=>$('#'+id).required=registering);}
@@ -111,8 +111,8 @@ async function renderDashboard(){
 }
 function renderAcademy(){
  const courses=Object.values(window.COURSES||{}).filter(c=>c.sector==='facilities_security');
- set('#page','<div class="notice">الدورات متاحة للجميع بدون تسجيل دخول. نظام الاختبارات الحالي محفوظ كما هو في موقع الأكاديمية إلى حين دمجه بالكامل.</div>'+
- '<div class="grid three">'+courses.map(c=>'<section class="section-card"><h3>'+esc(c.title)+'</h3><p>'+esc(c.requiredRank||'')+'</p><a class="btn ghost" href="../index.html" target="_blank" rel="noopener">فتح دورة الأكاديمية</a></section>').join('')+'</div>'+
+ set('#page','<div class="notice">الدورات متاحة للجميع بدون تسجيل دخول. تم دمج واجهة أكاديمية أمن المنشآت ودوراتها العامة مع الاحتفاظ بآلية الاختبارات الحالية.</div>'+
+ '<div class="grid three">'+courses.map(c=>'<section class="section-card"><h3>'+esc(c.title)+'</h3><p>'+esc(c.requiredRank||'')+'</p><a class="btn ghost" href="academy.html" target="_blank" rel="noopener">فتح دورة الأكاديمية</a></section>').join('')+'</div>'+
  '<button class="btn primary" id="allCourses">دخول الأكاديمية</button>');
  $('#allCourses').onclick=openAcademy;
 }
