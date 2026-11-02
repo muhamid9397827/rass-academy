@@ -35,3 +35,8 @@ jobs:
           grep -q "revoke insert on public.asf_reports" portal/supabase/02-report-submission.sql
           grep -q "report_kind is null or report_kind in" portal/supabase/schema.sql
           grep -q "and public.asf_approved()" portal/supabase/schema.sql
+          grep -q "asf_check_email_webhook" portal/supabase/functions/asf-notify/index.ts
+          grep -q "app_private.asf_email_bridge_key" portal/supabase/15-email-webhook-bridge.sql
+          if grep -Eq 'NEW\.(title|body|sender_name|discord_id)' portal/supabase/15-email-webhook-bridge.sql; then
+            echo 'Forbidden private report fields in outbound webhook'; exit 1
+          fi
