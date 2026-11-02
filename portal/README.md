@@ -1,5 +1,16 @@
 # بوابة أمن المنشآت — النسخة الأساسية (MVP)
 
+## إعداد إشعارات البريد — 3 نوفمبر 2026
+
+- ✅ تم ربط قاعدتي التسجيل والتقارير بوظيفة `asf-notify` عبر triggers خاصة (ملف `15-email-webhook-bridge.sql`).
+- ✅ مفتاح التحقق من Webhook يُولَّد ويُحفظ في `app_private.asf_email_bridge_key` داخل قاعدة البيانات، ولا يظهر في GitHub أو المتصفح.
+- ✅ تم اختبار الوظيفة المباشرة: طلب مصرح `HTTP 202` (البريد غير مهيأ بعد)، وطلب غير مصرح `HTTP 401`.
+- ✅ البيانات المرسلة من قاعدة البيانات إلى وظيفة البريد لا تتضمن عنوان التقرير ولا نصه ولا ملف PDF؛ فقط نوع الإشعار وتصنيف التقرير.
+- ⚠️ لإرسال بريد فعلي يلزم **حساب Resend مع نطاق مُوثَّق** وثلاثة أسرار فقط على Supabase Edge Functions: `RESEND_API_KEY` و `RESEND_FROM` و `ASF_COMMANDER_EMAIL`. لا تضع أي سر في `config.js` أو GitHub.
+- لا يلزم إعداد `ASF_WEBHOOK_SECRET` يدويًا أو إنشاء Webhooks من لوحة التحكم بعد تركيب migration 15.
+- إشعارات لوحة القائد الفورية لا تعتمد على Resend وتبقى فعالة.
+
+
 ## اختبار نوفمبر 2026: سجل المراجعات
 - سجل `asf_review_history` يحتفظ بكل توجيه وقرار ووقت حفظه، ولا يستطيع الأعضاء تعديله أو حذفه.
 - يشاهد الأعضاء توجيهات تقاريرهم العادية فقط. «سري للغاية» يستمر حصريًا للقائد.
@@ -83,8 +94,8 @@
    supabase functions deploy asf-notify --project-ref PROJECT_REF --no-verify-jwt
    supabase functions deploy asf-purge --project-ref PROJECT_REF --no-verify-jwt
    ```
-   اضبط Supabase Functions Secrets: `ASF_WEBHOOK_SECRET`, `RESEND_API_KEY`, `ASF_COMMANDER_EMAIL`, `RESEND_FROM`, `ASF_CRON_TOKEN`. وأضف رابط Supabase URL وservice role للـ purge كأسرار خادم (قد توفرها المنصة تلقائيًا).
-9. أضف Database Webhooks للـ INSERT على `public.asf_profiles` و`public.asf_reports` إلى Function `asf-notify`، مع هيدر `x-asf-webhook-secret` يطابق سر Edge Function. تأكد من إرسال بريد تجريبي.
+   اضبط Supabase Functions Secrets: `RESEND_API_KEY`, `ASF_COMMANDER_EMAIL`, `RESEND_FROM`, `ASF_CRON_TOKEN`. وأضف رابط Supabase URL وservice role للـ purge كأسرار خادم (قد توفرها المنصة تلقائيًا).
+9. بعد تركيب migration 15، لا حاجة لإضافة Webhooks يدويًا؛ اختبر رسالة فعلية بعد إعداد أسرار Resend.
 10. جدولة `asf-purge`: عبر Supabase Cron/pg_cron + pg_net أو Scheduler مؤمّن، يوميًا، مع `Authorization: Bearer ASF_CRON_TOKEN`. لا تعتبر 30 يومًا تلقائية حتى ينجح اختبار المهمة.
 
 ## ما يلزم قبل اعتبار الموقع منتهيًا
