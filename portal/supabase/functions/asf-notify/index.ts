@@ -1,6 +1,7 @@
 // Supabase Edge Function: asf-notify
-// Deploy with --no-verify-jwt. Require a long ASF_WEBHOOK_SECRET checked below.
-// Set two Supabase Database Webhooks on INSERT asf_profiles and asf_reports.
+// Deploy with --no-verify-jwt. Requests are authorized using a separate token
+// held in private database table app_private.asf_email_bridge_key.
+// Migration 15 installs minimal-data DB triggers for signup and report events.
 Deno.serve(async (request) => {
   if (request.method !== 'POST') return new Response('Method not allowed',{status:405});
   const provided=request.headers.get('x-asf-webhook-secret')||'';
