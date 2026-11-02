@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <meta name="description" content="منصة تدريب واختبارات موحدة للقطاعات الأمنية داخل سيرفر المحاكاة.">
+  <title>أكاديمية أمن المنشآت | منصة التدريب الموحدة</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css?v=20260802-2">
+  <script src="../js/config.js" defer></script>
+  <script src="../js/courses.js?v=20260802-3" defer></script>
+  <script src="academy-filter.js" defer></script>
+  <script src="../js/banks/individual-qualification.js" defer></script>
+  <script src="../js/banks/public-security-operations.js" defer></script>
+  <script src="../js/banks/public-security-traffic-road-security.js" defer></script>
+  <script src="../js/banks/public-security-air-support.js" defer></script>
+  <script src="../js/banks/public-security-special-missions.js" defer></script>
+  <script src="../js/banks/public-security-narcotics-control.js" defer></script>
+  <script src="../js/banks/public-security-zone-supervisor.js" defer></script>
+  <script src="../js/banks/regiments-zone-officer.js" defer></script>
+  <script src="../js/banks/regiments-recruitment.js" defer></script>
+  <script src="../js/banks/regiments-operations.js" defer></script>
+  <script src="../js/banks/regiments-prison-transfer.js" defer></script>
+  <script src="../js/banks/regiments-air-support.js" defer></script>
+  <script src="../js/banks/operations.js" defer></script>
+  <script src="../js/banks/military-character.js" defer></script>
+  <script src="../js/banks/air-wing.js" defer></script>
+  <script src="../js/banks/zone-officer.js" defer></script>
+  <script src="../js/banks/swat.js" defer></script>
+  <script src="../js/app.js?v=20260803-3" defer></script>
+<style>.sector-card--regiments,.sector-card--public,.sector-stats{display:none!important}.sector-cards{grid-template-columns:minmax(240px,520px)!important;justify-content:center}</style></head>
+<body>
+  <a class="skip-link" href="#main-content">انتقل إلى المحتوى الرئيسي</a>
+  <div class="page-glow page-glow--one" aria-hidden="true"></div>
+  <div class="page-glow page-glow--two" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="index.html" aria-label="العودة إلى الصفحة الرئيسية">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" role="img">
+            <path d="M24 3 40 9v12c0 11-6.8 19.7-16 24-9.2-4.3-16-13-16-24V9l16-6Z" fill="currentColor" opacity=".18"/>
+            <path d="M24 6.5 36.5 11v10c0 8.5-4.9 15.6-12.5 19.6C16.4 36.6 11.5 29.5 11.5 21V11L24 6.5Z" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="m17.5 24 4.2 4.2 9-10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6"/>
+          </svg>
+        </span>
+        <span>
+          <strong class="brand__title">أكاديمية أمن المنشآت</strong>
+          <span class="brand__subtitle">منصة التدريب الموحدة للقطاعات الأمنية</span>
+        </span>
+      </a>
+
+      <div class="header-meta">
+        <div id="sector-indicator" class="sector-indicator" hidden>
+          <span id="selected-sector-label"></span>
+          <button id="change-sector-button" class="button button--ghost button--small" type="button">تغيير القطاع</button>
+        </div>
+        <span class="simulation-badge">
+          <span class="simulation-badge__dot" aria-hidden="true"></span>
+          رئاسة كلية التدريب
+        </span>
+        <button class="icon-button" id="theme-button" type="button" aria-label="تبديل نمط الألوان" title="تبديل نمط الألوان">
+          <svg class="icon-button__moon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20.5 15.5A8.4 8.4 0 0 1 8.5 3.6 8.5 8.5 0 1 0 20.5 15.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg class="icon-button__sun" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.8" fill="none" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" class="app-shell">
+    <nav id="progress-steps" class="progress-steps" aria-label="مراحل التدريب">
+      <ol>
+        <li class="progress-step is-active" data-step="entry" aria-current="step">
+          <span class="progress-step__number">١</span>
+          <span class="progress-step__label">البيانات</span>
+        </li>
+        <li class="progress-step" data-step="study">
+          <span class="progress-step__number">٢</span>
+          <span class="progress-step__label">المادة</span>
+        </li>
+        <li class="progress-step" data-step="quiz">
+          <span class="progress-step__number">٣</span>
+          <span class="progress-step__label">الاختبار</span>
+        </li>
+        <li class="progress-step" data-step="result">
+          <span class="progress-step__number">٤</span>
+          <span class="progress-step__label">النتيجة</span>
+        </li>
+      </ol>
+    </nav>
+
+    <div id="global-status" class="status-toast" role="status" aria-live="polite" hidden></div>
+
+    <section id="sector-view" class="view sector-view" aria-labelledby="sector-title" hidden>
+      <div class="sector-landing">
+        <section class="landing-hero" aria-describedby="sector-subtitle">
+          <div class="landing-hero__content">
+            <div class="landing-hero__meta">
+              <span class="eyebrow">بوابة التدريب</span>
+              <span class="landing-location">بوابة أمن المنشآت</span>
+            </div>
+            <h1 id="sector-title">أكاديمية أمن المنشآت</h1>
+            <p id="sector-subtitle">منصة التدريب الموحدة للقطاعات الأمنية</p>
+            <div class="landing-hero__actions">
+              <a class="button button--primary" href="#available-sectors">
+                ابدأ التدريب
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 12h14m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </a>
+              <a class="button button--ghost" href="#available-sectors">عرض القطاعات</a>
+            </div>
+          </div>
+          <div class="landing-hero__emblem" aria-hidden="true">
+            <svg viewBox="0 0 120 120">
+              <path d="M60 9 99 23v30c0 27-15.3 47.7-39 58-23.7-10.3-39-31-39-58V23L60 9Z" fill="currentColor" opacity=".1"/>
+              <path d="M60 15 93 27v26c0 22.3-12.5 40.3-33 50-20.5-9.7-33-27.7-33-50V27l33-12Z" fill="none" stroke="currentColor" stroke-width="2.4"/>
+              <path d="m42 60 11 11 25-28" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </section>
+
+        <section id="available-sectors" class="sectors-section" aria-labelledby="available-sectors-title">
+          <div class="sectors-section__heading">
+            <div>
+              <span class="eyebrow">القطاعات المتاحة</span>
+              <h2 id="available-sectors-title">اختر مسار التدريب المناسب</h2>
+            </div>
+            <p>مسارات تدريبية مستقلة، مصممة لتجربة واضحة ومنظمة.</p>
+          </div>
+
+          <div class="sector-grid">
+            <article class="sector-card sector-card--facilities">
+              <div class="sector-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3 20 6v5c0 5.5-3.4 9.5-8 11-4.6-1.5-8-5.5-8-11V6l8-3Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                  <path d="m8.5 12 2.1 2.1 4.8-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="sector-card__content">
+                <span class="sector-card__eyebrow">قطاع تدريبي</span>
+                <h3>أمن المنشآت</h3>
+                <p>الدورات والمواد التدريبية المتاحة لمنسوبي أمن المنشآت.</p>
+              </div>
+              <button class="button button--primary sector-card__action" type="button" data-sector="facilities_security">دخول القطاع</button>
+            </article>
+
+            <article class="sector-card sector-card--regiments">
+              <div class="sector-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M4 20V9l8-5 8 5v11M8 20v-5h8v5M12 4v11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="sector-card__content">
+                <span class="sector-card__eyebrow">قطاع تدريبي</span>
+                <h3>الأفواج الأمنية</h3>
+                <p>دورات ومواد واختبارات ميدانية خاصة بقطاع الأفواج الأمنية.</p>
+              </div>
+              <button class="button button--primary sector-card__action" type="button" data-sector="security_regiments">استعراض الدورات</button>
+            </article>
+
+            <article class="sector-card sector-card--public">
+              <div class="sector-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3v18M5 8l7-5 7 5M6 21h12M8 11h8v7H8z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="sector-card__content">
+                <span class="sector-card__eyebrow">قطاع تدريبي</span>
+                <h3>الأمن العام</h3>
+                <p>دورات واختبارات ميدانية متدرجة حسب الرتب لمنسوبي الأمن العام.</p>
+              </div>
+              <button class="button button--primary sector-card__action" type="button" data-sector="public_security">استعراض الدورات</button>
+            </article>
+          </div>
+        </section>
+
+        <section class="sector-stats" aria-label="إحصائيات القطاعات المتاحة">
+          <div><strong>٣</strong><span>قطاعات في المنصة</span></div>
+          <div><strong>١٩</strong><span>دورة ومرجع تدريبي</span></div>
+          <div><strong>١٧</strong><span>بنوك أسئلة مستقلة</span></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="entry-view" class="view" aria-labelledby="entry-title">
+      <div id="resume-banner" class="resume-banner" hidden>
+        <div>
+          <span class="resume-banner__eyebrow">محاولة محفوظة</span>
+          <strong id="resume-title">لديك اختبار لم يكتمل</strong>
+          <p id="resume-details"></p>
+        </div>
+        <div class="resume-banner__actions">
+          <button id="resume-button" class="button button--small button--primary" type="button">متابعة المحاولة</button>
+          <button id="discard-session-button" class="button button--small button--ghost" type="button">حذفها</button>
+        </div>
+      </div>
+
+      <div class="entry-layout">
+        <div class="hero-panel">
+          <span class="eyebrow">منصة التدريب الموحدة</span>
+          <h1 id="entry-title">ارتق بمعرفتك<br><span>وطور خبرتك</span></h1>
+          <p class="hero-panel__lead">
+            الدورات طريقك لزيادة المعرفة وتنمية الخبرة وتعزيز جاهزيتك داخل القطاع
+          </p>
+
+          <div class="hero-stats" aria-label="معلومات المنصة">
+            <div class="hero-stat">
+              <strong id="courses-count">٥</strong>
+              <span>دورات ميدانية</span>
+            </div>
+            <div class="hero-stat">
+              <strong id="questions-count">٥٠</strong>
+              <span>سؤالاً تدريبياً</span>
+            </div>
+            <div class="hero-stat">
+              <strong>٧٠٪</strong>
+              <span>درجة الاجتياز</span>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="card entry-card">
+          <div class="card__header">
+            <span class="card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <div>
+              <h2>تسجيل المتدرب</h2>
+              <p>أدخل بيانات شخصيتك داخل السيرفر</p>
+            </div>
+          </div>
+
+          <form id="trainee-form" novalidate>
+            <div class="field">
+              <label for="trainee-name">اسم الشخصية الكامل</label>
+              <div class="field__control">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                </svg>
+                <input id="trainee-name" name="name" type="text" autocomplete="name" maxlength="60" placeholder="مثال مجاهد ال عباد" required>
+              </div>
+              <small id="trainee-name-error" class="field__error"></small>
+            </div>
+
+            <div class="field-grid">
+              <div class="field">
+                <label for="trainee-discord">معرّف Discord</label>
+                <div class="field__control">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8.2 7.6a11 11 0 0 1 7.6 0M9.2 15.4c2 1.1 3.6 1.1 5.6 0M8.5 14h.01M15.5 14h.01M7 5.2a18 18 0 0 1 10 0c1.8 2.5 2.8 5.6 3 9.1-1.2 1.6-2.7 2.7-4.4 3.4l-1.1-1.5M17 18.9c-3.3 1.4-6.7 1.4-10 0M7 5.2c-1.8 2.5-2.8 5.6-3 9.1 1.2 1.6 2.7 2.7 4.4 3.4l1.1-1.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                  </svg>
+                  <input id="trainee-discord" name="discord" type="text" dir="ltr" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="123456789012345678" required>
+                </div>
+                <small id="trainee-discord-error" class="field__error"></small>
+              </div>
+
+              <div id="rank-field" class="field">
+                <label for="trainee-rank">الرتبة الحالية</label>
+                <div class="field__control field__control--select">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m12 3 2.4 4.8 5.3.8-3.8 3.7.9 5.2-4.8-2.4-4.8 2.4.9-5.2-3.8-3.7 5.3-.8L12 3Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                  </svg>
+                  <select id="trainee-rank" name="rank" required>
+                    <option value="">اختر الرتبة</option>
+                    <option>جندي</option>
+                    <option>جندي أول</option>
+                    <option>عريف</option>
+                    <option>وكيل رقيب</option>
+                    <option>رقيب</option>
+                    <option>رقيب أول</option>
+                    <option>رئيس رقباء</option>
+                    <option>ملازم</option>
+                    <option>ملازم أول</option>
+                    <option>نقيب</option>
+                    <option>رائد</option>
+                    <option>مقدم</option>
+                    <option>عقيد</option>
+                    <option>عميد</option>
+                  </select>
+                </div>
+                <small id="trainee-rank-error" class="field__error"></small>
+              </div>
+            </div>
+
+            <div id="course-field" class="field">
+              <label for="course-select">الدورة أو المرجع</label>
+              <div class="field__control field__control--select">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Zm0 12.8A3.2 3.2 0 0 1 8.2 14H19M9 8h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <select id="course-select" name="course" required>
+                  <option value="">اختر الدورة المطلوبة</option>
+                </select>
+              </div>
+              <small id="course-select-hint" class="field__hint">ستظهر مدة الدراسة والاختبار بعد اختيار الدورة</small>
+              <small id="course-select-error" class="field__error"></small>
+            </div>
+
+            <label class="consent-control" for="simulation-consent">
+              <input id="simulation-consent" name="consent" type="checkbox" required>
+              <span class="consent-control__box" aria-hidden="true">
+                <svg viewBox="0 0 18 18">
+                  <path d="m4 9.2 3.1 3.1L14 5.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <span>أقر بأن البيانات تخص شخصيتي داخل سيرفر المحاكاة وأوافق على حفظ نتيجة المحاولة</span>
+            </label>
+            <small id="simulation-consent-error" class="field__error"></small>
+
+            <button id="entry-submit-button" class="button button--primary button--wide" type="submit">
+              دخول غرفة التدريب
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section id="study-view" class="view" aria-labelledby="study-title" hidden>
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">المرحلة الثانية</span>
+          <h1 id="study-title">المادة التدريبية</h1>
+          <p id="study-description">اقرأ المادة بهدوء قبل بدء الاختبار</p>
+        </div>
+        <button id="leave-study-button" class="button button--ghost button--small" type="button">
+          العودة للبداية
+        </button>
+      </div>
+
+      <div class="study-grid">
+        <aside class="study-sidebar">
+          <div class="card compact-card">
+            <span class="compact-card__label">المتدرب</span>
+            <strong id="study-trainee-name"></strong>
+            <span id="study-trainee-meta" class="muted-text"></span>
+          </div>
+
+          <div id="study-timer-card" class="card timer-card">
+            <div class="timer-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 8v5l3 2M9 2h6M12 5a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <span>وقت الاطلاع المتبقي</span>
+            <strong id="study-time" class="timer-value" role="timer" aria-label="وقت الاطلاع المتبقي">13:00</strong>
+            <div class="progress-bar" aria-hidden="true">
+              <span id="study-progress-bar"></span>
+            </div>
+            <p>يمكنك بدء الاختبار بعد انتهاء مدة الاطلاع</p>
+          </div>
+
+          <div class="card rules-card">
+            <h2>تعليمات سريعة</h2>
+            <ul>
+              <li>استخدم الأسهم أو السحب للتنقل بين الشرائح</li>
+              <li>يُحفظ تقدم الاختبار تلقائياً على هذا الجهاز</li>
+              <li>تبديل النافذة يُسجل كملاحظة فقط ولا يسبب رسوباً تلقائياً</li>
+            </ul>
+          </div>
+        </aside>
+
+        <div class="study-main">
+          <div class="document-card">
+            <div class="document-card__toolbar">
+              <div>
+                <span class="document-card__status" aria-hidden="true"></span>
+                <strong id="document-title">العرض التدريبي</strong>
+              </div>
+              <a id="slides-link" class="text-link" href="#" target="_blank" rel="noopener noreferrer">
+                فتح في نافذة مستقلة
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M14 5h5v5M13 11l6-6M19 14v5H5V5h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </a>
+            </div>
+            <div class="document-card__frame">
+              <iframe id="study-frame" title="العرض التدريبي للدورة المحددة" loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+              <div id="frame-fallback" class="frame-fallback">
+                <strong>تعذر عرض الشرائح؟</strong>
+                <span>استخدم رابط فتح في نافذة مستقلة أعلى العرض</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="study-action card">
+            <div>
+              <strong id="study-action-title">أكمل مدة الاطلاع أولاً</strong>
+              <span id="study-action-note">سيتفعّل زر الاختبار تلقائياً عند انتهاء المؤقت</span>
+            </div>
+            <button id="start-quiz-button" class="button button--success" type="button" disabled>
+              بدء الاختبار
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m9 7 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="quiz-view" class="view" aria-labelledby="quiz-title" hidden>
+      <div class="quiz-topbar">
+        <div>
+          <span class="eyebrow">الاختبار الميداني</span>
+          <h1 id="quiz-title">اختبار الدورة</h1>
+          <p id="quiz-trainee-line"></p>
+        </div>
+
+        <div class="quiz-metrics">
+          <div class="metric-card">
+            <span>الوقت المتبقي</span>
+            <strong id="quiz-time" class="metric-card__value" role="timer" aria-label="وقت الاختبار المتبقي">10:00</strong>
+          </div>
+          <div class="metric-card">
+            <span>تمت الإجابة</span>
+            <strong class="metric-card__value"><span id="answered-count">0</span>/<span id="total-count">10</span></strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="quiz-progress card">
+        <div>
+          <span>تقدمك في الاختبار</span>
+          <strong id="quiz-progress-text">٠٪</strong>
+        </div>
+        <div class="progress-bar progress-bar--quiz" role="progressbar" aria-label="نسبة الأسئلة المجابة" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span id="quiz-progress-bar"></span>
+        </div>
+      </div>
+
+      <div class="quiz-layout">
+        <aside class="question-map card" aria-label="خريطة الأسئلة">
+          <div class="question-map__header">
+            <h2>الأسئلة</h2>
+            <span><i aria-hidden="true"></i> مجاب</span>
+          </div>
+          <div id="question-map" class="question-map__grid"></div>
+          <div class="monitor-note">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Zm0-14v4m0 4h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div>
+              <strong>ملاحظات تبديل النافذة</strong>
+              <span><b id="visibility-count">0</b> ملاحظة — لا تسبب رسوباً تلقائياً</span>
+            </div>
+          </div>
+        </aside>
+
+        <div class="quiz-content">
+          <form id="quiz-form" novalidate></form>
+          <div class="quiz-actions card">
+            <p id="quiz-submit-hint">راجع إجاباتك جيداً ولا يمكن تعديلها بعد التسليم</p>
+            <div>
+              <button id="save-progress-button" class="button button--ghost" type="button">حفظ التقدم</button>
+              <button id="submit-quiz-button" class="button button--primary" type="button">
+                تسليم الإجابات
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m5 12 4 4L19 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="result-view" class="view" aria-labelledby="result-title" hidden>
+      <div class="result-card card">
+        <div id="result-emblem" class="result-emblem" aria-hidden="true">
+          <svg viewBox="0 0 48 48">
+            <path id="result-emblem-path" d="m14 25 7 7 14-17" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span id="result-kicker" class="eyebrow">اكتمل الاختبار</span>
+        <h1 id="result-title">أحسنت، تم اجتياز الدورة</h1>
+        <p id="result-message">تم تسجيل نتيجتك بنجاح على هذا الجهاز</p>
+
+        <div class="score-ring" id="score-ring">
+          <div>
+            <strong id="result-percentage">70%</strong>
+            <span>النتيجة النهائية</span>
+          </div>
+        </div>
+
+        <dl class="result-details">
+          <div>
+            <dt>المتدرب</dt>
+            <dd id="result-trainee"></dd>
+          </div>
+          <div>
+            <dt>الدورة</dt>
+            <dd id="result-course"></dd>
+          </div>
+          <div id="result-assigned-rank-row" hidden>
+            <dt>الرتبة المبدئية</dt>
+            <dd id="result-assigned-rank"></dd>
+          </div>
+          <div>
+            <dt>الإجابات الصحيحة</dt>
+            <dd id="result-score"></dd>
+          </div>
+          <div>
+            <dt>رقم المحاولة</dt>
+            <dd id="result-receipt" dir="ltr"></dd>
+          </div>
+          <div>
+            <dt>وقت التسليم</dt>
+            <dd id="result-date"></dd>
+          </div>
+          <div>
+            <dt>ملاحظات المراقبة</dt>
+            <dd id="result-notes"></dd>
+          </div>
+        </dl>
+
+        <div id="submission-status" class="submission-status" role="status" aria-live="polite">
+          <span class="submission-status__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M20 15.5A4.5 4.5 0 0 1 15.5 20H7a5 5 0 0 1-.8-9.9A7 7 0 0 1 19.6 8a4 4 0 0 1 .4 7.5ZM12 11v6m-2-2 2 2 2-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span id="submission-status-text">جاري حفظ النتيجة</span>
+        </div>
+
+        <div class="result-actions">
+          <button id="copy-result-button" class="button button--primary" type="button">
+            نسخ ملخص النتيجة
+          </button>
+          <button id="print-result-button" class="button button--ghost" type="button">
+            طباعة النتيجة
+          </button>
+          <button id="new-session-button" class="button button--ghost" type="button">
+            العودة للرئيسية
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p class="site-footer__copyright">
+      © 2026 — أكاديمية أمن المنشآت — بوابة أمن المنشآت.<br>
+      جميع الحقوق محفوظة. يُمنع نسخ أو إعادة استخدام أو إعادة نشر التصميم أو الأكواد أو المحتوى كليًا أو جزئيًا دون إذن كتابي مسبق.
+    </p>
+    <span id="footer-version" class="site-footer__version">الإصدار الثاني</span>
+  </footer>
+
+  <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-title">
+    <form method="dialog">
+      <span class="confirm-dialog__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 8v4m0 4h.01M10.3 4.4 2.2 18.2A1.2 1.2 0 0 0 3.2 20h17.6a1.2 1.2 0 0 0 1-1.8L13.7 4.4a1.9 1.9 0 0 0-3.4 0Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <h2 id="confirm-title">تأكيد تسليم الاختبار</h2>
+      <p id="confirm-message">هل أنت متأكد من تسليم إجاباتك؟</p>
+      <div class="confirm-dialog__actions">
+        <button id="confirm-cancel-button" class="button button--ghost" value="cancel">مراجعة الإجابات</button>
+        <button id="confirm-submit-button" class="button button--primary" value="confirm">تأكيد التسليم</button>
+      </div>
+    </form>
+  </dialog>
+
+  <noscript>
+    <div class="noscript-message">تحتاج هذه المنصة إلى تفعيل JavaScript لتشغيل الاختبارات</div>
+  </noscript>
+</body>
+</html>
+
