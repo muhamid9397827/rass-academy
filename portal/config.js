@@ -1,2 +1,2 @@
-// Copy public Supabase project URL and anon/publishable key here after SQL setup. NEVER put service_role in a browser file.
-window.ASF_CONFIG={supabaseUrl:"",supabaseAnonKey:"",commanderEmail:""};
+// Supabase publishable key is public by design; NEVER place service-role keys here.
+window.ASF_CONFIG={supabaseUrl:"https://sxtbgnjbrcsmgsdhkbno.supabase.co",supabaseAnonKey:"sb_publishable_uLwQd-hG2uJ7DpHydUL7EQ_ZfIXkkte",commanderEmail:""};
