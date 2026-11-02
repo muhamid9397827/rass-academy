@@ -1,5 +1,8 @@
 name: ASF live URL smoke
 on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/asf-live-check.yml', 'portal/**', 'index.html']
   workflow_dispatch:
   workflow_run:
     workflows: ["pages build and deployment"]
