@@ -150,9 +150,9 @@ async function renderReports(mode){
  };
 }
 async function downloadPdf(r){
- const {data,error}=await db.storage.from('asf-reports').createSignedUrl(r.pdf_path,70);
+ const {data,error}=await db.storage.from('asf-reports').download(r.pdf_path);
  if(error)return toast('ملف PDF غير جاهز أو ليس لديك صلاحية: '+error.message,true);
- window.open(data.signedUrl,'_blank','noopener,noreferrer');
+ const blobUrl=URL.createObjectURL(data);window.open(blobUrl,'_blank','noopener,noreferrer');setTimeout(()=>URL.revokeObjectURL(blobUrl),120000);
 }
 async function detailReport(r,mode){
  const {data:rev}=await db.from('asf_reviews').select('*').eq('report_id',r.id).maybeSingle();
