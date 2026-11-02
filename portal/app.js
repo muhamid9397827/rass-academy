@@ -43,7 +43,7 @@ $('#authForm').onsubmit=async e=>{
   if(registering){
     const game_name=$('#gameName').value.trim(),discord_id=$('#discordId').value.trim(),rank=$('#rank').value;
     if(!/^[0-9]{17,20}$/.test(discord_id))throw Error('معرّف Discord يجب أن يكون رقميًا من 17 إلى 20 خانة.');
-    const {data,error}=await db.auth.signUp({email,password,options:{data:{asf_portal:'true',game_name,discord_id,rank}}});if(error)throw error;
+    const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname,data:{asf_portal:'true',game_name,discord_id,rank}}});if(error)throw error;
     toast(data.session?'تم إنشاء الحساب، بانتظار موافقة القائد.':'تم إرسال طلب التسجيل. تحقق من بريدك لتأكيد الحساب إن طُلب ذلك.');
     await loadIdentity();
   }else{
