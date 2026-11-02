@@ -169,6 +169,7 @@ async function detailReport(r,mode){
  };
 }
 async function renderCompose(){
+ if(!profile){toast('أكمل ملف القائد العسكري أولًا',true);return navigate('account');}
  const {data:drafts,error}=await db.from('asf_drafts').select('*').order('updated_at',{ascending:false}).limit(30);if(error)throw error;
  set('#page','<div class="section-card"><div class="row between"><h3>تقرير إداري جديد</h3><span class="badge secret">السري للغاية: لا يراه بعد الإرسال إلا القائد</span></div>'+
  '<form id="reportForm"><div class="grid two"><label>نوع التقرير<select name="kind" id="reportKind">'+opt(Object.entries(KINDS))+'</select></label><label>صيغة التقرير<select name="mode" id="reportMode">'+opt([['structured','تقرير منظم'],['free','تقرير حر']])+'</select></label></div>'+
@@ -285,11 +286,21 @@ async function renderDelegations(){
  if(error)return toast(error.message,true);toast('تم تحديث الصلاحيات');loadIdentity(true)};
 }
 function renderAccount(){
+ if(!profile && commander){
+  set('#page','<div class="section-card"><h3>إكمال الملف العسكري للقائد</h3><p class="muted">حساب القيادة مرتبط ببريدك المؤكد. لإصدار كود ASF العسكري وتفعيل إمكانية إرسال التقارير، أدخل بيانات شخصيتك داخل اللعبة مرة واحدة.</p><form id="leaderSetup"><label>اسمك داخل اللعبة<input name="game_name" required minlength="2" maxlength="80"></label><label>Discord User ID<input name="discord_id" required pattern="[0-9]{17,20}" inputmode="numeric" dir="ltr"></label><label>الرتبة<select name="rank">'+opt(RANKS.map(r=>[r,r]))+'</select></label><button class="btn primary">اعتماد ملف القائد وإصدار الكود العسكري</button></form></div>');
+  $('#leaderSetup').onsubmit=async e=>{
+   e.preventDefault();let f=new FormData(e.currentTarget);
+   const {data,error}=await db.rpc('asf_commander_profile_setup',{p_name:String(f.get('game_name')).trim(),p_discord:String(f.get('discord_id')).trim(),p_rank:f.get('rank')});
+   if(error)return toast(error.message,true);toast('تم إنشاء الملف العسكري للقائد: '+data);await loadIdentity(true);
+  };return;
+ }
+ if(!profile)return set('#page',empty('الملف العسكري غير موجود.'));
  set('#page','<div class="grid two"><div class="section-card"><h3>بطاقتي الرقمية</h3><p>الاسم: <b>'+esc(profile.game_name)+'</b></p><p>الرتبة: <b>'+esc(profile.rank)+'</b></p><p>الكود العسكري: <b>'+esc(profile.military_code||'—')+'</b></p><p>Discord ID: <b dir="ltr">'+esc(profile.discord_id)+'</b></p><p>حالة الحساب: '+badge(profile.status)+'</p></div>'+
  '<div class="section-card"><h3>طلب تعديل بيانات</h3><p>طلب تغيير الاسم أو Discord ID يخضع لموافقة القائد، ولا يؤثر على البيانات الحالية قبل قبول الطلب.</p><form id="changeForm">'+input('name','الاسم الجديد',profile.game_name)+input('discord','معرّف Discord الجديد',profile.discord_id)+'<button type="submit" class="btn primary">إرسال طلب التعديل</button></form></div></div>');
  $('#changeForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);
  const {error}=await db.from('asf_change_requests').insert({user_id:user.id,new_game_name:String(f.get('name')).trim(),new_discord_id:String(f.get('discord')).trim()});
  if(error)return toast(error.message,true);toast('تم إرسال طلب التعديل إلى القائد');};
 }
+
 init();
 })();
