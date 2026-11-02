@@ -8,7 +8,7 @@ const STATES={new:'جديد',reviewing:'قيد المراجعة',reviewed:'تم�
 const RANKS=['جندي','جندي أول','عريف','وكيل رقيب','رقيب','رقيب أول','رئيس رقباء','ملازم','ملازم أول','نقيب','رائد','مقدم','عقيد','عميد','لواء','فريق','فريق أول'];
 const cfg=window.ASF_CONFIG||{}, ready=!!(cfg.supabaseUrl&&cfg.supabaseAnonKey&&window.supabase);
 let db=ready?window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey):null;
-let user=null, profile=null, commander=false, grants=[], pageName='dashboard', draftId=null, latestReports=[], correctionSource=null;
+let user=null, profile=null, commander=false, grants=[], pageName='dashboard', draftId=null, latestReports=[], correctionSource=null, notificationChannel=null;
 const toast=(m,error=false)=>{const b=$('#toast');b.textContent=m;b.className='show'+(error?' error':'');clearTimeout(toast.t);toast.t=setTimeout(()=>b.className='',5800)};
 const set=(s,html)=>{$(s).innerHTML=html};
 const date=d=>d?new Date(d).toLocaleString('ar-SA',{dateStyle:'short',timeStyle:'short'}):'—';
@@ -55,7 +55,7 @@ $('#authForm').onsubmit=async e=>{
 async function init(){
  if(!ready){showScreen('welcome');toast('البوابة التجريبية بحاجة لربط قاعدة البيانات لتفعيل الحسابات.',true);return}
  const {data}=await db.auth.getUser();if(data?.user){user=data.user;await loadIdentity()}else showScreen('welcome');
- db.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){user=null;showScreen('welcome')} if(event==='PASSWORD_RECOVERY'){const password=prompt('أدخل كلمة مرور جديدة (8 أحرف على الأقل):');if(password&&password.length>=8)db.auth.updateUser({password}).then(({error})=>toast(error?error.message:'تم تحديث كلمة المرور',!!error));}});
+ db.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){user=null;commander=false;profile=null;grants=[];if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}showScreen('welcome')} if(event==='PASSWORD_RECOVERY'){const password=prompt('أدخل كلمة مرور جديدة (8 أحرف على الأقل):');if(password&&password.length>=8)db.auth.updateUser({password}).then(({error})=>toast(error?error.message:'تم تحديث كلمة المرور',!!error));}});
 }
 async function query(name,select='*'){const {data,error}=await db.from(name).select(select);if(error)throw error;return data||[]}
 async function loadIdentity(silent=false){
@@ -70,6 +70,17 @@ async function loadIdentity(silent=false){
   ]);
   if(pe||ce||de)throw pe||ce||de;
   profile=p;commander=!!cm;grants=dg||[];
+  if(commander && !notificationChannel){
+    notificationChannel=db.channel('asf-commander-notices-'+user.id)
+     .on('postgres_changes',{event:'INSERT',schema:'public',table:'asf_notifications',filter:'recipient_id=eq.'+user.id},
+      payload=>{toast(payload.new?.message||'وصل إشعار جديد للقيادة');
+       if(pageName==='dashboard')renderDashboard().catch(err=>toast(err.message,true));
+       if(pageName==='inbox')renderReports('inbox').catch(err=>toast(err.message,true));
+       if(pageName==='members' && payload.new?.category==='registration')renderMembers().catch(err=>toast(err.message,true));
+      }).subscribe();
+  }else if(!commander && notificationChannel){
+    db.removeChannel(notificationChannel);notificationChannel=null;
+  }
   $('#sessionLabel').textContent=p?.game_name||user.email;$('#signOut').hidden=false;
   if(commander||p?.status==='approved'){
    showScreen('workspace');$('#courtNav').hidden=!(commander||p.court_enabled);
