@@ -1,0 +1,26 @@
+name: ASF live URL smoke
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["pages build and deployment"]
+    types: [completed]
+jobs:
+  live:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify portal and academy published
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://muhamid9397827.github.io/rass-academy"
+          for attempt in 1 2 3 4 5; do
+            if curl -fLsS --max-time 15 "$URL/portal/" | grep -q 'بوابة أمن المنشآت' &&
+               curl -fLsS --max-time 15 "$URL/portal/academy.html" | grep -q 'أكاديمية أمن المنشآت'; then
+              echo "ASF portal and academy are published and reachable"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "ASF published URLs did not pass smoke test"
+          exit 1
