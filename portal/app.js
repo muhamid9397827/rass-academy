@@ -144,7 +144,7 @@ function renderAcademy(){
 }
 function cardReport(r,mode){
  const secret=r.kind==='secret',revealed=mode==='inbox'||mode==='trash'||!secret;
- return '<article class="section-card"><div class="row between"><div><h3>'+esc(r.title)+'</h3><span class="muted">'+esc(code(r.report_number))+' · '+date(r.submitted_at)+' · '+esc(r.sender_name)+'</span></div>'+badge(KINDS[r.kind],secret)+'</div>'+
+ return '<article class="section-card"><div class="row between"><div><h3>'+esc(r.title)+'</h3><span class="muted">'+esc(code(r.report_number))+' · '+date(r.submitted_at)+' · '+esc(r.sender_name)+'</span></div>'+badge(KINDS[r.kind],secret)+(r.pdf_ready_at?'':badge('PDF قيد الإكمال'))+'</div>'+
  '<div class="row" style="margin-top:12px">'+btn('عرض التفاصيل','detail',r.id)+btn('تنزيل PDF','pdf',r.id)+(commander?btn(mode==='trash'?'استعادة':'حذف','trash',r.id,mode==='trash'?'light':'warn'):'')+'</div></article>';
 }
 async function renderReports(mode){
@@ -177,16 +177,21 @@ async function renderReports(mode){
 }
 async function downloadPdf(r){
  let {data,error}=await db.storage.from('asf-reports').download(r.pdf_path);
- if(error && commander && r.deleted_at===null){
+ const mayRepair=commander||(profile?.status==='approved'&&r.author_id===user?.id&&r.kind!=='secret');
+ if(error && mayRepair && r.deleted_at===null){
   try{
    const pdf=await buildPdf(r);
    const {error:uploadError}=await db.storage.from('asf-reports').upload(r.pdf_path,pdf,{contentType:'application/pdf',upsert:false});
    if(uploadError)throw uploadError;
    data=pdf;error=null;
-   toast('أُعيد إنشاء ملف PDF من بيانات التقرير المؤرشفة، وأُضيف إلى التخزين الخاص.');
+   toast('أُعيد إنشاء ملف PDF من بيانات التقرير المحفوظة.');
   }catch(repairError){toast('تعذر إصلاح ملف PDF: '+repairError.message,true)}
  }
  if(error)return toast('ملف PDF غير جاهز أو ليس لديك صلاحية: '+error.message,true);
+ if(!r.pdf_ready_at && r.deleted_at===null){
+  const {data:ready,error:markError}=await db.rpc('asf_mark_pdf_ready',{p_report:r.id});
+  if(markError||!ready)toast('الملف متاح للقراءة لكن تعذر تحديث حالة حفظه',true);
+ }
  const blobUrl=URL.createObjectURL(data);
  const opened=window.open(blobUrl,'_blank','noopener,noreferrer');
  if(!opened){
@@ -246,7 +251,10 @@ async function renderCompose(){
    if(error)throw error;
    const report={...v,report_number:data.report_number,submitted_at:data.submitted_at,sender_name:profile.game_name,sender_rank:profile.rank,sender_code:profile.military_code};
    let result='تم اعتماد إرسال التقرير '+code(data.report_number);
-   try{const pdf=await buildPdf(report);const {error:up}=await db.storage.from('asf-reports').upload(path,pdf,{contentType:'application/pdf',upsert:false});if(up)throw up;result+=' وحفظ PDF بنجاح'}
+   try{const pdf=await buildPdf(report);const {error:up}=await db.storage.from('asf-reports').upload(path,pdf,{contentType:'application/pdf',upsert:false});if(up)throw up;
+    const {data:confirmed,error:confirmError}=await db.rpc('asf_mark_pdf_ready',{p_report:data.id});
+    if(confirmError||!confirmed)throw Error('تم رفع PDF لكن تعذر تأكيد حفظه');
+    result+=' وحفظ PDF بنجاح'}
    catch(pdfError){result+=' لكن تعذّر إنشاء/رفع PDF: '+pdfError.message+'. التقرير محفوظ في قاعدة البيانات، ويجب معالجة الملف.'}
    if(draftId)await db.from('asf_drafts').delete().eq('id',draftId);draftId=null;correctionSource=null;
    toast(result,result.includes('تعذّر'));form.reset();toggle();
