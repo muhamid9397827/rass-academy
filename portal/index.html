@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101d2f"><meta name="description" content="بوابة أمن المنشآت — الدورات والأنظمة الإدارية والتقارير">
+<title>بوابة أمن المنشآت</title><link rel="stylesheet" href="styles.css"></head>
+<body>
+<header class="topbar"><div class="brand"><span class="brand-icon">◆</span><span>بوابة أمن المنشآت<small>المنصة الإدارية الموحدة · رول بلاي</small></span></div>
+<div class="top-actions"><span id="sessionLabel"></span><button class="btn ghost" id="signOut" hidden>تسجيل الخروج</button></div></header>
+<div id="toast" role="status" aria-live="polite"></div>
+<section id="welcome" class="welcome shell">
+ <div class="hero"><p class="eyebrow">منصة موحدة · إجراءات منظمة</p><h1>بوابة أمن المنشآت</h1><p>الدورات للجميع. الأنظمة الإدارية والتقارير للأعضاء المعتمدين فقط.</p>
+ <div class="hero-actions"><button class="btn primary" id="showLogin">تسجيل الدخول</button><button class="btn light" id="showRegister">إنشاء حساب</button><button class="btn ghost" id="openAcademy">الدورات العامة</button></div></div>
+ <div class="welcome-cards"><article class="tile"><b>🎓</b><h3>الأكاديمية</h3><p>الدورات الإلكترونية متاحة دون حساب.</p></article><article class="tile"><b>🛡</b><h3>الشرطة العسكرية</h3><p>للحسابات المعتمدة.</p></article><article class="tile"><b>⚖</b><h3>مجلس القضاء</h3><p>يتطلب تصريحًا خاصًا.</p></article><article class="tile"><b>▤</b><h3>التقارير</h3><p>مراسلات رسمية محفوظة بصيغة PDF.</p></article></div>
+</section>
+<section id="authScreen" class="auth-layout" hidden><div class="panel auth-panel"><h2 id="authTitle">تسجيل الدخول</h2><p class="subtle">سجّل باستخدام بريدك الإلكتروني وكلمة المرور.</p>
+<form id="authForm">
+ <label>البريد الإلكتروني<input id="email" type="email" required autocomplete="email"></label>
+ <label>كلمة المرور<input id="password" type="password" required minlength="8" autocomplete="current-password"></label>
+ <div id="registerFields" hidden>
+ <label>الاسم داخل اللعبة<input id="gameName" maxlength="80" minlength="2" autocomplete="nickname"></label>
+ <label>Discord User ID<input id="discordId" type="text" inputmode="numeric" pattern="[0-9]{17,20}" dir="ltr" placeholder="18 أو 19 رقمًا"></label>
+ <label>الرتبة<select id="rank"></select></label></div>
+ <button class="btn primary full" type="submit" id="authSubmit">دخول</button>
+ </form><button class="link-button" id="authToggle">ليس لديك حساب؟ إنشاء حساب</button><button class="link-button" id="forgotPassword" type="button">نسيت كلمة المرور؟</button><button class="link-button" id="authBack">العودة للرئيسية</button>
+ <p class="hint">بعد إنشاء الحساب، يراجع القائد البيانات ويوافق على التفعيل يدويًا.</p></div></section>
+<section class="shell" id="pendingScreen" hidden><article class="panel center"><span class="big-icon">⏳</span><h2>حسابك بانتظار موافقة القائد</h2><p id="pendingText">لن تتاح الأنظمة الداخلية حتى يتم تفعيل حسابك.</p><button class="btn ghost" id="refreshProfile">تحديث حالة الحساب</button></article></section>
+<div class="workspace" id="workspace" hidden>
+<aside class="sidebar"><div class="side-label">لوحة التحكم</div>
+<button class="nav active" data-page="dashboard">▦ <span>الرئيسية</span></button>
+<button class="nav" data-page="academy">🎓 <span>الدورات العامة</span></button>
+<button class="nav" data-page="reports">▤ <span>تقاريري</span></button>
+<button class="nav" data-page="compose">＋ <span>تقرير جديد</span></button>
+<button class="nav" data-page="police">🛡 <span>الشرطة العسكرية</span></button>
+<button class="nav" data-page="court" id="courtNav" hidden>⚖ <span>مجلس القضاء</span></button>
+<div id="adminNav" hidden><div class="side-label">القيادة</div>
+<button class="nav" data-page="inbox">✉ <span>التقارير الواردة</span></button>
+<button class="nav" data-page="members">♙ <span>طلبات التفعيل والأعضاء</span></button>
+<button class="nav" data-page="changes">✎ <span>طلبات تعديل البيانات</span></button>
+<button class="nav" data-page="delegations">☷ <span>تفويض القيادات</span></button>
+<button class="nav" data-page="trash">▣ <span>سلة المحذوفات</span></button></div>
+<button class="nav" data-page="account">◉ <span>ملفي الشخصي</span></button></aside>
+<main class="content"><div id="pageTitle" class="page-title"></div><div id="page"></div></main></div>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+<script src="../js/courses.js"></script>
+<script src="mp-data.js"></script>
+<script src="app.js" defer></script>
+</body></html>

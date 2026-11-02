@@ -1,0 +1,34 @@
+const { chromium } = require('playwright');
+const assert = require('node:assert/strict');
+(async () => {
+ const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ const page=await browser.newPage({viewport:{width:1280,height:900}});
+ const errors=[];
+ page.on('pageerror',err=>errors.push(err.message));
+ await page.goto('http://127.0.0.1:8000/portal/',{waitUntil:'domcontentloaded'});
+ await page.locator('#showLogin').click();
+ assert.equal(await page.locator('#authScreen').isVisible(),true,'login form');
+ await page.locator('#authToggle').click();
+ assert.equal(await page.locator('#registerFields').isVisible(),true,'registration form');
+ const pdf=await page.evaluate(async()=>{
+  if(typeof window.html2pdf!=='function')throw Error('PDF library unavailable');
+  const element=document.createElement('article');
+  element.style.cssText='background:white;color:black;padding:20px;direction:rtl;font-size:20px';
+  element.textContent='تقرير إداري — أمن المنشآت';
+  const blob=await window.html2pdf().set({margin:5,jsPDF:{unit:'mm',format:'a4'},html2canvas:{scale:1}}).from(element).outputPdf('blob');
+  return {type:blob.type,size:blob.size};
+ });
+ assert.ok(pdf.size>1200,'nonempty PDF generated');
+ await page.locator('#authBack').click();
+ assert.equal(await page.locator('#welcome').isVisible(),true,'public welcome');
+ await page.goto('http://127.0.0.1:8000/portal/academy.html',{waitUntil:'domcontentloaded'});
+ await page.locator('#sector-view, #entry-view').first().waitFor({state:'attached'});
+ assert.equal(await page.locator('[data-sector="facilities_security"]').count(),1);
+ assert.equal(await page.locator('.sector-card--regiments').isVisible(),false,'regiments hidden');
+ assert.equal(await page.locator('.sector-card--public').isVisible(),false,'public security hidden');
+ await page.screenshot({path:'/tmp/asf-academy-smoke.png',fullPage:true});
+ const critical=errors.filter(e=>!e.includes('Failed to fetch'));
+ assert.deepEqual(critical,[],'unhandled browser errors');
+ await browser.close();
+ console.log('ASF smoke: portal login/register and public academy PASS');
+})().catch(err=>{console.error(err);process.exit(1)});

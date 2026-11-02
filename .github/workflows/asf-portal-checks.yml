@@ -1,0 +1,32 @@
+name: ASF Portal checks
+on:
+  push:
+    paths:
+      - 'portal/**'
+      - '.github/workflows/asf-portal-checks.yml'
+  pull_request:
+    paths:
+      - 'portal/**'
+      - '.github/workflows/asf-portal-checks.yml'
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: node --check portal/app.js && node --check portal/config.js && node --check portal/academy-app.js && node --check portal/academy-filter.js && node --check portal/mp-data.js
+      - name: Browser smoke test
+        run: |
+          npm install --no-save playwright@1.58.0
+          npx playwright install --with-deps chromium
+          (python3 -m http.server 8000 >/tmp/asf-http.log 2>&1 &)
+          node portal/smoke.spec.cjs
+      - name: Security regression guards
+        run: |
+          grep -q "kind='secret' and public.asf_is_commander()" portal/supabase/schema.sql
+          grep -q "revoke insert on public.asf_reports" portal/supabase/02-report-submission.sql
+          grep -q "report_kind is null or report_kind in" portal/supabase/schema.sql
+          grep -q "and public.asf_approved()" portal/supabase/schema.sql
