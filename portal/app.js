@@ -43,7 +43,7 @@ $('#authForm').onsubmit=async e=>{
   if(registering){
     const game_name=$('#gameName').value.trim(),discord_id=$('#discordId').value.trim(),rank=$('#rank').value;
     if(!/^[0-9]{17,20}$/.test(discord_id))throw Error('معرّف Discord يجب أن يكون رقميًا من 17 إلى 20 خانة.');
-    const {data,error}=await db.auth.signUp({email,password,options:{data:{asf_portal:'true',game_name,discord_id,rank}}});if(error)throw error;
+    const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname,data:{asf_portal:'true',game_name,discord_id,rank}}});if(error)throw error;
     toast(data.session?'تم إنشاء الحساب، بانتظار موافقة القائد.':'تم إرسال طلب التسجيل. تحقق من بريدك لتأكيد الحساب إن طُلب ذلك.');
     await loadIdentity();
   }else{
@@ -83,9 +83,10 @@ async function loadIdentity(silent=false){
   }
   $('#sessionLabel').textContent=p?.game_name||user.email;$('#signOut').hidden=false;
   if(commander||p?.status==='approved'){
-   showScreen('workspace');$('#courtNav').hidden=!(commander||p.court_enabled);
-   $('#adminNav').hidden=!(commander||has('reports.read')||has('reports.review'));
-   document.querySelectorAll('[data-page="members"],[data-page="changes"],[data-page="delegations"],[data-page="trash"]').forEach(n=>n.hidden=!commander);
+   showScreen('workspace');$('#courtNav').hidden=!(commander||p?.court_enabled||has('court.manage'));
+   $('#adminNav').hidden=!(commander||has('reports.read')||has('reports.review')||has('users.review'));
+   document.querySelectorAll('[data-page="members"],[data-page="changes"]').forEach(n=>n.hidden=!(commander||has('users.review')));
+   document.querySelectorAll('[data-page="delegations"],[data-page="trash"],[data-page="audit"]').forEach(n=>n.hidden=!commander);
    document.querySelector('[data-page="inbox"]').hidden=!(commander||has('reports.read')||has('reports.review'));
    await navigate(pageName);
   }else{
@@ -98,7 +99,7 @@ document.querySelectorAll('.nav').forEach(n=>n.onclick=()=>navigate(n.dataset.pa
 async function navigate(name){
  if(!user||!(commander||profile?.status==='approved'))return;
  pageName=name;document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page===name));
- const titles={dashboard:'لوحة التحكم',academy:'الأكاديمية والدورات',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',trash:'سلة المحذوفات',account:'الملف الشخصي'};
+ const titles={dashboard:'لوحة التحكم',academy:'الأكاديمية والدورات',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
  set('#pageTitle','<div><h1>'+esc(titles[name]||'بوابة أمن المنشآت')+'</h1><p>المنصة الموحدة · إعدادات الصلاحيات حسب حسابك</p></div>');
  set('#page','<div class="empty">جارٍ تحميل البيانات...</div>');
  try{
@@ -108,9 +109,10 @@ async function navigate(name){
   if(name==='compose')return renderCompose();
   if(name==='police')return renderPolice();
   if(name==='court')return renderCourt();
-  if(name==='members'&&commander)return renderMembers();
-  if(name==='changes'&&commander)return renderChanges();
+  if(name==='members'&&(commander||has('users.review')))return renderMembers();
+  if(name==='changes'&&(commander||has('users.review')))return renderChanges();
   if(name==='delegations'&&commander)return renderDelegations();
+  if(name==='audit'&&commander)return renderAudit();
   if(name==='account')return renderAccount();
   set('#page',empty('لا تملك صلاحية الوصول إلى هذا القسم.'));
  }catch(err){set('#page',empty('تعذر تحميل القسم: '+err.message));toast(err.message,true)}
@@ -120,7 +122,7 @@ async function renderDashboard(){
  if(error)throw error;
  const own=(rs||[]).filter(r=>r.kind!=='secret').length;
  const info=[
- ['الكود العسكري',profile?.military_code||'القائد'],['تقارير يمكن عرضها',String(rs?.length||0)],['مجلس القضاء',commander||profile?.court_enabled?'مسموح':'غير مفعل'],['الحساب','مفعل']
+ ['الكود العسكري',profile?.military_code||'القائد'],['تقارير يمكن عرضها',String(rs?.length||0)],['مجلس القضاء',commander||profile?.court_enabled||has('court.manage')?'مسموح':'غير مفعل'],['الحساب','مفعل']
  ];
  set('#page','<div class="grid four">'+info.map(([k,v])=>'<div class="metric"><div class="caption">'+esc(k)+'</div><div class="n" style="font-size:20px">'+esc(v)+'</div></div>').join('')+'</div>'+
  '<div class="grid two" style="margin-top:18px"><section class="section-card"><h3>التقارير</h3><p>إنشاء تقرير منظم أو حر، تحميل PDF، متابعة ملاحظات القائد.</p><button class="btn primary" id="dashCompose">إرسال تقرير</button></section><section class="section-card"><h3>الصلاحيات</h3><p>التقارير السرية للغاية تعرض للقائد فقط حتى مع وجود قيادات مفوضة.</p><button class="btn ghost" id="dashAccount">ملفي الشخصي</button></section></div>');
@@ -279,20 +281,48 @@ async function buildPdf(report){
  if(typeof window.html2pdf!=='function')throw Error('مكتبة PDF لم تُحمّل');
  return window.html2pdf().set({margin:5,filename:code(report.report_number)+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(renderPaper(report)).outputPdf('blob');
 }
-function renderPolice(){
+async function renderPolice(){
  const data=window.MP_DATA;
- if(!data)return set('#page',empty('تعذر تحميل قواعد المخالفات من الموقع القديم'));
+ if(!data)return set('#page',empty('تعذر تحميل قواعد مخالفات الشرطة العسكرية'));
  const list=[...(data.standardViolations||[]),...(data.fixedViolations||[])];
- set('#page','<div class="section-card"><h3>حساب العقوبة المقترحة</h3><p>البيانات مستقاة من قائمة مخالفات الشرطة العسكرية القديمة، مع استمرار الحفاظ على الموقع الأصلي دون تعديل.</p><form id="policeForm"><label>رتبة المخالف<select name="rank">'+opt(Object.keys(data.penaltyMatrix).map(r=>[r,r]))+'</select></label>'+
+ const overrides=await query('asf_police_overrides');
+ const ranks=Object.keys(data.penaltyMatrix);
+ const mayManage=commander||has('police.manage');
+ const penaltyFor=(v,rank)=>{
+  const custom=overrides.find(o=>o.rule_key===v.key&&o.rank_key===rank);
+  return custom?.penalty||(v?.calc?v.calc(rank):data.penaltyMatrix[rank]?.[v?.tier])||'تُحال للتقدير';
+ };
+ set('#page','<div class="section-card"><h3>حساب العقوبة المقترحة</h3><p>القواعد الأصلية محفوظة؛ التعديلات القيادية تظهر في البوابة فقط.</p><form id="policeForm"><label>رتبة المخالف<select name="rank">'+opt(ranks.map(r=>[r,r]))+'</select></label>'+
  '<label>المخالفة<select name="violation">'+opt(list.map((v,i)=>[String(i),String(v.id||'')+' — '+v.text]))+'</select></label><button class="btn primary" type="submit">احتساب العقوبة</button></form><div id="policeResult" class="notice" hidden></div></div>'+
+ (mayManage?'<section class="section-card"><h3>إدارة العقوبات المقترحة</h3><p>يمكنك تغيير العقوبة لمخالفة ورتبة محددتين. لا تتغير ملفات الشرطة العسكرية القديمة، ويمكن العودة إلى العقوبة الأصلية.</p><form id="policeAdminForm"><label>المخالفة<select name="rule">'+opt(list.map(v=>[v.key,String(v.id||'')+' — '+v.text]))+'</select></label>'+
+ '<label>الرتبة<select name="rank">'+opt(ranks.map(r=>[r,r]))+'</select></label>'+
+ '<label>العقوبة المقترحة<textarea name="penalty" maxlength="500" required></textarea></label><div class="row"><button class="btn primary" name="action" value="save" type="submit">حفظ التعديل</button><button class="btn ghost" name="action" value="reset" type="submit">استعادة العقوبة الأصلية</button></div></form></section>':'')+
  '<section class="section-card"><h3>إحالة قضية جديدة إلى مجلس القضاء</h3><form id="caseForm"><label>الموضوع<input name="subject" required maxlength="200"></label><label>التفاصيل<textarea name="details" required maxlength="12000"></textarea></label><button class="btn ghost" type="submit">إرسال للمجلس</button></form></section>');
- $('#policeForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),v=list[Number(f.get('violation'))],rank=f.get('rank');
- const penalty=v?.calc?v.calc(rank):data.penaltyMatrix[rank]?.[v?.tier]||'تُحال للتقدير';$('#policeResult').hidden=false;$('#policeResult').textContent='العقوبة المقترحة: '+penalty;};
+ $('#policeForm').onsubmit=e=>{
+  e.preventDefault();const f=new FormData(e.target),v=list[Number(f.get('violation'))],rank=f.get('rank');
+  $('#policeResult').hidden=false;$('#policeResult').textContent='العقوبة المقترحة: '+penaltyFor(v,rank);
+ };
+ if(mayManage){
+  const form=$('#policeAdminForm'),sync=()=>{
+   const rule=list.find(v=>v.key===form.elements.rule.value);
+   form.elements.penalty.value=penaltyFor(rule,form.elements.rank.value);
+  };
+  form.elements.rule.onchange=sync;form.elements.rank.onchange=sync;sync();
+  form.onsubmit=async e=>{
+   e.preventDefault();const sender=e.submitter||document.activeElement;
+   const erase=sender?.value==='reset',f=new FormData(form);
+   const {error}=await db.rpc('asf_set_police_override',{p_key:f.get('rule'),p_rank:f.get('rank'),p_penalty:erase?'':String(f.get('penalty')||'').trim()});
+   if(error)return toast(error.message,true);
+   toast(erase?'تمت استعادة العقوبة الأصلية':'تم تحديث العقوبة المقترحة');renderPolice();
+  };
+ }
  $('#caseForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);
- const {error}=await db.from('asf_court_cases').insert({submitted_by:user.id,subject:String(f.get('subject')).trim(),details:String(f.get('details')).trim()});if(error)return toast(error.message,true);toast('تم إرسال القضية لمجلس القضاء');e.target.reset();};
+ const {error}=await db.from('asf_court_cases').insert({submitted_by:user.id,subject:String(f.get('subject')).trim(),details:String(f.get('details')).trim()});
+ if(error)return toast(error.message,true);toast('تم إرسال القضية لمجلس القضاء');e.target.reset();
+ };
 }
 async function renderCourt(){
- if(!(commander||profile?.court_enabled))return set('#page',empty('مجلس القضاء يتطلب تفعيلًا خاصًا من القائد.'));
+ if(!(commander||profile?.court_enabled||has('court.manage')))return set('#page',empty('مجلس القضاء يتطلب تفعيلًا خاصًا من القائد.'));
  const [cases,decisions,warnings]=await Promise.all([query('asf_court_cases'),query('asf_court_decisions'),query('asf_court_warnings')]);
  cases.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
  warnings.sort((a,b)=>String(b.recorded_at).localeCompare(String(a.recorded_at)));
@@ -345,11 +375,11 @@ function courtWarningCard(w){
 }
 async function renderMembers(){
  const rows=await query('asf_profiles');rows.sort((a,b)=>a.created_at<b.created_at?1:-1);
- const actions=p=>'<div class="actions">'+(p.status!=='approved'?btn('تفعيل','approve',p.user_id,'primary'):btn('إيقاف','suspend',p.user_id,'warn'))+
+ const actions=p=>!commander?'—':'<div class="actions">'+(p.status!=='approved'?btn('تفعيل','approve',p.user_id,'primary'):btn('إيقاف','suspend',p.user_id,'warn'))+
  btn('تغيير الرتبة','rank',p.user_id)+btn(p.court_enabled?'إلغاء القضاء':'تفعيل القضاء',p.court_enabled?'court_off':'court_on',p.user_id)+btn('رفض','reject',p.user_id,'warn')+'</div>';
  set('#page','<div class="section-card"><h3>طلبات التفعيل وجميع الأعضاء</h3><div class="table-wrap"><table><thead><tr><th>الاسم</th><th>الرتبة</th><th>الكود</th><th>Discord ID</th><th>الحالة</th><th>إجراءات القائد</th></tr></thead><tbody>'+
  rows.map(p=>'<tr><td>'+esc(p.game_name)+'</td><td>'+esc(p.rank)+'</td><td>'+esc(p.military_code||'—')+'</td><td dir="ltr">'+esc(p.discord_id)+'</td><td>'+badge(p.status)+'</td><td>'+actions(p)+'</td></tr>').join('')+'</tbody></table></div></div>');
- $('#page').onclick=async e=>{const b=e.target.closest('button[data-action]');if(!b)return;const action=b.dataset.action;
+ $('#page').onclick=async e=>{if(!commander)return;const b=e.target.closest('button[data-action]');if(!b)return;const action=b.dataset.action;
  let arg=null;if(action==='rank'){arg=prompt('الرتبة الجديدة (من القائمة المعتمدة):',rows.find(r=>r.user_id===b.dataset.id)?.rank||'');if(!arg||!RANKS.includes(arg))return toast('الرتبة غير معتمدة',true);}
  if(['reject','suspend'].includes(action)&&!confirm('تأكيد الإجراء على الحساب؟'))return;
  const {data,error}=await db.rpc('asf_admin_action',{op:action,target:b.dataset.id,arg});if(error)return toast(error.message,true);
@@ -358,14 +388,41 @@ async function renderMembers(){
 async function renderChanges(){
  const rows=await query('asf_change_requests');
  set('#page','<div class="section-card"><h3>طلبات تعديل الاسم ومعرّف ديسكورد</h3><div class="table-wrap"><table><thead><tr><th>صاحب الطلب</th><th>الاسم الجديد</th><th>Discord ID</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>'+
- rows.map(r=>'<tr><td>'+esc(r.user_id)+'</td><td>'+esc(r.new_game_name)+'</td><td dir="ltr">'+esc(r.new_discord_id)+'</td><td>'+badge(r.state)+'</td><td>'+(r.state==='pending'?btn('موافقة','allow',r.id,'primary')+btn('رفض','deny',r.id,'warn'):'—')+'</td></tr>').join('')+'</tbody></table></div></div>');
- $('#page').onclick=async e=>{const b=e.target.closest('[data-action]');if(!b)return;const {error}=await db.rpc('asf_review_change',{req:b.dataset.id,allow_change:b.dataset.action==='allow'});if(error)return toast(error.message,true);toast('تمت معالجة الطلب');renderChanges()};
+ rows.map(r=>'<tr><td>'+esc(r.user_id)+'</td><td>'+esc(r.new_game_name)+'</td><td dir="ltr">'+esc(r.new_discord_id)+'</td><td>'+badge(r.state)+'</td><td>'+(r.state==='pending'&&commander?btn('موافقة','allow',r.id,'primary')+btn('رفض','deny',r.id,'warn'):'—')+'</td></tr>').join('')+'</tbody></table></div></div>');
+ $('#page').onclick=async e=>{if(!commander)return;const b=e.target.closest('[data-action]');if(!b)return;const {error}=await db.rpc('asf_review_change',{req:b.dataset.id,allow_change:b.dataset.action==='allow'});if(error)return toast(error.message,true);toast('تمت معالجة الطلب');renderChanges()};
+}
+async function renderAudit(){
+ if(!commander)return set('#page',empty('سجل العمليات مخصص للقائد فقط.'));
+ const {data:logs,error}=await db.from('asf_audit').select('*').order('created_at',{ascending:false}).limit(200);
+ if(error)throw error;
+ const actorIds=[...new Set((logs||[]).map(x=>x.actor_id).filter(Boolean))];
+ const {data:users}=actorIds.length?await db.from('asf_profiles').select('user_id,game_name,military_code').in('user_id',actorIds):{data:[]};
+ const actors=new Map((users||[]).map(p=>[p.user_id,p]));
+ const names={approve:'تفعيل عضو',suspend:'إيقاف عضو',reject:'رفض عضو',rank:'تعديل رتبة',court_on:'منح القضاء',court_off:'سحب القضاء',
+ delegation:'تعديل صلاحية',review:'مراجعة تقرير',restore:'استعادة تقرير',trash:'حذف إلى السلة',
+ police_rule_override:'تعديل عقوبة',court_warning_cancel:'إلغاء إنذار',pdf_finalized:'تأكيد ملف PDF',profile_change:'تعديل بيانات',commander_profile_init:'ملف القائد'};
+ set('#page','<section class="section-card"><h3>سجل الإجراءات الإدارية</h3>'+
+ '<p>يُعرض للقائد فقط، ويحتفظ بتاريخ التعديلات دون منح صلاحية حذف السجل.</p>'+
+ '<input id="auditSearch" placeholder="بحث بالعملية أو المستخدم أو السجل" style="margin-bottom:15px">'+
+ '<div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>المسؤول</th><th>الإجراء</th><th>المرجع</th></tr></thead><tbody id="auditRows"></tbody></table></div></section>');
+ const paint=()=>{
+  const q=$('#auditSearch').value.toLowerCase().trim();
+  const shown=(logs||[]).filter(x=>{
+   const actor=actors.get(x.actor_id);
+   return [x.action,names[x.action],x.target_id,actor?.game_name,actor?.military_code].some(v=>String(v||'').toLowerCase().includes(q));
+  });
+  set('#auditRows',shown.map(x=>{
+   const a=actors.get(x.actor_id);
+   return '<tr><td>'+date(x.created_at)+'</td><td>'+esc(a?.game_name||'حساب مؤرشف')+'</td><td>'+esc(names[x.action]||x.action)+'</td><td title="'+esc(x.target_id)+'">'+esc(String(x.target_id).slice(0,36))+'</td></tr>';
+  }).join('')||'<tr><td colspan="4">لا توجد عمليات مطابقة</td></tr>');
+ };
+ $('#auditSearch').oninput=paint;paint();
 }
 async function renderDelegations(){
  const [people,rights]=await Promise.all([query('asf_profiles'),query('asf_delegations')]);
  set('#page','<div class="notice">لا توجد صلاحية يمكنها تجاوز حصرية «سري للغاية»؛ حتى تفويض قراءة جميع التقارير لا يشمله.</div>'+
  '<div class="section-card"><h3>إضافة أو سحب صلاحيات قيادية</h3><form id="grantsForm"><label>العضو<select name="user">'+opt(people.filter(p=>p.status==='approved').map(p=>[p.user_id,p.game_name+' — '+(p.military_code||'')]))+'</select></label>'+
- '<label>الأداة<select name="feature">'+opt([['reports.read','الاطلاع على التقارير العادية'],['reports.review','مراجعة التقارير وإرسال ملاحظات عليها'],['police.manage','إدارة الشرطة العسكرية (تجهيز مستقبلي)'],['court.manage','إدارة مجلس القضاء (تجهيز مستقبلي)'],['users.review','مراجعة المستخدمين (تجهيز مستقبلي)']])+'</select></label>'+
+ '<label>الأداة<select name="feature">'+opt([['reports.read','الاطلاع على التقارير العادية'],['reports.review','مراجعة التقارير وإرسال ملاحظات عليها'],['police.manage','تعديل العقوبات المقترحة بالشرطة العسكرية'],['court.manage','صلاحية مجلس القضاء وإدارة السجلات'],['users.review','الاطلاع على طلبات التسجيل وتعديل البيانات']])+'</select></label>'+
  '<label>تصنيف التقارير<select name="kind">'+opt([['','جميع التقارير غير السرية'],...Object.entries(KINDS).filter(([k])=>k!=='secret')])+'</select></label>'+
  '<div class="row"><button type="submit" class="btn primary" name="enable" value="true">منح</button><button type="submit" class="btn warn" name="enable" value="false">سحب</button></div></form></div>'+
  '<div class="section-card"><h3>التفويضات الحالية</h3><div class="table-wrap"><table><thead><tr><th>العضو</th><th>الصلاحية</th><th>نوع التقرير</th></tr></thead><tbody>'+
