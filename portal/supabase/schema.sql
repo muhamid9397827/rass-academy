@@ -30,10 +30,13 @@ create table if not exists public.asf_profiles (
 create or replace function public.asf_create_profile() returns trigger language plpgsql security definer set search_path=''
 as $$
 begin
- insert into public.asf_profiles(user_id,game_name,discord_id,rank)
- values(new.id, trim(coalesce(new.raw_user_meta_data->>'game_name','')),coalesce(new.raw_user_meta_data->>'discord_id',''),coalesce(new.raw_user_meta_data->>'rank',''));
+ -- This Auth instance also serves unrelated applications; only ASF-tagged signups create ASF profiles.
+ if new.raw_user_meta_data->>'asf_portal' = 'true' then
+   insert into public.asf_profiles(user_id,game_name,discord_id,rank)
+   values(new.id, trim(coalesce(new.raw_user_meta_data->>'game_name','')),coalesce(new.raw_user_meta_data->>'discord_id',''),coalesce(new.raw_user_meta_data->>'rank',''));
+ end if;
  return new;
-end; $$;
+end; $;
 drop trigger if exists asf_auth_created on auth.users;
 create trigger asf_auth_created after insert on auth.users for each row execute function public.asf_create_profile();
 
@@ -148,7 +151,7 @@ create policy "delegations self or commander" on public.asf_delegations for sele
 create policy "drafts own" on public.asf_drafts for all to authenticated using(author_id=auth.uid() and public.asf_approved()) with check(author_id=auth.uid() and public.asf_approved());
 create policy "reports restricted read" on public.asf_reports for select to authenticated using(
  (kind='secret' and public.asf_is_commander())
- or (kind<>'secret' and (public.asf_is_commander() or author_id=auth.uid() or public.asf_can_read_kind(kind)))
+ or (kind<>'secret' and (public.asf_is_commander() or (public.asf_approved() and (author_id=auth.uid() or public.asf_can_read_kind(kind)))))
 );
 create policy "reports approved submit" on public.asf_reports for insert to authenticated with check(
  author_id=auth.uid() and public.asf_approved()
@@ -280,7 +283,7 @@ as $$
  select 1 from public.asf_reports r
  where r.pdf_path=path and r.deleted_at is null
  and ((r.kind='secret' and public.asf_is_commander())
- or (r.kind<>'secret' and (public.asf_is_commander() or r.author_id=auth.uid() or public.asf_can_read_kind(r.kind))))
+ or (r.kind<>'secret' and (public.asf_is_commander() or (public.asf_approved() and (r.author_id=auth.uid() or public.asf_can_read_kind(r.kind))))))
  );
 $$;
 revoke all on function public.asf_pdf_can_read(text) from public;
