@@ -83,9 +83,10 @@ async function loadIdentity(silent=false){
   }
   $('#sessionLabel').textContent=p?.game_name||user.email;$('#signOut').hidden=false;
   if(commander||p?.status==='approved'){
-   showScreen('workspace');$('#courtNav').hidden=!(commander||p.court_enabled);
-   $('#adminNav').hidden=!(commander||has('reports.read')||has('reports.review'));
-   document.querySelectorAll('[data-page="members"],[data-page="changes"],[data-page="delegations"],[data-page="trash"]').forEach(n=>n.hidden=!commander);
+   showScreen('workspace');$('#courtNav').hidden=!(commander||p?.court_enabled||has('court.manage'));
+   $('#adminNav').hidden=!(commander||has('reports.read')||has('reports.review')||has('users.review'));
+   document.querySelectorAll('[data-page="members"],[data-page="changes"]').forEach(n=>n.hidden=!(commander||has('users.review')));
+   document.querySelectorAll('[data-page="delegations"],[data-page="trash"]').forEach(n=>n.hidden=!commander);
    document.querySelector('[data-page="inbox"]').hidden=!(commander||has('reports.read')||has('reports.review'));
    await navigate(pageName);
   }else{
@@ -108,8 +109,8 @@ async function navigate(name){
   if(name==='compose')return renderCompose();
   if(name==='police')return renderPolice();
   if(name==='court')return renderCourt();
-  if(name==='members'&&commander)return renderMembers();
-  if(name==='changes'&&commander)return renderChanges();
+  if(name==='members'&&(commander||has('users.review')))return renderMembers();
+  if(name==='changes'&&(commander||has('users.review')))return renderChanges();
   if(name==='delegations'&&commander)return renderDelegations();
   if(name==='account')return renderAccount();
   set('#page',empty('لا تملك صلاحية الوصول إلى هذا القسم.'));
@@ -120,7 +121,7 @@ async function renderDashboard(){
  if(error)throw error;
  const own=(rs||[]).filter(r=>r.kind!=='secret').length;
  const info=[
- ['الكود العسكري',profile?.military_code||'القائد'],['تقارير يمكن عرضها',String(rs?.length||0)],['مجلس القضاء',commander||profile?.court_enabled?'مسموح':'غير مفعل'],['الحساب','مفعل']
+ ['الكود العسكري',profile?.military_code||'القائد'],['تقارير يمكن عرضها',String(rs?.length||0)],['مجلس القضاء',commander||profile?.court_enabled||has('court.manage')?'مسموح':'غير مفعل'],['الحساب','مفعل']
  ];
  set('#page','<div class="grid four">'+info.map(([k,v])=>'<div class="metric"><div class="caption">'+esc(k)+'</div><div class="n" style="font-size:20px">'+esc(v)+'</div></div>').join('')+'</div>'+
  '<div class="grid two" style="margin-top:18px"><section class="section-card"><h3>التقارير</h3><p>إنشاء تقرير منظم أو حر، تحميل PDF، متابعة ملاحظات القائد.</p><button class="btn primary" id="dashCompose">إرسال تقرير</button></section><section class="section-card"><h3>الصلاحيات</h3><p>التقارير السرية للغاية تعرض للقائد فقط حتى مع وجود قيادات مفوضة.</p><button class="btn ghost" id="dashAccount">ملفي الشخصي</button></section></div>');
@@ -292,7 +293,7 @@ function renderPolice(){
  const {error}=await db.from('asf_court_cases').insert({submitted_by:user.id,subject:String(f.get('subject')).trim(),details:String(f.get('details')).trim()});if(error)return toast(error.message,true);toast('تم إرسال القضية لمجلس القضاء');e.target.reset();};
 }
 async function renderCourt(){
- if(!(commander||profile?.court_enabled))return set('#page',empty('مجلس القضاء يتطلب تفعيلًا خاصًا من القائد.'));
+ if(!(commander||profile?.court_enabled||has('court.manage')))return set('#page',empty('مجلس القضاء يتطلب تفعيلًا خاصًا من القائد.'));
  const [cases,decisions,warnings]=await Promise.all([query('asf_court_cases'),query('asf_court_decisions'),query('asf_court_warnings')]);
  cases.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
  warnings.sort((a,b)=>String(b.recorded_at).localeCompare(String(a.recorded_at)));
@@ -345,11 +346,11 @@ function courtWarningCard(w){
 }
 async function renderMembers(){
  const rows=await query('asf_profiles');rows.sort((a,b)=>a.created_at<b.created_at?1:-1);
- const actions=p=>'<div class="actions">'+(p.status!=='approved'?btn('تفعيل','approve',p.user_id,'primary'):btn('إيقاف','suspend',p.user_id,'warn'))+
+ const actions=p=>!commander?'—':'<div class="actions">'+(p.status!=='approved'?btn('تفعيل','approve',p.user_id,'primary'):btn('إيقاف','suspend',p.user_id,'warn'))+
  btn('تغيير الرتبة','rank',p.user_id)+btn(p.court_enabled?'إلغاء القضاء':'تفعيل القضاء',p.court_enabled?'court_off':'court_on',p.user_id)+btn('رفض','reject',p.user_id,'warn')+'</div>';
  set('#page','<div class="section-card"><h3>طلبات التفعيل وجميع الأعضاء</h3><div class="table-wrap"><table><thead><tr><th>الاسم</th><th>الرتبة</th><th>الكود</th><th>Discord ID</th><th>الحالة</th><th>إجراءات القائد</th></tr></thead><tbody>'+
  rows.map(p=>'<tr><td>'+esc(p.game_name)+'</td><td>'+esc(p.rank)+'</td><td>'+esc(p.military_code||'—')+'</td><td dir="ltr">'+esc(p.discord_id)+'</td><td>'+badge(p.status)+'</td><td>'+actions(p)+'</td></tr>').join('')+'</tbody></table></div></div>');
- $('#page').onclick=async e=>{const b=e.target.closest('button[data-action]');if(!b)return;const action=b.dataset.action;
+ $('#page').onclick=async e=>{if(!commander)return;const b=e.target.closest('button[data-action]');if(!b)return;const action=b.dataset.action;
  let arg=null;if(action==='rank'){arg=prompt('الرتبة الجديدة (من القائمة المعتمدة):',rows.find(r=>r.user_id===b.dataset.id)?.rank||'');if(!arg||!RANKS.includes(arg))return toast('الرتبة غير معتمدة',true);}
  if(['reject','suspend'].includes(action)&&!confirm('تأكيد الإجراء على الحساب؟'))return;
  const {data,error}=await db.rpc('asf_admin_action',{op:action,target:b.dataset.id,arg});if(error)return toast(error.message,true);
@@ -358,14 +359,14 @@ async function renderMembers(){
 async function renderChanges(){
  const rows=await query('asf_change_requests');
  set('#page','<div class="section-card"><h3>طلبات تعديل الاسم ومعرّف ديسكورد</h3><div class="table-wrap"><table><thead><tr><th>صاحب الطلب</th><th>الاسم الجديد</th><th>Discord ID</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>'+
- rows.map(r=>'<tr><td>'+esc(r.user_id)+'</td><td>'+esc(r.new_game_name)+'</td><td dir="ltr">'+esc(r.new_discord_id)+'</td><td>'+badge(r.state)+'</td><td>'+(r.state==='pending'?btn('موافقة','allow',r.id,'primary')+btn('رفض','deny',r.id,'warn'):'—')+'</td></tr>').join('')+'</tbody></table></div></div>');
- $('#page').onclick=async e=>{const b=e.target.closest('[data-action]');if(!b)return;const {error}=await db.rpc('asf_review_change',{req:b.dataset.id,allow_change:b.dataset.action==='allow'});if(error)return toast(error.message,true);toast('تمت معالجة الطلب');renderChanges()};
+ rows.map(r=>'<tr><td>'+esc(r.user_id)+'</td><td>'+esc(r.new_game_name)+'</td><td dir="ltr">'+esc(r.new_discord_id)+'</td><td>'+badge(r.state)+'</td><td>'+(r.state==='pending'&&commander?btn('موافقة','allow',r.id,'primary')+btn('رفض','deny',r.id,'warn'):'—')+'</td></tr>').join('')+'</tbody></table></div></div>');
+ $('#page').onclick=async e=>{if(!commander)return;const b=e.target.closest('[data-action]');if(!b)return;const {error}=await db.rpc('asf_review_change',{req:b.dataset.id,allow_change:b.dataset.action==='allow'});if(error)return toast(error.message,true);toast('تمت معالجة الطلب');renderChanges()};
 }
 async function renderDelegations(){
  const [people,rights]=await Promise.all([query('asf_profiles'),query('asf_delegations')]);
  set('#page','<div class="notice">لا توجد صلاحية يمكنها تجاوز حصرية «سري للغاية»؛ حتى تفويض قراءة جميع التقارير لا يشمله.</div>'+
  '<div class="section-card"><h3>إضافة أو سحب صلاحيات قيادية</h3><form id="grantsForm"><label>العضو<select name="user">'+opt(people.filter(p=>p.status==='approved').map(p=>[p.user_id,p.game_name+' — '+(p.military_code||'')]))+'</select></label>'+
- '<label>الأداة<select name="feature">'+opt([['reports.read','الاطلاع على التقارير العادية'],['reports.review','مراجعة التقارير وإرسال ملاحظات عليها'],['police.manage','إدارة الشرطة العسكرية (تجهيز مستقبلي)'],['court.manage','إدارة مجلس القضاء (تجهيز مستقبلي)'],['users.review','مراجعة المستخدمين (تجهيز مستقبلي)']])+'</select></label>'+
+ '<label>الأداة<select name="feature">'+opt([['reports.read','الاطلاع على التقارير العادية'],['reports.review','مراجعة التقارير وإرسال ملاحظات عليها'],['police.manage','تعديل العقوبات المقترحة بالشرطة العسكرية'],['court.manage','صلاحية مجلس القضاء وإدارة السجلات'],['users.review','الاطلاع على طلبات التسجيل وتعديل البيانات']])+'</select></label>'+
  '<label>تصنيف التقارير<select name="kind">'+opt([['','جميع التقارير غير السرية'],...Object.entries(KINDS).filter(([k])=>k!=='secret')])+'</select></label>'+
  '<div class="row"><button type="submit" class="btn primary" name="enable" value="true">منح</button><button type="submit" class="btn warn" name="enable" value="false">سحب</button></div></form></div>'+
  '<div class="section-card"><h3>التفويضات الحالية</h3><div class="table-wrap"><table><thead><tr><th>العضو</th><th>الصلاحية</th><th>نوع التقرير</th></tr></thead><tbody>'+
