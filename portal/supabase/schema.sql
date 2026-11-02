@@ -36,7 +36,7 @@ begin
    values(new.id, trim(coalesce(new.raw_user_meta_data->>'game_name','')),coalesce(new.raw_user_meta_data->>'discord_id',''),coalesce(new.raw_user_meta_data->>'rank',''));
  end if;
  return new;
-end; $;
+end; $$;
 drop trigger if exists asf_auth_created on auth.users;
 create trigger asf_auth_created after insert on auth.users for each row execute function public.asf_create_profile();
 
