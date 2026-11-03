@@ -7,6 +7,11 @@ const KINDS={personnel:'تقرير مسؤول الأفراد',officers:'تقري
 const STATES={new:'جديد',reviewing:'قيد المراجعة',reviewed:'تمت المراجعة',needs_more:'يحتاج استكمال'};
 const RANKS=['جندي','جندي أول','عريف','وكيل رقيب','رقيب','رقيب أول','رئيس رقباء','ملازم','ملازم أول','نقيب','رائد','مقدم','عقيد','عميد','لواء','فريق','فريق أول'];
 const cfg=window.ASF_CONFIG||{}, ready=!!(cfg.supabaseUrl&&cfg.supabaseAnonKey&&window.supabase);
+const PORTAL_AUTH_REDIRECT='https://muhamid9397827.github.io/rass-academy/portal/';
+// Snapshot the recovery intent BEFORE Supabase processes and removes the URL fragment.
+const recoveryHash=new URLSearchParams(window.location.hash.replace(/^#/,'')),
+      recoveryQuery=new URLSearchParams(window.location.search);
+const recoveryLinkOpened=recoveryHash.get('type')==='recovery'||recoveryQuery.get('type')==='recovery';
 let db=ready?window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey):null;
 let user=null, profile=null, commander=false, grants=[], pageName='dashboard', draftId=null, latestReports=[], correctionSource=null, notificationChannel=null;
 const toast=(m,error=false)=>{const b=$('#toast');b.textContent=m;b.className='show'+(error?' error':'');clearTimeout(toast.t);toast.t=setTimeout(()=>b.className='',5800)};
@@ -19,7 +24,7 @@ const btn=(label,act,id='',kind='ghost')=>'<button class="btn '+kind+' small" da
 const badge=(s,secret=false)=>'<span class="badge '+(secret?'secret':'')+'">'+esc(s)+'</span>';
 const empty=msg=>'<div class="empty">'+esc(msg)+'</div>';
 const has=(permission,kind=null)=>commander||grants.some(g=>g.permission===permission&&(kind===null||g.report_kind===null||g.report_kind===kind));
-function showScreen(which){['welcome','authScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which)}
+function showScreen(which){['welcome','authScreen','recoveryScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which)}
 function openAcademy(){window.open('academy.html','_blank','noopener')}
 $('#openAcademy').onclick=openAcademy;
 const restrictedModal=$('#restrictedModal');
@@ -32,14 +37,14 @@ function closeRestricted(){restrictedModal.hidden=true;document.body.classList.r
 $('#closeRestricted').onclick=closeRestricted;$('#ackRestricted').onclick=closeRestricted;
 restrictedModal.onclick=e=>{if(e.target===restrictedModal)closeRestricted()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!restrictedModal.hidden)closeRestricted()});
-let registering=false;
+let registering=false,recoveryMode=recoveryLinkOpened;
 function authForm(mode){registering=mode==='register';showScreen('authScreen');$('#authTitle').textContent=registering?'إنشاء حساب جديد':'تسجيل الدخول';$('#registerFields').hidden=!registering;$('#authSubmit').textContent=registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authToggle').textContent=registering?'لديك حساب بالفعل؟ تسجيل الدخول':'ليس لديك حساب؟ إنشاء حساب';$('#forgotPassword').hidden=registering;['gameName','discordId','rank'].forEach(id=>$('#'+id).required=registering);}
 $('#showLogin').onclick=()=>authForm('login');$('#showRegister').onclick=()=>authForm('register');
 $('#authToggle').onclick=()=>authForm(registering?'login':'register');
 $('#forgotPassword').onclick=async()=>{
  if(!ready)return toast('ربط قاعدة البيانات غير متاح',true);
  const email=$('#email').value.trim();if(!email)return toast('أدخل بريدك الإلكتروني أولًا',true);
- const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});
+ const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:PORTAL_AUTH_REDIRECT});
  toast(error?'تعذر إرسال رابط الاستعادة: '+error.message:'إذا كان البريد مسجلًا، سيتم إرسال رابط استعادة كلمة المرور.',!!error);
 };$('#authBack').onclick=()=>showScreen('welcome');
 $('#rank').innerHTML=opt(RANKS.map(r=>[r,r]));
@@ -53,7 +58,7 @@ $('#authForm').onsubmit=async e=>{
   if(registering){
     const game_name=$('#gameName').value.trim(),discord_id=$('#discordId').value.trim(),rank=$('#rank').value;
     if(!/^[0-9]{17,20}$/.test(discord_id))throw Error('معرّف Discord يجب أن يكون رقميًا من 17 إلى 20 خانة.');
-    const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname,data:{asf_portal:'true',game_name,discord_id,rank}}});if(error)throw error;
+    const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:PORTAL_AUTH_REDIRECT,data:{asf_portal:'true',game_name,discord_id,rank}}});if(error)throw error;
     toast(data.session?'تم إنشاء الحساب، بانتظار موافقة القائد.':'تم إرسال طلب التسجيل. تحقق من بريدك لتأكيد الحساب إن طُلب ذلك.');
     await loadIdentity();
   }else{
@@ -63,10 +68,68 @@ $('#authForm').onsubmit=async e=>{
  finally{$('#authSubmit').disabled=false}
 };
 async function init(){
- if(!ready){showScreen('welcome');toast('البوابة التجريبية بحاجة لربط قاعدة البيانات لتفعيل الحسابات.',true);return}
- const {data}=await db.auth.getUser();if(data?.user){user=data.user;await loadIdentity()}else showScreen('welcome');
- db.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){user=null;commander=false;profile=null;grants=[];if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}showScreen('welcome')} if(event==='PASSWORD_RECOVERY'){const password=prompt('أدخل كلمة مرور جديدة (8 أحرف على الأقل):');if(password&&password.length>=8)db.auth.updateUser({password}).then(({error})=>toast(error?error.message:'تم تحديث كلمة المرور',!!error));}});
+ if(!ready){showScreen('welcome');toast('البوابة بحاجة لربط قاعدة البيانات لتفعيل الحسابات.',true);return}
+ // Subscribe before checking the session: Supabase may complete the recovery redirect immediately.
+ db.auth.onAuthStateChange((event,session)=>{
+  if(event==='PASSWORD_RECOVERY'){
+   recoveryMode=true;
+   showRecoveryScreen();
+   return;
+  }
+  if(event==='SIGNED_OUT'){
+   user=null;commander=false;profile=null;grants=[];
+   if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
+   if(!recoveryMode)showScreen('welcome');
+  }
+ });
+ try{
+  const {data,error}=await db.auth.getUser();
+  if(recoveryMode){
+   showRecoveryScreen();
+   if(error||!data?.user){
+    $('#recoveryStatus').textContent='انتهت صلاحية رابط الاستعادة أو تعذر التحقق منه. ارجع إلى تسجيل الدخول واطلب رابطًا جديدًا.';
+    $('#recoveryForm').hidden=true;
+   }
+   return;
+  }
+  if(data?.user){user=data.user;await loadIdentity()}else showScreen('welcome');
+ }catch(err){
+  showScreen(recoveryMode?'recoveryScreen':'welcome');
+  toast('تعذر التحقق من جلسة تسجيل الدخول.',true);
+ }
 }
+function showRecoveryScreen(){
+ showScreen('recoveryScreen');
+ $('#recoveryForm').hidden=false;
+ $('#recoveryStatus').textContent='أدخل كلمة مرور جديدة، ثم سجّل الدخول بها إلى البوابة.';
+}
+$('#recoveryBack').onclick=()=>{
+ // Never use the recovery link as an ordinary sign-in. Request a fresh link if needed.
+ recoveryMode=false;
+ window.history.replaceState(null,'',window.location.pathname);
+ authForm('login');
+};
+$('#recoveryForm').onsubmit=async e=>{
+ e.preventDefault();
+ if(!ready)return toast('خدمة تسجيل الدخول غير متاحة.',true);
+ const password=$('#recoveryPassword').value,confirmation=$('#recoveryPasswordConfirm').value;
+ if(password.length<8)return toast('يجب أن تتكوّن كلمة المرور من 8 أحرف على الأقل.',true);
+ if(password!==confirmation)return toast('كلمتا المرور غير متطابقتين.',true);
+ const submit=$('#recoverySubmit');submit.disabled=true;
+ try{
+  const {data:authResult,error:authError}=await db.auth.getUser();
+  if(authError||!authResult?.user)throw Error('رابط الاستعادة غير صالح أو انتهت صلاحيته. اطلب رابطًا جديدًا.');
+  const {error}=await db.auth.updateUser({password});
+  if(error)throw error;
+  recoveryMode=false;
+  window.history.replaceState(null,'',window.location.pathname);
+  $('#recoveryForm').reset();
+  await db.auth.signOut();
+  authForm('login');
+  toast('تم تحديث كلمة المرور. يمكنك الآن تسجيل الدخول بالكلمة الجديدة.');
+ }catch(err){toast(err.message||'تعذر تحديث كلمة المرور.',true)}
+ finally{submit.disabled=false}
+};
 async function query(name,select='*'){const {data,error}=await db.from(name).select(select);if(error)throw error;return data||[]}
 async function loadIdentity(silent=false){
  if(!ready)return;
