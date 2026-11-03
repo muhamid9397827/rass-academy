@@ -446,6 +446,7 @@ function mountAcademyResults(){
    button.disabled=true;
    try{const {data:result,error}=await db.rpc('asf_confirm_academy_delivery',{p_result:button.dataset.deliverResult});if(error)throw error;
     toast((result.already_delivered?'سبق تأكيد التسليم بواسطة ':'تم تأكيد التسليم باسم ')+result.delivered_by_name);await load();
+     if($('#departmentRewards'))await deptUI.rewardPanel('training');
    }catch(err){toast(err.message||'تعذر تأكيد التسليم',true);button.disabled=false;}
   });
  };
