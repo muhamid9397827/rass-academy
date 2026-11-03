@@ -608,7 +608,7 @@ async function renderCourt(){
   const d=decisions.find(v=>v.case_id===c.id);return '<div class="section-card"><h3>'+esc(c.subject)+'</h3><p style="white-space:pre-wrap">'+esc(c.details)+'</p><p class="muted">'+date(c.created_at)+'</p><div>'+badge(d?(d.outcome==='approved'?'معتمدة':'مرفوضة'):'بانتظار القرار')+'</div>'+
   (!d?'<div class="row">'+btn('اعتماد','decide-yes',c.id)+btn('رفض','decide-no',c.id)+'</div>':'<p>'+esc(d.note||'')+'</p>')+'</div>'}).join('')||empty('لا توجد قضايا بعد'))+'</div>'+
  '<div class="section-card"><h3>تسجيل إنذار قضائي</h3><form id="warningForm">'+
- '<div class="grid two">'+input('player_name','اسم العسكري الكامل')+input('player_rank','الرتبة')+input('player_code','الكود العسكري')+input('player_discord_id','Discord ID للبحث الدقيق')+
+ '<div class="grid two">'+input('player_name','اسم العسكري الكامل')+input('player_rank','الرتبة')+input('player_code','الكود العسكري')+'<label>Discord ID للبحث الدقيق<input name="player_discord_id" required inputmode="numeric" pattern="[0-9]{15,22}" maxlength="22" placeholder="المعرّف الرقمي"></label>'+
  '<label>درجة الإنذار<select name="warning_level">'+opt([['شفهي','شفهي'],['وظيفي','وظيفي'],['نهائي','نهائي'],['إجراء آخر','إجراء آخر']])+'</select></label>'+
  '<label>مدة الإنذار بالأيام (اختياري)<input name="duration_days" type="number" min="0" max="3650"></label>'+
  '<label>رقم القضية المرتبطة (اختياري)<select name="case_id">'+opt([['','بدون قضية'],...cases.map(c=>[c.id,c.subject])])+'</select></label></div>'+
@@ -645,7 +645,7 @@ async function renderCourt(){
  $('#warningForm').onsubmit=async e=>{
   e.preventDefault();const f=new FormData(e.target);
   if(!isFullName(f.get('player_name')))return toast('اكتب اسم العسكري والكنية، ولا تستخدم اسمًا واحدًا.',true);
-  const discord=String(f.get('player_discord_id')||'').trim();if(discord&&!/^[0-9]{15,22}$/.test(discord))return toast('معرّف Discord غير صحيح.',true);
+  const discord=String(f.get('player_discord_id')||'').trim();if(!/^[0-9]{15,22}$/.test(discord))return toast('معرّف Discord غير صحيح.',true);
   const row={recorded_by:user.id,player_name:String(f.get('player_name')).trim(),player_discord_id:discord||null,player_rank:String(f.get('player_rank')).trim(),player_code:String(f.get('player_code')).trim(),warning_level:f.get('warning_level'),
    offense:String(f.get('offense')).trim(),punishment:String(f.get('punishment')).trim(),duration_days:f.get('duration_days')===''?null:Number(f.get('duration_days')),case_id:f.get('case_id')||null};
   const {error}=await db.from('asf_court_warnings').insert(row);if(error)return toast(error.message,true);
