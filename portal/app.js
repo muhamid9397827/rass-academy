@@ -179,16 +179,24 @@ async function loadIdentity(silent=false){
   ]);
   if(pe||ce||de)throw pe||ce||de;
   profile=p;commander=!!cm;grants=dg||[];
-  if(commander && !notificationChannel){
-    notificationChannel=db.channel('asf-commander-notices-'+user.id)
+  if(!notificationChannel){
+    // All signed-in members can receive their own decision notices. RLS stays authoritative.
+    notificationChannel=db.channel('asf-notices-'+user.id)
      .on('postgres_changes',{event:'INSERT',schema:'public',table:'asf_notifications',filter:'recipient_id=eq.'+user.id},
-      payload=>{toast(payload.new?.message||'وصل إشعار جديد للقيادة');
-       if(pageName==='dashboard')renderDashboard().catch(err=>toast(err.message,true));
-       if(pageName==='inbox')renderReports('inbox').catch(err=>toast(err.message,true));
-       if(pageName==='members' && payload.new?.category==='registration')renderMembers().catch(err=>toast(err.message,true));
+      payload=>{
+       const notice=payload.new||{};
+       toast(notice.message||'وصل إشعار جديد');
+       if(notice.category==='access_decision'){
+        loadIdentity(true).catch(err=>toast(err.message,true));
+        return;
+       }
+       if(commander){
+        if(pageName==='dashboard')renderDashboard().catch(err=>toast(err.message,true));
+        if(pageName==='inbox')renderReports('inbox').catch(err=>toast(err.message,true));
+        if(pageName==='members'&&notice.category==='registration')renderMembers().catch(err=>toast(err.message,true));
+        if(pageName==='access-queue'&&notice.category==='access_request')renderAccessQueue().catch(err=>toast(err.message,true));
+       }
       }).subscribe();
-  }else if(!commander && notificationChannel){
-    db.removeChannel(notificationChannel);notificationChannel=null;
   }
   $('#sessionLabel').textContent=p?.game_name||user.email;$('#signOut').hidden=false;
   if(commander||p?.status==='approved'){
