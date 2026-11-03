@@ -231,7 +231,7 @@ async function loadIdentity(silent=false){
         loadIdentity(true).catch(err=>toast(err.message,true));
         return;
        }
-       if(['academy_pass','academy_assigned'].includes(notice.category)){
+       if(['academy_pass','academy_assigned'].includes(notice.event_kind||notice.category)){
         if(pageName==='academy-results')renderAcademyResults();
         if(pageName==='academy')renderAcademy();
        }
@@ -331,7 +331,7 @@ async function renderDashboard(){
   if(!nerr){
    const unread=(notices||[]).filter(n=>!n.read_at);
    $('#page').insertAdjacentHTML('beforeend','<section class="section-card" style="margin-top:18px"><div class="row between"><h3>الإشعارات '+badge(String(unread.length)+' غير مقروء')+'</h3><button class="btn ghost small" id="markAllRead">تعليم كمقروء</button></div>'+
-   ((notices||[]).map(n=>'<div class="notice-item">'+(n.read_at?'':'● ')+esc(n.message)+'<small class="muted">'+date(n.created_at)+'</small>'+(['academy_pass','academy_assigned'].includes(n.category)?'<button class="btn ghost small" data-open-notice="academy-results">فتح جدول الدورات</button>':n.category==='registration'&&(commander||has('users.approve'))?'<button class="btn ghost small" data-open-notice="members">مراجعة طلب العضوية</button>':'')+'</div>').join('')||empty('لا توجد إشعارات'))+'</section>');
+   ((notices||[]).map(n=>'<div class="notice-item">'+(n.read_at?'':'● ')+esc(n.message)+'<small class="muted">'+date(n.created_at)+'</small>'+(['academy_pass','academy_assigned'].includes(n.event_kind||n.category)?'<button class="btn ghost small" data-open-notice="academy-results">فتح جدول الدورات</button>':n.category==='registration'&&(commander||has('users.approve'))?'<button class="btn ghost small" data-open-notice="members">مراجعة طلب العضوية</button>':'')+'</div>').join('')||empty('لا توجد إشعارات'))+'</section>');
    $('#page').querySelectorAll('[data-open-notice]').forEach(b=>b.onclick=()=>navigate(b.dataset.openNotice));
    $('#markAllRead').onclick=async()=>{const {error}=await db.from('asf_notifications').update({read_at:new Date().toISOString()}).is('read_at',null);if(error)return toast(error.message,true);toast('تم تعليم الإشعارات كمقروءة');renderDashboard();};
   }
