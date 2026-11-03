@@ -374,8 +374,8 @@ async function renderDashboard(){
  const card=([id,icon,title,description])=>'<button type="button" class="dashboard-card mp-simple-card" data-section="'+id+'"><span class="dashboard-card__icon" aria-hidden="true">'+icon+'</span><span class="dashboard-card__body"><strong>'+esc(title)+'</strong><small>'+esc(description)+'</small></span><span class="dashboard-card__action">فتح ←</span></button>';
  set('#page','<section class="mp-dashboard-welcome"><div><span class="eyebrow">مساحة عملك</span><h2>أهلًا، '+esc(profile?.game_name||'القيادة')+'</h2><p>اختر ما تحتاجه فقط؛ الأقسام التي لا تملك صلاحيتها مخفية.</p></div><span class="mp-dashboard-code">'+esc(profile?.military_code||'قيادة أمن المنشآت')+'</span></section>'+
  '<section class="mp-dashboard-top"><button class="btn primary" type="button" data-fast="compose">＋ كتابة تقرير</button><button class="btn ghost" type="button" data-fast="reports">متابعة تقاريري</button><button class="btn ghost" type="button" data-fast="academy">الدورات العامة</button></section>'+
- '<div class="section-intro"><div><h2>الأقسام المتاحة لك</h2><p>لن ترى أي قسم مقفل أو لا يخص مهامك.</p></div></div>'+
- '<div class="dashboard-sections mp-simple-grid">'+cards.map(card).join('')+'</div>'+
+ '<div class="section-intro"><div><h2>أدواتك</h2><p>الأعمال اليومية بالأعلى، وبقية الأقسام تجدها هنا عند الحاجة.</p></div></div>'+
+ (cards.length>3?'<details class="mp-notices-panel mp-workspaces-fold"><summary>الأقسام التخصصية المتاحة <span class="badge">'+(cards.length-3)+'</span></summary><div class="dashboard-sections mp-simple-grid mp-fold-grid">'+cards.slice(3).map(card).join('')+'</div></details>':'')+
  '<div class="mp-dashboard-foot"><span>هل تحتاج صلاحية إضافية؟</span><button type="button" class="btn ghost small" id="accessDashboardShortcut">طلب وصول أو متابعة طلباتي</button></div>'+
  '<section id="dashboardNotices" class="mp-notices"></section>');
  $('#page').querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>navigate(b.dataset.section));
