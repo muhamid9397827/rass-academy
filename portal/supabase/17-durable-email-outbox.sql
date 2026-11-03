@@ -77,17 +77,24 @@ revoke all on function app_private.asf_dispatch_email_outbox() from public,anon,
 create or replace function app_private.asf_queue_email_bridge()
 returns trigger language plpgsql security definer set search_path=''
 as $fn$
-declare category_name text;
+declare category_name text; v_event_id uuid;
 begin
  if TG_TABLE_NAME='asf_reports' then
    category_name:=case when new.kind='secret' then 'secret_report' else 'report' end;
+   v_event_id:=new.id;
  elsif TG_TABLE_NAME='asf_profiles' then
    category_name:='registration';
+   v_event_id:=new.user_id;
  else return new; end if;
  insert into app_private.asf_email_outbox(category,event_id)
- values(category_name,case when TG_TABLE_NAME='asf_profiles' then new.user_id else new.id end)
+ values(category_name,v_event_id)
  on conflict(category,event_id) do nothing;
- perform app_private.asf_dispatch_email_outbox();
+ begin
+  perform app_private.asf_dispatch_email_outbox();
+ exception when others then
+  -- Never roll back a new user's signup or a report submission because email failed.
+  null;
+ end;
  return new;
 end $fn$;
 -- Existing two database triggers automatically use replaced trigger function.
