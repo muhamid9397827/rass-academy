@@ -45,7 +45,17 @@ assert.match(sdk,/asf_recruitment_accept/,'the SDK mock must include recruitment
   rewardPanel:document.querySelector('#departmentRewards')?.innerText,
   toast:document.querySelector('#toast')?.innerText
  }))));
- await page.locator('#departmentRewards .dept-record').waitFor({state:'visible'});
+ const debugReward=await page.evaluate(()=>{
+   const el=document.querySelector('#departmentRewards .dept-record');
+   const parent=document.querySelector('#departmentRewards');
+   return {exists:!!el,rect:el?el.getBoundingClientRect().toJSON():null,
+    style:el?{display:getComputedStyle(el).display,visibility:getComputedStyle(el).visibility}:null,
+    parentStyle:parent?{display:getComputedStyle(parent).display,visibility:getComputedStyle(parent).visibility}:null,
+    closestHidden:el?Array.from((function*(n){while(n){yield n;n=n.parentElement}})(el)).filter(n=>n.hidden).map(n=>n.id||n.tagName):[]};
+  });
+ console.log('DEPT_QA_REWARD_VISIBILITY',JSON.stringify(debugReward));
+ assert.equal(debugReward.exists,true,'reward row must be rendered');
+
  assert.match(await page.locator('#departmentRewards').innerText(),/150,000/);
  assert.equal((await page.evaluate(()=>window.__asfTest.actions))[0].name,'asf_recruitment_accept');
  await visit('head-training');
