@@ -22,7 +22,7 @@ let sdk=portalMock.replace(" const userId=",' const role=new URLSearchParams(loc
  assert.equal((await page.evaluate(()=>window.__asfTest.state.decisions))[0].op,'approve');
  assert.equal(await page.locator('[data-action="rank"]').count(),0);assert.equal(await page.locator('[data-action="suspend"]').count(),0);
  assert.equal(await page.locator('#academyReviewNav').isVisible(),false);
- await page.goto(base+'?role=courses');await page.locator('.mp-notices-panel summary').click();await page.locator('[data-open-notice="academy-results"]').click();await page.locator('[data-deliver-result]').waitFor();
+ await page.goto(base+'?role=courses');await page.locator('#dashboardNotices summary').click();await page.locator('[data-open-notice="academy-results"]').click();await page.locator('[data-deliver-result]').waitFor();
  assert.match(await page.locator('#courseGoogleSheet').getAttribute('href'),/1PC5iXwHWyFT4kd7qa6oa_JL1-r3F_anv3fPniF8rfdM/);
  await page.locator('.course-notice-flow summary').click();
  assert.match(await page.locator('.course-notice-flow').innerText(),/الإضافة اليدوية إلى Google لا تولّد إشعارًا/);
