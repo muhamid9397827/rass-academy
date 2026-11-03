@@ -75,9 +75,6 @@
       "result-view",
       "global-status",
       "progress-steps",
-      "sector-indicator",
-      "selected-sector-label",
-      "change-sector-button",
       "course-field",
       "entry-submit-button",
       "theme-button",
@@ -161,15 +158,13 @@
     cacheElements();
     restoreTheme();
     migrateLegacySessions();
-    selectedSector = getStoredSector();
+    // Keep the internal course key for existing training progress; only one academy is offered.
+    selectedSector = FACILITIES_SECURITY;
+    storeSector(FACILITIES_SECURITY);
     bindEvents();
-    if (selectedSector) {
-      applySectorSelection();
-      checkForSavedSession();
-      showView("entry");
-    } else {
-      showView("sector");
-    }
+    applySectorSelection();
+    checkForSavedSession();
+    showView("sector");
     elements.footerVersion.textContent = DEMO_MODE
       ? "الإصدار الثاني وضع العرض"
       : "الإصدار الثاني";
@@ -186,7 +181,6 @@
     document.querySelectorAll("[data-sector]").forEach((button) => {
       button.addEventListener("click", () => selectSector(button.dataset.sector));
     });
-    elements.changeSectorButton.addEventListener("click", changeSector);
     elements.traineeForm.addEventListener("submit", handleEntrySubmit);
     elements.courseSelect.addEventListener("change", updateCourseHint);
     elements.resumeButton.addEventListener("click", resumeSavedSession);
@@ -218,15 +212,7 @@
 
   function isKnownSector(value) { return value === FACILITIES_SECURITY; }
 
-  function getSectorLabel(sector = selectedSector) {
-    if (sector === SECURITY_REGIMENTS) {
-      return "الأفواج الأمنية";
-    }
-    if (sector === PUBLIC_SECURITY) {
-      return "الأمن العام";
-    }
-    return "أمن المنشآت";
-  }
+  function getSectorLabel() { return "أمن المنشآت"; }
 
   function getStoredSector() {
     try {
@@ -288,32 +274,12 @@
   }
 
   function applySectorSelection() {
-    elements.sectorIndicator.hidden = !selectedSector;
-    elements.selectedSectorLabel.textContent = selectedSector
-      ? `القطاع المختار: ${getSectorLabel()}`
-      : "";
     elements.courseField.hidden = false;
     elements.courseSelect.disabled = false;
     elements.entrySubmitButton.disabled = false;
     populateCourseSelect();
     updatePlatformStats();
     updateCourseHint();
-  }
-
-  function changeSector() {
-    clearInterval(studyTicker);
-    clearInterval(quizTicker);
-    storageRemove(STORAGE.session);
-    state = createEmptyState();
-    state.sector = selectedSector;
-    pendingSession = null;
-    isSubmitting = false;
-    elements.traineeForm.reset();
-    clearAllErrors();
-    selectedSector = "";
-    clearStoredSector();
-    elements.sectorIndicator.hidden = true;
-    showView("sector");
   }
 
   function restoreTheme() {
@@ -342,7 +308,7 @@
     elements.courseSelect.value = "";
 
     const quizGroup = document.createElement("optgroup");
-    quizGroup.label = "الدورات الميدانية";
+    quizGroup.label = "الدورات الإلكترونية";
     const applicantGroup = document.createElement("optgroup");
     applicantGroup.label = "تأهيل المتقدمين الجدد";
     const referenceGroup = document.createElement("optgroup");
