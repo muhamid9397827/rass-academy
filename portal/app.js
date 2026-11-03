@@ -143,7 +143,7 @@ $('#authForm').onsubmit=async e=>{
  }catch(err){
   const timedOut=err?.name==='AuthTimeoutError'||/abort|timeout|fetch|network|lock/i.test(String(err?.message||''));
   if(timedOut){authEpoch++;authNeedsReload=true;window.ASF_AUTH.cancel(db);}
-  status.hidden=false;status.className='auth-status error';status.textContent=timedOut?'تأخر الاتصال أو تعذّر إكمال الجلسة. اضغط «إعادة فتح تسجيل الدخول» للمحاولة بأمان.':err.message||'تعذر تنفيذ العملية';toast(status.textContent,true);
+  status.hidden=false;status.className='auth-status error';status.textContent=timedOut?'تأخر الاتصال أو تعذّر إكمال الجلسة. اضغط «إعادة فتح تسجيل الدخول» للمحاولة بأمان.':err.message||'تعذر تنفيذ العملية';
  }finally{$('#authSubmit').disabled=false;$('#authSubmit').textContent=authNeedsReload?'إعادة فتح تسجيل الدخول':registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authForm').removeAttribute('aria-busy');$('#authToggle').disabled=false;$('#forgotPassword').disabled=false;}
 };
 async function init(){
