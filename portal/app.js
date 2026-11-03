@@ -11,6 +11,7 @@ const PORTAL_AUTH_REDIRECT='https://muhamid9397827.github.io/rass-academy/portal
 // Snapshot the recovery intent BEFORE Supabase processes and removes the URL fragment.
 const recoveryHash=new URLSearchParams(window.location.hash.replace(/^#/,'')),
       recoveryQuery=new URLSearchParams(window.location.search);
+const recoveryTokenHash=recoveryHash.get('token_hash')||recoveryQuery.get('token_hash');
 const recoveryLinkOpened=recoveryHash.get('type')==='recovery'||recoveryQuery.get('type')==='recovery';
 let db=ready?window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey):null;
 let user=null, profile=null, commander=false, grants=[], pageName='dashboard', draftId=null, latestReports=[], correctionSource=null, notificationChannel=null;
@@ -83,6 +84,21 @@ async function init(){
   }
  });
  try{
+  // For commander recovery links sent through Resend without Supabase's SMTP.
+  // Token hashes are one-use; clear the URL before exchanging for an Auth session.
+  if(recoveryTokenHash && recoveryLinkOpened){
+   window.history.replaceState(null,'',window.location.pathname);
+   recoveryMode=true;
+   showRecoveryScreen();
+   const {data:recovered,error:verifyError}=await db.auth.verifyOtp({
+    type:'recovery',token_hash:recoveryTokenHash
+   });
+   if(verifyError || !recovered?.user){
+    $('#recoveryStatus').textContent='رابط الاستعادة منتهي الصلاحية أو مستخدم من قبل. اطلب رابطًا جديدًا.';
+    $('#recoveryForm').hidden=true;
+   }
+   return;
+  }
   const {data,error}=await db.auth.getUser();
   if(recoveryMode){
    showRecoveryScreen();

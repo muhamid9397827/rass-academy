@@ -4,16 +4,17 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const sdk = `
 (() => {
- const state = { reset:null, updated:null, signedOut:0 };
+ const state = { reset:null, updated:null, signedOut:0, verified:false, verification:null };
  window.__recoveryQA=state;
  window.supabase = {createClient:()=>({
   auth: {
-   getUser:async()=>({data:{user:location.hash.includes('type=recovery') && !location.hash.includes('invalid')?
+   getUser:async()=>({data:{user:(state.verified || location.hash.includes('type=recovery')) && !location.hash.includes('invalid')?
       {id:'11111111-2222-4333-8444-555555555571'}:null},error:null}),
    onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),
+   verifyOtp:async({token_hash,type})=>{state.verification={token_hash,type};if(token_hash==='invalid')return {data:{user:null},error:{message:'expired'}};state.verified=true;return {data:{user:{id:'11111111-2222-4333-8444-555555555571'}},error:null}},
    resetPasswordForEmail:async(email,options)=>{state.reset={email,redirectTo:options.redirectTo};return {data:{},error:null}},
    updateUser:async(data)=>{state.updated={password:data.password};return {data:{user:{}},error:null}},
-   signOut:async()=>{state.signedOut++;return {error:null}}
+   signOut:async()=>{state.signedOut++;state.verified=false;return {error:null}}
   }
  })}
 })();
@@ -54,6 +55,22 @@ const sdk = `
  await page.reload({waitUntil:'domcontentloaded'});
  await page.locator('#recoveryScreen').waitFor({state:'visible'});
  assert.equal(await page.locator('#recoveryForm').isVisible(),false,'expired/invalid session must not offer submission');
+ await page.goto(base+'#token_hash=goodQAhash&type=recovery',{waitUntil:'domcontentloaded'});
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.locator('#recoveryScreen').waitFor({state:'visible'});
+ await page.waitForFunction(()=>!!window.__recoveryQA.verification);
+ assert.equal(await page.evaluate(()=>window.__recoveryQA.verification.type),'recovery');
+ assert.equal(await page.evaluate(()=>window.__recoveryQA.verification.token_hash),'goodQAhash');
+ assert.equal(await page.evaluate(()=>location.hash),'','one-time token hash removed from URL');
+ await page.locator('#recoveryPassword').fill('AnotherSecurePassword2026!');
+ await page.locator('#recoveryPasswordConfirm').fill('AnotherSecurePassword2026!');
+ await page.locator('#recoverySubmit').click();
+ await page.locator('#authScreen').waitFor({state:'visible'});
+ await page.goto(base+'#token_hash=invalid&type=recovery',{waitUntil:'domcontentloaded'});
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.locator('#recoveryScreen').waitFor({state:'visible'});
+ await page.waitForFunction(()=>!!window.__recoveryQA.verification);
+ assert.equal(await page.locator('#recoveryForm').isVisible(),false,'invalid token_hash must not permit reset');
  assert.deepEqual(errors,[],'no unhandled browser errors');
  await browser.close();
  console.log('PASS: production redirect, reset form, confirmation validation, recovery session and URL fragment clearing');
