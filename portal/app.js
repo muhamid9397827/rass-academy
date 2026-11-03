@@ -418,7 +418,7 @@ function mountAcademyResults(){
   if(!rows.isConnected||request!==generation)return;
   if(error){rows.textContent='تعذر تحميل سجل النتائج. أعد المحاولة.';return;}
   const rewardResponse=await db.from('asf_department_rewards')
-   .select('id,subject_id,actor_id,actor_name,amount,paid_at').eq('department','training')
+   .select('id,subject_id,actor_id,actor_name,amount,paid_at,paid_by_name').eq('department','training')
    .order('earned_at',{ascending:false}).limit(200);
   const rewardByResult=new Map((rewardResponse.data||[]).map(reward=>[reward.subject_id,reward]));
   const canReviewReward=commander||hasDeptRole('training','head');
@@ -426,7 +426,7 @@ function mountAcademyResults(){
    const reward=rewardByResult.get(r.id);
    if(!r.delivered_at)return 'لم يسلم الرول بعد';
    if(!reward)return 'لا يوجد استحقاق ظاهر';
-   if(reward.paid_at)return '<span class="dept-state-paid">✓ تم إعطاء المكافأة</span>';
+   if(reward.paid_at)return '<span class="dept-state-paid">✓ تم إعطاء المكافأة</span><small>بواسطة '+esc(reward.paid_by_name||'الرئاسة')+'</small>';
    return '<span class="dept-state-unpaid">150,000 بانتظار الصرف</span>'+
     (canReviewReward&&reward.actor_id!==user.id?'<button class="btn primary small" data-course-reward="'+esc(reward.id)+'">✓ تم إعطاء المكافأة</button>':'');
   };
