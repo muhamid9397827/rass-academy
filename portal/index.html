@@ -63,6 +63,17 @@
  <button class="btn primary full" type="submit" id="authSubmit">دخول</button>
  </form><button class="link-button" id="authToggle">ليس لديك حساب؟ إنشاء حساب</button><button class="link-button" id="forgotPassword" type="button">نسيت كلمة المرور؟</button><button class="link-button" id="authBack">العودة للرئيسية</button>
  <p class="hint">بعد إنشاء الحساب، يراجع القائد البيانات ويوافق على التفعيل يدويًا.</p></div></section>
+<section id="verifyEmailScreen" class="auth-layout" hidden>
+ <div class="panel auth-panel">
+  <span class="recovery-icon" aria-hidden="true">✉</span>
+  <h2>تحقق من بريدك الإلكتروني</h2>
+  <p class="subtle" id="verifyEmailMessage">إذا تم قبول طلب التسجيل، ستصلك رسالة لتأكيد البريد الإلكتروني.</p>
+  <div class="notice" role="status">بعد الضغط على رابط التأكيد، ارجع إلى البوابة وسجّل الدخول بنفس البريد وكلمة المرور. حسابك يبقى بانتظار موافقة القائد.</div>
+  <p class="subtle">إذا فتح الرابط صفحة <code>localhost</code>، لا تنشئ حسابًا ثانيًا. افتح البوابة من الزر أدناه وحاول تسجيل الدخول؛ قد يكون البريد تأكّد بالفعل.</p>
+  <button class="btn primary full" id="verifyEmailLogin" type="button">العودة لتسجيل الدخول</button>
+  <button class="link-button" id="verifyEmailBack" type="button">العودة للرئيسية</button>
+ </div>
+</section>
 <section id="recoveryScreen" class="auth-layout" hidden>
  <div class="panel auth-panel">
   <span class="recovery-icon" aria-hidden="true">🔐</span>
@@ -102,5 +113,5 @@
 <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
 <script src="../js/courses.js"></script>
 <script src="mp-data.js"></script>
-<script src="app.js?v=20261103-access-v1" defer></script>
+<script src="app.js?v=20261103-auth-v2" defer></script>
 </body></html>
