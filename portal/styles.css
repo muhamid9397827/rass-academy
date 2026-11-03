@@ -99,3 +99,6 @@ input,textarea,select{background:#091827;border-color:#31516b}.sidebar{backgroun
 @media(max-width:600px){.secret-report-guidance{padding:14px}.course-notice-flow .btn{width:100%}}
 
 .course-notice-flow summary{cursor:pointer;min-height:44px;align-content:center;font-weight:700}.course-notice-flow[open] summary{margin-bottom:8px}
+
+/* Persistent feedback remains visible when the auth request is slow or fails. */
+.auth-status{padding:11px 13px;border:1px solid #376a77;border-radius:10px;background:#122e40;color:#c9edf0;line-height:1.9;overflow-wrap:anywhere}.auth-status.error{color:#ffd9ce;border-color:#a5685a;background:#422c30}#authForm[aria-busy="true"] #authSubmit{cursor:wait}
