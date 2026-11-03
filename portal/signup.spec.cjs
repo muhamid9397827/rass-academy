@@ -2,7 +2,7 @@
 // All Supabase calls are mocked. No accounts, passwords or emails created.
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
-const sdk="(() => {\n const data={signupCalls:[],signinCalls:[],getUserCalls:0,signedIn:false,emailUnconfirmed:false,loggedInFromRedirect:location.hash.includes('type=signup')};\n window.__signupQA=data;\n const member={id:'11111111-2222-4333-8444-555555555592',email:'qa@example.invalid'};\n const profile={user_id:member.id,game_name:'متدرب تجريبي',rank:'جندي',military_code:null,status:'pending',court_enabled:false};\n class Q{\n  constructor(table){this.table=table}\n  select(){return this}eq(){return this}order(){return this}limit(){return this}is(){return this}\n  async maybeSingle(){return {data:profile,error:null}}\n  then(ok){return Promise.resolve({data:[],error:null}).then(ok)}\n }\n window.supabase={createClient(){return {\n  auth:{\n   getUser:async()=>{data.getUserCalls++;return data.signedIn||data.loggedInFromRedirect?{data:{user:member},error:null}:{data:{user:null},error:{name:'AuthSessionMissingError',message:'Auth session missing!'}}},\n   onAuthStateChange:()=>({}),\n   signUp:async (args)=>{data.signupCalls.push(args);return {data:{user:member,session:null},error:null}},\n   signInWithPassword:async args=>{data.signinCalls.push(args);if(data.emailUnconfirmed)return {data:{user:null,session:null},error:{message:'Email not confirmed'}};data.signedIn=true;return {data:{user:member,session:{access_token:'mock-session'}},error:null}},\n   signOut:async()=>({error:null})\n  },\n  from:table=>new Q(table),\n  rpc:async name=>({data:name==='asf_is_commander'?false:null,error:null}),\n  channel:()=>({on(){return this},subscribe(){return this}}),\n  removeChannel(){}\n }}};\n})();";
+const sdk="(() => {\n const data={signupCalls:[],signinCalls:[],getUserCalls:0,signedIn:false,emailUnconfirmed:false,loggedInFromRedirect:location.hash.includes('type=signup')};\n window.__signupQA=data;\n const member={id:'11111111-2222-4333-8444-555555555592',email:'qa@example.invalid'};\n const profile={user_id:member.id,game_name:'متدرب تجريبي',rank:'جندي',military_code:null,status:'pending',court_enabled:false};\n class Q{\n  constructor(table){this.table=table}\n  select(){return this}eq(){return this}order(){return this}limit(){return this}is(){return this}\n  async maybeSingle(){return {data:profile,error:null}}\n  then(ok){return Promise.resolve({data:[],error:null}).then(ok)}\n }\n window.supabase={createClient(){return {\n  auth:{\n   getUser:async()=>{data.getUserCalls++;return data.signedIn||data.loggedInFromRedirect?{data:{user:member},error:null}:{data:{user:null},error:{name:'AuthSessionMissingError',message:'Auth session missing!'}}},\n   onAuthStateChange:()=>({}),\n   signUp:async (args)=>{data.signupCalls.push(args);return {data:{user:member,session:null},error:null}},\n   signInWithPassword:async args=>{data.signinCalls.push(args);if(data.emailUnconfirmed)return {data:{user:null,session:null},error:{message:'Email not confirmed'}};data.signedIn=true;return {data:{user:member,session:{access_token:'mock-session'}},error:null}},\n   signOut:async()=>({error:null})\n  },\n  from:table=>new Q(table),\n  rpc:async (name,args)=>{if(name==='asf_submit_activation_reason'){data.submittedReason=args.p_reason;profile.activation_reason=args.p_reason;return {data:null,error:null}}return {data:name==='asf_is_commander'?false:null,error:null}},\n  channel:()=>({on(){return this},subscribe(){return this}}),\n  removeChannel(){}\n }}};\n})();";
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  const page=await browser.newPage({viewport:{width:390,height:844}});
@@ -19,6 +19,10 @@ const sdk="(() => {\n const data={signupCalls:[],signinCalls:[],getUserCalls:0,s
  await page.locator('#password').fill('SafeTestPass2026!');
  await page.locator('#gameName').fill('متدرب اختبار');
  await page.locator('#discordId').fill('123456789012345678');
+ assert.equal(await page.locator('#activationReasonNotice').isVisible(),true,'mandatory reason notice visible');
+ await page.locator('#authSubmit').click();
+ assert.equal(await page.evaluate(()=>window.__signupQA.signupCalls.length),0,'empty reason blocks registration');
+ await page.locator('#activationReason').fill('أحتاج تفعيل عضويتي لأداء أعمالي الإدارية في أمن المنشآت.');
  await page.locator('#authSubmit').click();
  await page.locator('#verifyEmailScreen').waitFor({state:'visible'});
  assert.equal(await page.locator('#workspace').isVisible(),false);
@@ -27,7 +31,8 @@ const sdk="(() => {\n const data={signupCalls:[],signinCalls:[],getUserCalls:0,s
  assert.equal(await page.locator('#toast').textContent(),'','no Auth session missing toast');
  assert.equal(await page.locator('#password').inputValue(),'','signup password cleared from form');
  const submitted=await page.evaluate(()=>window.__signupQA.signupCalls[0]);
- assert.equal(submitted.options.emailRedirectTo,'https://muhamid9397827.github.io/rass-academy/portal/');
+ assert.equal(submitted.options.emailRedirectTo,'https://muhamid9397827.github.io/rass-academy/portal/confirmed.html');
+ assert.ok(submitted.options.data.activation_reason.length>=10,'activation reason sent to server');
  await page.locator('#verifyEmailLogin').click();
  await page.locator('#authScreen').waitFor({state:'visible'});
  assert.equal(await page.locator('#email').inputValue(),'qa@example.invalid');
@@ -35,6 +40,11 @@ const sdk="(() => {\n const data={signupCalls:[],signinCalls:[],getUserCalls:0,s
  await page.locator('#authSubmit').click();
  await page.locator('#pendingScreen').waitFor({state:'visible'});
  assert.equal(await page.locator('#workspace').isVisible(),false,'unapproved member must not reach internal workspace');
+ await page.locator('#pendingReasonSection').waitFor({state:'visible'});
+ await page.locator('#pendingReason').fill('هذا سبب مستكمل للمراجعة من قبل قيادة أمن المنشآت.');
+ await page.locator('#submitPendingReason').click();
+ await page.locator('#pendingReasonRecorded').waitFor({state:'visible'});
+ assert.ok((await page.evaluate(()=>window.__signupQA.submittedReason)).includes('مستكمل'),'pending account can add missing reason');
  await page.setViewportSize({width:360,height:780});
  const width=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth);
  assert.ok(width<=2,'horizontal overflow at 360px '+width);
