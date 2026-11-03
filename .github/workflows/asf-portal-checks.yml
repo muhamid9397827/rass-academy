@@ -3,10 +3,14 @@ on:
   push:
     paths:
       - 'portal/**'
+      - 'js/courses.js'
+      - 'js/banks/**'
       - '.github/workflows/asf-portal-checks.yml'
   pull_request:
     paths:
       - 'portal/**'
+      - 'js/courses.js'
+      - 'js/banks/**'
       - '.github/workflows/asf-portal-checks.yml'
 jobs:
   static:
@@ -32,10 +36,18 @@ jobs:
           node portal/confirmation.spec.cjs
           node portal/ui-theme.spec.cjs
           node portal/access-requests.spec.cjs
+          node portal/completion.spec.cjs
       - name: Server cleanup policy tests
         run: node portal/purge.spec.cjs
+      - name: Academy receipts and legacy workflow regression
+        run: |
+          node --check portal/academy-config.js
+          node --check portal/workflow-tools.js
+          node portal/build-academy-catalog.cjs --check
+          node portal/academy-results.spec.mjs
+          node portal/workflow-tools.spec.cjs
       - name: Live Supabase Auth readiness
-        run: node portal/auth-health.spec.cjs
+        run: node portal/auth-health.spec.cjs && node portal/result-health.spec.cjs
       - name: Security regression guards
         run: |
           grep -q "kind='secret' and public.asf_is_commander()" portal/supabase/schema.sql
