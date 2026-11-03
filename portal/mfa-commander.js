@@ -9,7 +9,7 @@
    active=false;factorId='';stage='';busy=false;
    $('mfaCode').value='';$('mfaQr').hidden=true;$('mfaQr').removeAttribute('src');
    $('mfaSecret').textContent='';$('mfaSecretRow').hidden=true;
-   $('mfaSetup').hidden=true;$('mfaVerify').hidden=true;
+   $('mfaSetup').hidden=true;$('mfaVerify').hidden=true;$('mfaStart').hidden=false;
    status('');
   }
   async function enter(){
