@@ -58,7 +58,7 @@
  <label>البريد الإلكتروني<input id="email" type="email" required autocomplete="email"></label>
  <label>كلمة المرور<input id="password" type="password" required minlength="8" autocomplete="current-password"></label>
  <div id="registerFields" hidden>
- <label>الاسم داخل اللعبة<input id="gameName" maxlength="80" minlength="2" autocomplete="nickname"></label>
+ <label>الاسم والكنية داخل اللعبة<input id="gameName" maxlength="80" minlength="5" autocomplete="name" placeholder="مثال: مجاهد ال عباد"><small class="muted">لا تُقبل الأسماء المفردة؛ اكتب اسمًا وكنية.</small></label>
  <label>Discord User ID<input id="discordId" type="text" inputmode="numeric" pattern="[0-9]{17,20}" dir="ltr" placeholder="18 أو 19 رقمًا"></label>
  <label>الرتبة<select id="rank"></select></label>
  <label class="activation-reason-field" for="activationReason">سبب طلب تفعيل الحساب
@@ -117,7 +117,7 @@
 </div>
 <button class="nav" data-page="reports">▤ <span>تقاريري</span></button>
 <button class="nav" data-page="compose">＋ <span>تقرير جديد</span></button>
-<button class="nav" data-page="police">🛡 <span>الشرطة العسكرية</span></button>
+<button class="nav" data-page="police" id="policeNav" hidden>🛡 <span>الشرطة العسكرية</span></button>
 <button class="nav" data-page="court" id="courtNav" hidden>⚖ <span>مجلس القضاء</span></button>
 <div id="adminNav" hidden><div class="side-label">القيادة</div>
 <button class="nav" data-page="inbox">✉ <span>التقارير الواردة</span></button>
@@ -127,7 +127,7 @@
 <button class="nav" data-page="access-queue" hidden>✉ <span>مراجعة طلبات التصاريح</span></button>
 <button class="nav" data-page="trash">▣ <span>سلة المحذوفات</span></button>
 <button class="nav" data-page="audit">☷ <span>سجل العمليات</span></button></div>
-<button class="nav" data-page="access">🔐 <span>طلبات التصاريح</span></button>
+<div class="side-label">المساعدة والحساب</div><button class="nav" data-page="access">🔐 <span>طلب وصول للأقسام</span></button>
 <button class="nav" data-page="account">◉ <span>ملفي الشخصي</span></button></aside>
 <main class="content"><div id="pageTitle" class="page-title"></div><div id="page"></div></main></div>
 <button class="mobile-menu-backdrop" id="mobileMenuBackdrop" type="button" aria-label="إغلاق القائمة" hidden></button>
@@ -142,5 +142,6 @@
 <script src="mobile.js?v=20261103-mobile-1"></script>
 <script src="auth-client.js?v=20261103-auth-fix-1"></script>
 <script src="departments.js?v=20261103-depts-1"></script>
-<script src="app.js?v=20261103-depts-1" defer></script>
+<script src="police-workspace.js?v=20261103-police-1"></script>
+<script src="app.js?v=20261103-police-1" defer></script>
 </body></html>

@@ -38,7 +38,7 @@ const recoveryTokenHash=recoveryHash.get('token_hash')||recoveryQuery.get('token
 const recoveryLinkOpened=recoveryHash.get('type')==='recovery'||recoveryQuery.get('type')==='recovery';
 let db=ready?window.ASF_AUTH.createClient():null;
 let authEpoch=0,authNeedsReload=false,signingOut=false;
-let user=null, profile=null, commander=false, grants=[], departmentRoles=[], pageName=new URLSearchParams(location.search).get('view')==='academy-results'?'academy-results':'dashboard', draftId=null, latestReports=[], correctionSource=null, notificationChannel=null;
+let user=null, profile=null, commander=false, policeHead=false, grants=[], departmentRoles=[], pageName=new URLSearchParams(location.search).get('view')==='academy-results'?'academy-results':'dashboard', draftId=null, latestReports=[], correctionSource=null, notificationChannel=null;
 const toast=(m,error=false)=>{const b=$('#toast');b.textContent=m;b.className='show'+(error?' error':'');clearTimeout(toast.t);toast.t=setTimeout(()=>b.className='',5800)};
 const set=(s,html)=>{$(s).innerHTML=html};
 const date=d=>d?new Date(d).toLocaleString('ar-SA',{dateStyle:'short',timeStyle:'short'}):'—';
@@ -48,9 +48,11 @@ const input=(name,label,value='',type='text')=>'<label>'+esc(label)+'<input name
 const btn=(label,act,id='',kind='ghost')=>'<button class="btn '+kind+' small" data-action="'+esc(act)+'" data-id="'+esc(id)+'">'+esc(label)+'</button>';
 const badge=(s,secret=false)=>'<span class="badge '+(secret?'secret':'')+'">'+esc(s)+'</span>';
 const empty=msg=>'<div class="empty">'+esc(msg)+'</div>';
+const isFullName=value=>{const name=String(value||'').trim();const parts=name.split(/\s+/);return name.length<=80&&parts.length>=2&&parts.every(p=>p.length>=2&&/^\p{L}+$/u.test(p));};
 const has=(permission,kind=null)=>commander||grants.some(g=>g.permission===permission&&(kind===null||g.report_kind===null||g.report_kind===kind));
 const hasDeptRole=(department,role)=>commander||departmentRoles.some(r=>r.department===department&&r.role===role);
 const hasDept=(department)=>commander||departmentRoles.some(r=>r.department===department);
+const policeUI=window.ASF_POLICE_UI.create({db,getContext:()=>({user,commander,hasPolice:has('police.manage'),isPoliceHead:policeHead,gameName:profile?.game_name}),notify:toast});
 const deptUI=window.ASF_DEPARTMENTS.create({
  db,
  getContext:()=>({user,commander,roles:departmentRoles,legacyAcademyManage:has('academy.manage')}),
@@ -90,7 +92,7 @@ $('#verifyEmailBack').onclick=()=>showScreen('welcome');
 $('#rank').innerHTML=opt(RANKS.map(r=>[r,r]));
 $('#signOut').onclick=async()=>{
  if(signingOut)return;signingOut=true;['showLogin','showRegister','registerFromHero','signOut'].forEach(id=>$('#'+id).disabled=true);
- authEpoch++;user=null;profile=null;commander=false;grants=[];departmentRoles=[];departmentRoles=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');showScreen('welcome');$('#signOut').hidden=true;$('#sessionLabel').textContent='';
+ authEpoch++;user=null;profile=null;commander=false;policeHead=false;grants=[];departmentRoles=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');showScreen('welcome');$('#signOut').hidden=true;$('#sessionLabel').textContent='';
  if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
  try{const {error}=await window.ASF_AUTH.deadline(()=>db.auth.signOut(),()=>{authNeedsReload=true;window.ASF_AUTH.cancel(db)});if(error)throw error;}catch(err){
   authNeedsReload=true;window.ASF_AUTH.cancel(db);
@@ -124,9 +126,10 @@ $('#authForm').onsubmit=async e=>{
  try{
   await window.ASF_AUTH.deadline(async()=>{
   if(registering){
-    const game_name=$('#gameName').value.trim(),discord_id=$('#discordId').value.trim(),rank=$('#rank').value,
+    const game_name=$('#gameName').value.trim().replace(/\s+/g,' '),discord_id=$('#discordId').value.trim(),rank=$('#rank').value,
       activation_reason=$('#activationReason').value.trim();
-    if(!/^[0-9]{17,20}$/.test(discord_id))throw Error('معرّف Discord يجب أن يكون رقميًا من 17 إلى 20 خانة.');
+    if(!isFullName(game_name))throw Error('اكتب الاسم والكنية، مثل: مجاهد ال عباد. لا يُقبل اسم واحد فقط.');
+     if(!/^[0-9]{17,20}$/.test(discord_id))throw Error('معرّف Discord يجب أن يكون رقميًا من 17 إلى 20 خانة.');
     if(activation_reason.length<10||activation_reason.length>500)throw Error('سبب طلب التفعيل إلزامي ويجب أن يتراوح بين 10 و500 حرف.');
     const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:PORTAL_CONFIRMATION_REDIRECT,data:{asf_portal:'true',game_name,discord_id,rank,activation_reason}}});
     if(attempt!==authEpoch)return;
@@ -172,7 +175,7 @@ async function init(){
    return;
   }
   if(event==='SIGNED_OUT'){
-   authEpoch++;user=null;commander=false;profile=null;grants=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');
+   authEpoch++;user=null;commander=false;policeHead=false;profile=null;grants=[];departmentRoles=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');
    if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
    if(!recoveryMode)showScreen('welcome');
   }
@@ -249,16 +252,17 @@ async function loadIdentity(silent=false,fromAuth=false){
  try{
   const {data:{user:u},error:ue}=await db.auth.getUser();if(epoch!==authEpoch)return;if(ue)throw ue;
   if(!u){showScreen('welcome');return}user=u;
- const [{data:p,error:pe},{data:cm,error:ce},{data:dg,error:de},{data:responsibilities,error:re},{data:departmentMemberships,error:dme}]=await Promise.all([
+ const [{data:p,error:pe},{data:cm,error:ce},{data:dg,error:de},{data:responsibilities,error:re},{data:departmentMemberships,error:dme},{data:policeMembership,error:hme}]=await Promise.all([
     db.from('asf_profiles').select('*').eq('user_id',user.id).maybeSingle(),
     db.rpc('asf_is_commander'),
     db.from('asf_delegations').select('*').eq('user_id',user.id),
     db.from('asf_responsibilities').select('*').eq('user_id',user.id),
-    db.from('asf_department_roles').select('user_id,department,role').eq('user_id',user.id)
+    db.from('asf_department_roles').select('user_id,department,role').eq('user_id',user.id),
+    db.from('asf_police_heads').select('user_id').eq('user_id',user.id)
   ]);
   if(epoch!==authEpoch)return;
-  if(pe||ce||de||re||dme)throw pe||ce||de||re||dme;
-  profile=p;commander=!!cm;grants=[...(dg||[]),...(responsibilities||[])];departmentRoles=departmentMemberships||[];
+  if(pe||ce||de||re||dme||hme)throw pe||ce||de||re||dme||hme;
+  profile=p;commander=!!cm;policeHead=!!policeMembership?.length;grants=[...(dg||[]),...(responsibilities||[])];departmentRoles=departmentMemberships||[];
   if(!notificationChannel){
     // All signed-in members can receive their own decision notices. RLS stays authoritative.
     notificationChannel=db.channel('asf-notices-'+user.id)
@@ -286,6 +290,7 @@ async function loadIdentity(silent=false,fromAuth=false){
   $('#sessionLabel').textContent=p?.game_name||user.email;$('#signOut').hidden=false;
   if(commander||p?.status==='approved'){
    showScreen('workspace');$('#courtNav').hidden=!(commander||p?.court_enabled||has('court.manage'));
+    $('#policeNav').hidden=!(commander||policeHead||has('police.manage'));
    $('#adminNav').hidden=!(commander||has('reports.read')||has('reports.review')||has('users.review')||has('users.approve'));
    document.querySelector('[data-page="members"]').hidden=!(commander||has('users.review')||has('users.approve'));
    document.querySelector('[data-page="changes"]').hidden=!(commander||has('users.review'));
@@ -336,7 +341,12 @@ async function navigate(name){
   if(name==='academy-results')return await renderAcademyResults();
   if(name==='training-center')return await deptUI.render('training');
   if(name==='recruitment-center')return await deptUI.render('recruitment');
-  if(name==='department-admin'&&commander)return await deptUI.renderAdmin();
+  if(name==='department-admin'&&commander){
+    await deptUI.renderAdmin();
+    $('#page').insertAdjacentHTML('beforeend','<section class="section-card"><h3>رئاسة الشرطة العسكرية</h3><p class="muted">تعيين رئيس الشرطة وتوزيع رول الشرطة العسكرية ورول مجلس القضاء للأعضاء المعتمدين من مكان واحد.</p><button type="button" class="btn primary" id="openPoliceLeadership">فتح إدارة رئاسة الشرطة</button></section>');
+    $('#openPoliceLeadership').onclick=async()=>{await navigate('police');const details=$('#mpLeadershipDetails');if(details){details.open=true;details.scrollIntoView({block:'start',behavior:'smooth'});}};
+    return;
+   }
   if(name==='reports'||name==='inbox'||name==='trash')return await renderReports(name);
   if(name==='compose')return await renderCompose();
   if(name==='police')return await renderPolice();
@@ -352,44 +362,40 @@ async function navigate(name){
  }catch(err){set('#page',empty('تعذر تحميل القسم: '+err.message));toast(err.message,true)}
 }
 async function renderDashboard(){
- const {data:rs,error}=await db.from('asf_reports').select('id,kind,submitted_at,deleted_at',{count:'exact'}).is('deleted_at',null).limit(100);
- if(error)throw error;
- const own=(rs||[]).filter(r=>r.kind!=='secret').length;
  const courtAllowed=commander||profile?.court_enabled||has('court.manage');
- const info=[
- ['الكود العسكري',profile?.military_code||'القائد'],['تقارير يمكن عرضها',String(rs?.length||0)],['مجلس القضاء',courtAllowed?'مسموح':'غير مفعل'],['الحساب','مفعل']
+ const policeAllowed=commander||policeHead||has('police.manage');
+ const canDeliver=commander||has('academy.manage')||hasDeptRole('training','head')||hasDeptRole('training','trainer');
+ const cards=[
+  ['compose','＋','تقرير جديد','إرسال تقرير إداري'],
+  ['reports','▤','تقاريري','المتابعة والمسودات'],
+  ['academy','🎓','الأكاديمية','الدورات والاختبارات'],
+  ...(policeAllowed?[['police','🛡','الشرطة العسكرية','بحث المخالفات والتحقيق']]:[]),
+  ...(courtAllowed?[['court','⚖','مجلس القضاء','القضايا والإنذارات']]:[]),
+  ...(canDeliver?[['academy-results','✓','نتائج الدورات','التسليم والمتابعة']]:[]),
+  ...(hasDept('training')?[['training-center','🎓','كلية التدريب','عمل القسم']]:[]),
+  ...(hasDept('recruitment')?[['recruitment-center','🪪','القبول والتجنيد','طلبات القسم']]:[]),
+  ...(commander?[['department-admin','⚙','رئاسات الأقسام','إدارة الأدوار']]:[])
  ];
- const sectionCard=(id,icon,title,text,allowed=true,label='دخول القسم')=>'<button class="dashboard-card'+(allowed?'':' is-restricted')+'" data-section="'+id+'" type="button" aria-label="'+esc(title+(allowed?'':' — لا تملك صلاحية الدخول'))+'"><span class="dashboard-card__icon" aria-hidden="true">'+icon+'</span><span class="dashboard-card__body"><span class="dashboard-card__label">قسم البوابة</span><strong>'+esc(title)+'</strong><small>'+esc(text)+'</small></span>'+(allowed?'<span class="dashboard-card__action">'+esc(label)+' <b aria-hidden="true">←</b></span>':'<span class="restricted-overlay"><span class="lock-icon" aria-hidden="true">🔒</span><span class="restricted-badge">مقيّد</span><b>لا تملك صلاحية الدخول</b><small>يتطلب تصريحًا خاصًا</small></span>')+'</button>';
- set('#page','<section class="user-welcome"><div><span class="eyebrow">مرحبًا بعودتك</span><h2>'+esc(profile?.game_name||'قائد أمن المنشآت')+'</h2><p>يمكنك متابعة أعمالك والوصول إلى الأقسام المصرّح بها من لوحة التحكم.</p></div><div class="identity-chips"><span><small>الرتبة</small><b>'+esc(profile?.rank||'القيادة')+'</b></span><span><small>الكود العسكري</small><b dir="ltr">'+esc(profile?.military_code||'—')+'</b></span></div></section>'+
- '<div class="grid four dashboard-metrics">'+info.map(([k,v])=>'<div class="metric"><div class="caption">'+esc(k)+'</div><div class="n">'+esc(v)+'</div></div>').join('')+'</div>'+
- '<div class="dept-quick-access" id="deptQuickAccess"><div class="dept-section-title"><h3>أقسامك التخصصية</h3><span class="dept-chip">حسب الرول المخصص لك</span></div><div class="dept-quick-actions">'+
-  (hasDept('training')?'<button class="btn primary" data-go-dept="training-center">🎓 كلية التدريب — '+esc(commander?'القيادة':departmentRoles.filter(r=>r.department==='training').map(r=>({head:'الرئاسة',trainer:'مدرب',member:'عضو'}[r.role])).join(' / '))+'</button>':'')+
-  (hasDept('recruitment')?'<button class="btn primary" data-go-dept="recruitment-center">🪪 القبول والتجنيد — '+esc(commander?'القيادة':departmentRoles.filter(r=>r.department==='recruitment').map(r=>({head:'الرئاسة',trainer:'مدرب',member:'عضو'}[r.role])).join(' / '))+'</button>':'')+
-  (commander?'<button class="btn ghost" data-go-dept="department-admin">⚙ توزيع رئاسات الأقسام</button>':'')+
- '</div></div>'+'<div class="section-intro"><div><span class="eyebrow">مساحة العمل</span><h2>أقسام البوابة</h2></div><p>اختر القسم المطلوب للمتابعة</p></div><div class="dashboard-sections">'+
- sectionCard('reports','▤','التقارير','إنشاء التقارير ومتابعة المراجعات')+
- sectionCard('court','⚖','مجلس القضاء','القضايا والقرارات والسجل القضائي',courtAllowed)+
- sectionCard('police','🛡','الشرطة العسكرية','اللوائح واحتساب العقوبات',has('police.manage'))+
- sectionCard('academy','🎓','الأكاديمية والتأهيل','الدورات والمسارات التدريبية')+'</div>');
- $('#page').querySelectorAll('[data-go-dept]').forEach(button=>button.onclick=()=>navigate(button.dataset.goDept));
- $('#page').querySelectorAll('.dashboard-card').forEach(card=>card.onclick=()=>{if(card.classList.contains('is-restricted'))showRestricted(card.querySelector('strong')?.textContent||'القسم');else navigate(card.dataset.section)});
- $('#page').insertAdjacentHTML('beforeend','<div class="access-shortcut"><div><strong>التصاريح والصلاحيات</strong><p>'+(commander?'راجع طلبات أعضاء القطاع واتخذ قرارك.':'تحتاج صلاحية إضافية؟ قدّم طلبًا إلى القائد وتابع الرد هنا.')+'</p></div><button type="button" class="btn ghost" id="accessDashboardShortcut">'+(commander?'مراجعة الطلبات':'طلب تصريح')+'</button></div>');
+ const card=([id,icon,title,description])=>'<button type="button" class="dashboard-card mp-simple-card" data-section="'+id+'"><span class="dashboard-card__icon" aria-hidden="true">'+icon+'</span><span class="dashboard-card__body"><strong>'+esc(title)+'</strong><small>'+esc(description)+'</small></span><span class="dashboard-card__action">فتح ←</span></button>';
+ set('#page','<section class="mp-dashboard-welcome"><div><span class="eyebrow">مساحة عملك</span><h2>أهلًا، '+esc(profile?.game_name||'القيادة')+'</h2><p>اختر ما تحتاجه فقط؛ الأقسام التي لا تملك صلاحيتها مخفية.</p></div><span class="mp-dashboard-code">'+esc(profile?.military_code||'قيادة أمن المنشآت')+'</span></section>'+
+ '<section class="mp-dashboard-top"><button class="btn primary" type="button" data-fast="compose">＋ كتابة تقرير</button><button class="btn ghost" type="button" data-fast="reports">متابعة تقاريري</button><button class="btn ghost" type="button" data-fast="academy">الدورات العامة</button></section>'+
+ '<div class="section-intro"><div><h2>أدواتك</h2><p>الأعمال اليومية بالأعلى، وبقية الأقسام تجدها هنا عند الحاجة.</p></div></div>'+
+ (cards.length>3?'<details class="mp-notices-panel mp-workspaces-fold"><summary>الأقسام التخصصية المتاحة <span class="badge">'+(cards.length-3)+'</span></summary><div class="dashboard-sections mp-simple-grid mp-fold-grid">'+cards.slice(3).map(card).join('')+'</div></details>':'')+
+ '<div class="mp-dashboard-foot"><span>هل تحتاج صلاحية إضافية؟</span><button type="button" class="btn ghost small" id="accessDashboardShortcut">طلب وصول أو متابعة طلباتي</button></div>'+
+ '<section id="dashboardNotices" class="mp-notices"></section>');
+ $('#page').querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>navigate(b.dataset.section));
+ $('#page').querySelectorAll('[data-fast]').forEach(b=>b.onclick=()=>navigate(b.dataset.fast));
  $('#accessDashboardShortcut').onclick=()=>navigate(commander?'access-queue':'access');
- if(commander||has('academy.manage')||hasDeptRole('training','head')||hasDeptRole('training','trainer')){
-  $('#page').insertAdjacentHTML('beforeend','<section class="access-shortcut"><div><strong>متابعة الدورات</strong><p>راجع الناجحين وأكّد تسليم الدورة ضمن جدول واحد.</p></div><button class="btn primary" id="openCourseDeliveries">نتائج الدورات والتسليم</button></section>');
-  $('#openCourseDeliveries').onclick=()=>navigate('academy-results');
- }
- {
-  const {data:notices,error:nerr}=await db.from('asf_notifications').select('*').order('created_at',{ascending:false}).limit(20);
-  if(!nerr){
-   const unread=(notices||[]).filter(n=>!n.read_at);
-   $('#page').insertAdjacentHTML('beforeend','<section class="section-card" style="margin-top:18px"><div class="row between"><h3>الإشعارات '+badge(String(unread.length)+' غير مقروء')+'</h3><button class="btn ghost small" id="markAllRead">تعليم كمقروء</button></div>'+
-   ((notices||[]).map(n=>'<div class="notice-item">'+(n.read_at?'':'● ')+esc(n.message)+'<small class="muted">'+date(n.created_at)+'</small>'+(['academy_pass','academy_assigned'].includes(n.event_kind||n.category)?'<button class="btn ghost small" data-open-notice="academy-results">فتح جدول الدورات</button>':n.category==='registration'&&(commander||has('users.approve'))?'<button class="btn ghost small" data-open-notice="members">مراجعة طلب العضوية</button>':'')+'</div>').join('')||empty('لا توجد إشعارات'))+'</section>');
-   $('#page').querySelectorAll('[data-open-notice]').forEach(b=>b.onclick=()=>navigate(b.dataset.openNotice));
-   $('#markAllRead').onclick=async()=>{const {error}=await db.from('asf_notifications').update({read_at:new Date().toISOString()}).is('read_at',null);if(error)return toast(error.message,true);toast('تم تعليم الإشعارات كمقروءة');renderDashboard();};
-  }
- }
+ const {data:notices,error}=await db.from('asf_notifications').select('*').order('created_at',{ascending:false}).limit(12);
+ if(error||!$('#dashboardNotices'))return;
+ const pending=(notices||[]).filter(n=>!n.read_at).length;
+ $('#dashboardNotices').innerHTML='<details class="mp-notices-panel"><summary>الإشعارات <span class="badge">'+pending+' غير مقروء</span></summary><div class="mp-notices-body"><button type="button" class="btn ghost small" id="markAllRead">تحديد الكل كمقروء</button>'+
+ ((notices||[]).map(n=>'<div class="notice-item">'+(n.read_at?'':'● ')+esc(n.message)+'<small class="muted">'+date(n.created_at)+'</small>'+
+ (['academy_pass','academy_assigned'].includes(n.event_kind||n.category)&&canDeliver?'<button type="button" class="btn ghost small" data-open-notice="academy-results">فتح نتائج الدورات</button>':n.category==='registration'&&(commander||has('users.approve'))?'<button type="button" class="btn ghost small" data-open-notice="members">طلبات العضوية</button>':'')+'</div>').join('')||empty('لا توجد إشعارات حاليًا'))+'</div></details>';
+ $('#dashboardNotices').querySelectorAll('[data-open-notice]').forEach(b=>b.onclick=()=>navigate(b.dataset.openNotice));
+ $('#markAllRead').onclick=async()=>{const {error:err}=await db.from('asf_notifications').update({read_at:new Date().toISOString()}).is('read_at',null);if(err)return toast(err.message,true);toast('تم تحديد الإشعارات كمقروءة');renderDashboard();};
 }
+
 function renderAcademy(){
  const courses=Object.values(window.COURSES||{}).filter(c=>c.sector==='facilities_security');
  set('#page','<div class="notice">الدورات متاحة للجميع بدون تسجيل دخول.</div><div class="grid three">'+courses.map(c=>'<section class="section-card"><h3>'+esc(c.title)+'</h3><p>'+esc(c.requiredRank||'')+'</p><a class="btn ghost" href="academy.html" target="_blank" rel="noopener">فتح دورة الأكاديمية</a></section>').join('')+'</div><button class="btn primary" id="allCourses">دخول الأكاديمية</button>');
@@ -598,57 +604,7 @@ async function buildPdf(report){
  if(typeof window.html2pdf!=='function')throw Error('مكتبة PDF لم تُحمّل');
  return window.html2pdf().set({margin:5,filename:code(report.report_number)+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(renderPaper(report)).outputPdf('blob');
 }
-async function renderPolice(){
- if(!commander&&!has('police.manage'))return showRestricted('الشرطة العسكرية');
- const data=window.MP_DATA;
- if(!data)return set('#page',empty('تعذر تحميل قواعد مخالفات الشرطة العسكرية'));
- const list=[...(data.standardViolations||[]),...(data.fixedViolations||[])];
- const overrides=await query('asf_police_overrides');
- const ranks=Object.keys(data.penaltyMatrix);
- const mayManage=commander||has('police.manage');
- const penaltyFor=(v,rank)=>{
-  const custom=overrides.find(o=>o.rule_key===v.key&&o.rank_key===rank);
-  return custom?.penalty||(v?.calc?v.calc(rank):data.penaltyMatrix[rank]?.[v?.tier])||'تُحال للتقدير';
- };
- set('#page','<div class="section-card"><h3>حساب العقوبة المقترحة</h3><p>القواعد الأصلية محفوظة؛ التعديلات القيادية تظهر في البوابة فقط.</p><form id="policeForm"><label>رتبة المخالف<select name="rank">'+opt(ranks.map(r=>[r,r]))+'</select></label>'+
- '<label>المخالفة<select name="violation">'+opt(list.map((v,i)=>[String(i),String(v.id||'')+' — '+v.text]))+'</select></label><button class="btn primary" type="submit">احتساب العقوبة</button></form><div id="policeResult" class="notice" hidden></div></div>'+
- (mayManage?'<section class="section-card"><h3>إدارة العقوبات المقترحة</h3><p>يمكنك تغيير العقوبة لمخالفة ورتبة محددتين. لا تتغير ملفات الشرطة العسكرية القديمة، ويمكن العودة إلى العقوبة الأصلية.</p><form id="policeAdminForm"><label>المخالفة<select name="rule">'+opt(list.map(v=>[v.key,String(v.id||'')+' — '+v.text]))+'</select></label>'+
- '<label>الرتبة<select name="rank">'+opt(ranks.map(r=>[r,r]))+'</select></label>'+
- '<label>العقوبة المقترحة<textarea name="penalty" maxlength="500" required></textarea></label><div class="row"><button class="btn primary" name="action" value="save" type="submit">حفظ التعديل</button><button class="btn ghost" name="action" value="reset" type="submit">استعادة العقوبة الأصلية</button></div></form></section>':'')+
- '<section class="section-card"><h3>تقرير التحقيق العسكري</h3><form id="investigationForm"><div class="grid two"><label>رقم ملف التحقيق<input name="reportNumber" required maxlength="100" value="'+esc('INV-'+Date.now().toString(36).toUpperCase())+'"></label><label>اسم المحقق<input name="investigator" required maxlength="80" value="'+esc(profile.game_name)+'"></label><label>اسم العسكري المتهم<input name="accused" required maxlength="80"></label><label>Discord المتهم<input name="discord" required inputmode="numeric" pattern="[0-9]{15,22}" maxlength="22"></label></div><p class="muted">اختر المخالفة والرتبة من حاسبة العقوبة أعلاه. راجع نتيجة التحقيق والحكم قبل الإرسال.</p><button class="btn primary" type="submit">تجهيز تقرير التحقيق</button></form><pre id="investigationPreview" style="white-space:pre-wrap" hidden></pre><div class="row"><button class="btn ghost" id="copyInvestigation" type="button" hidden>نسخ تقرير التحقيق</button><button class="btn ghost" id="useInvestigation" type="button" hidden>استخدامه في إحالة للمجلس</button></div></section>'+
- '<section class="section-card"><h3>إحالة قضية جديدة إلى مجلس القضاء</h3><form id="caseForm"><label>الموضوع<input name="subject" required maxlength="200"></label><label>التفاصيل<textarea name="details" required maxlength="12000"></textarea></label><button class="btn ghost" type="submit">إرسال للمجلس</button></form></section>');
- $('#policeForm').onsubmit=e=>{
-  e.preventDefault();const f=new FormData(e.target),v=list[Number(f.get('violation'))],rank=f.get('rank');
-  $('#policeResult').hidden=false;$('#policeResult').textContent='العقوبة المقترحة: '+penaltyFor(v,rank);
- };
- let investigationText='';
- $('#investigationForm').onsubmit=e=>{
-  e.preventDefault();const f=new FormData(e.target),calc=new FormData($('#policeForm')),v=list[Number(calc.get('violation'))],rank=calc.get('rank');
-  investigationText=window.ASF_WORKFLOW.buildInvestigation({reportNumber:f.get('reportNumber'),investigator:f.get('investigator'),accused:String(f.get('accused'))+' <@'+f.get('discord')+'>',violationText:v.text,classification:v.tier?'بند ('+v.id+') — '+v.tierName:'قوانين مخالفات ثابتة',penalty:penaltyFor(v,rank)});
-  $('#investigationPreview').hidden=false;$('#investigationPreview').textContent=investigationText;
-  $('#copyInvestigation').hidden=false;$('#useInvestigation').hidden=false;
- };
- $('#copyInvestigation').onclick=async()=>{try{await navigator.clipboard.writeText(investigationText);toast('تم نسخ تقرير التحقيق')}catch{toast('تعذر النسخ التلقائي؛ يمكنك تحديد نص التقرير ونسخه.',true)}};
- $('#useInvestigation').onclick=()=>{const form=$('#caseForm');form.elements.subject.value='ملف تحقيق '+$('#investigationForm').elements.reportNumber.value;form.elements.details.value=investigationText;form.scrollIntoView({behavior:'smooth',block:'center'})};
- if(mayManage){
-  const form=$('#policeAdminForm'),sync=()=>{
-   const rule=list.find(v=>v.key===form.elements.rule.value);
-   form.elements.penalty.value=penaltyFor(rule,form.elements.rank.value);
-  };
-  form.elements.rule.onchange=sync;form.elements.rank.onchange=sync;sync();
-  form.onsubmit=async e=>{
-   e.preventDefault();const sender=e.submitter||document.activeElement;
-   const erase=sender?.value==='reset',f=new FormData(form);
-   const {error}=await db.rpc('asf_set_police_override',{p_key:f.get('rule'),p_rank:f.get('rank'),p_penalty:erase?'':String(f.get('penalty')||'').trim()});
-   if(error)return toast(error.message,true);
-   toast(erase?'تمت استعادة العقوبة الأصلية':'تم تحديث العقوبة المقترحة');renderPolice();
-  };
- }
- $('#caseForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);
- const {error}=await db.from('asf_court_cases').insert({submitted_by:user.id,subject:String(f.get('subject')).trim(),details:String(f.get('details')).trim()});
- if(error)return toast(error.message,true);toast('تم إرسال القضية لمجلس القضاء');e.target.reset();
- };
-}
+async function renderPolice(){return policeUI.render();}
 async function renderCourt(){
  if(!(commander||profile?.court_enabled||has('court.manage')))return set('#page',empty('مجلس القضاء يتطلب تفعيلًا خاصًا من القائد.'));
  const [cases,decisions,warnings]=await Promise.all([query('asf_court_cases'),query('asf_court_decisions'),query('asf_court_warnings')]);
@@ -659,7 +615,7 @@ async function renderCourt(){
   const d=decisions.find(v=>v.case_id===c.id);return '<div class="section-card"><h3>'+esc(c.subject)+'</h3><p style="white-space:pre-wrap">'+esc(c.details)+'</p><p class="muted">'+date(c.created_at)+'</p><div>'+badge(d?(d.outcome==='approved'?'معتمدة':'مرفوضة'):'بانتظار القرار')+'</div>'+
   (!d?'<div class="row">'+btn('اعتماد','decide-yes',c.id)+btn('رفض','decide-no',c.id)+'</div>':'<p>'+esc(d.note||'')+'</p>')+'</div>'}).join('')||empty('لا توجد قضايا بعد'))+'</div>'+
  '<div class="section-card"><h3>تسجيل إنذار قضائي</h3><form id="warningForm">'+
- '<div class="grid two">'+input('player_name','اسم العسكري')+input('player_rank','الرتبة')+input('player_code','الكود العسكري')+
+ '<div class="grid two">'+input('player_name','اسم العسكري الكامل')+input('player_rank','الرتبة')+input('player_code','الكود العسكري')+'<label>Discord ID للبحث الدقيق<input name="player_discord_id" required inputmode="numeric" pattern="[0-9]{15,22}" maxlength="22" placeholder="المعرّف الرقمي"></label>'+
  '<label>درجة الإنذار<select name="warning_level">'+opt([['شفهي','شفهي'],['وظيفي','وظيفي'],['نهائي','نهائي'],['إجراء آخر','إجراء آخر']])+'</select></label>'+
  '<label>مدة الإنذار بالأيام (اختياري)<input name="duration_days" type="number" min="0" max="3650"></label>'+
  '<label>رقم القضية المرتبطة (اختياري)<select name="case_id">'+opt([['','بدون قضية'],...cases.map(c=>[c.id,c.subject])])+'</select></label></div>'+
@@ -667,7 +623,7 @@ async function renderCourt(){
  '<label>العقوبة<textarea name="punishment" required minlength="3" maxlength="4000"></textarea></label>'+
  '<button class="btn primary" type="submit">تثبيت الإنذار في السجل</button></form></div>'+
  '<div class="section-card"><div class="row between"><h3>السجل القضائي والإنذارات</h3>'+badge(String(warnings.length)+' سجل')+'</div>'+
- '<input id="warningSearch" placeholder="ابحث بالاسم أو الكود أو الرتبة أو المخالفة">'+
+ '<div class="mp-court-lookup"><h4>استعلام سريع عن إنذارات عسكري</h4><p class="muted">أدخل الاسم الكامل ومعرّف Discord معًا لعرض الإنذارات النشطة. السجلات القديمة دون معرّف لا تظهر في الاستعلام المزدوج.</p><form id="warningLookupForm" class="grid two"><label>اسم العسكري الكامل<input name="player" required maxlength="80" placeholder="الاسم والكنية"></label><label>Discord ID<input name="discord" required inputmode="numeric" pattern="[0-9]{15,22}" maxlength="22"></label><button class="btn primary" type="submit">بحث عن الإنذارات النشطة</button></form><div id="warningLookupResult" aria-live="polite"></div></div><input id="warningSearch" placeholder="ابحث بالاسم أو الكود أو Discord أو الرتبة أو المخالفة">'+
  '<div class="row"><label>السجل<select id="warningScope"><option value="active">الإنذارات النشطة</option><option value="archive">الأرشيف: المنتهية والملغاة</option><option value="all">جميع السجلات</option></select></label></div><div id="warningRows"></div></div>');
  $('#page').onclick=async e=>{
   const b=e.target.closest('[data-action]');if(!b)return;
@@ -684,13 +640,20 @@ async function renderCourt(){
  };
  const filterWarnings=()=>{
   const text=String($('#warningSearch').value||'').trim().toLowerCase(),scope=$('#warningScope').value;
-  const matches=warnings.filter(w=>{const state=window.ASF_WORKFLOW.warningState(w);return(scope==='all'||(scope==='archive'?state.archived:!state.archived))&&[w.player_name,w.player_code,w.player_rank,w.offense,w.punishment].some(z=>String(z||'').toLowerCase().includes(text))});
+  const matches=warnings.filter(w=>{const state=window.ASF_WORKFLOW.warningState(w);return(scope==='all'||(scope==='archive'?state.archived:!state.archived))&&[w.player_name,w.player_discord_id,w.player_code,w.player_rank,w.offense,w.punishment].some(z=>String(z||'').toLowerCase().includes(text))});
   set('#warningRows',matches.map(w=>courtWarningCard(w)).join('')||empty('لا توجد نتائج'));
  };
  $('#warningSearch').oninput=filterWarnings;$('#warningScope').onchange=filterWarnings;filterWarnings();
+ $('#warningLookupForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),full=String(f.get('player')||'').trim(),discord=String(f.get('discord')||'').trim();
+  if(!isFullName(full)||!/^[0-9]{15,22}$/.test(discord))return toast('أدخل الاسم والكنية ومعرّف Discord الرقمي.',true);
+  const same=window.ASF_POLICE_UI.norm(full);const found=warnings.filter(w=>!window.ASF_WORKFLOW.warningState(w).archived&&w.player_discord_id===discord&&window.ASF_POLICE_UI.norm(w.player_name)===same);
+  set('#warningLookupResult','<p class="muted">'+found.length+' إنذار نشط مطابق</p>'+ (found.map(w=>courtWarningCard(w)).join('')||empty('لا توجد إنذارات نشطة مطابقة.')));
+ };
  $('#warningForm').onsubmit=async e=>{
   e.preventDefault();const f=new FormData(e.target);
-  const row={recorded_by:user.id,player_name:String(f.get('player_name')).trim(),player_rank:String(f.get('player_rank')).trim(),player_code:String(f.get('player_code')).trim(),warning_level:f.get('warning_level'),
+  if(!isFullName(f.get('player_name')))return toast('اكتب اسم العسكري والكنية، ولا تستخدم اسمًا واحدًا.',true);
+  const discord=String(f.get('player_discord_id')||'').trim();if(!/^[0-9]{15,22}$/.test(discord))return toast('معرّف Discord غير صحيح.',true);
+  const row={recorded_by:user.id,player_name:String(f.get('player_name')).trim(),player_discord_id:discord||null,player_rank:String(f.get('player_rank')).trim(),player_code:String(f.get('player_code')).trim(),warning_level:f.get('warning_level'),
    offense:String(f.get('offense')).trim(),punishment:String(f.get('punishment')).trim(),duration_days:f.get('duration_days')===''?null:Number(f.get('duration_days')),case_id:f.get('case_id')||null};
   const {error}=await db.from('asf_court_warnings').insert(row);if(error)return toast(error.message,true);
   toast('تم تثبيت الإنذار');return renderCourt();
@@ -699,7 +662,7 @@ async function renderCourt(){
 function courtWarningCard(w){
  const state=window.ASF_WORKFLOW.warningState(w);
  return '<div class="section-card"><div class="row between"><b>'+esc(w.player_name)+' — '+esc(w.player_rank)+'</b>'+badge(state.label)+'</div>'+
- '<p class="muted">'+esc(w.player_code||'بدون كود')+' · '+date(w.recorded_at)+' · '+esc(w.warning_level)+'</p>'+
+ '<p class="muted">'+esc(w.player_code||'بدون كود')+(w.player_discord_id?' · Discord: '+esc(w.player_discord_id):'')+' · '+date(w.recorded_at)+' · '+esc(w.warning_level)+'</p>'+
  '<p><b>المخالفة:</b> '+esc(w.offense)+'</p><p><b>العقوبة:</b> '+esc(w.punishment)+'</p>'+
  (state.expiresAt?'<p class="muted">نهاية المدة: '+date(state.expiresAt)+'</p>':'')+
  (w.cancelled_at?'<p class="muted">أُلغي بتاريخ '+date(w.cancelled_at)+'؛ السبب: '+esc(w.cancellation_reason)+'</p>':state.archived?'':btn('إلغاء الإنذار','cancel-warning',w.id,'warn'))+'</div>';
@@ -852,7 +815,8 @@ function renderAccount(){
   set('#page','<div class="section-card"><h3>إكمال الملف العسكري للقائد</h3><p class="muted">حساب القيادة مرتبط ببريدك المؤكد. لإصدار كود ASF العسكري وتفعيل إمكانية إرسال التقارير، أدخل بيانات شخصيتك داخل اللعبة مرة واحدة.</p><form id="leaderSetup"><label>اسمك داخل اللعبة<input name="game_name" required minlength="2" maxlength="80"></label><label>Discord User ID<input name="discord_id" required pattern="[0-9]{17,20}" inputmode="numeric" dir="ltr"></label><label>الرتبة<select name="rank">'+opt(RANKS.map(r=>[r,r]))+'</select></label><button class="btn primary">اعتماد ملف القائد وإصدار الكود العسكري</button></form></div>');
   $('#leaderSetup').onsubmit=async e=>{
    e.preventDefault();let f=new FormData(e.currentTarget);
-   const {data,error}=await db.rpc('asf_commander_profile_setup',{p_name:String(f.get('game_name')).trim(),p_discord:String(f.get('discord_id')).trim(),p_rank:f.get('rank')});
+   const fullName=String(f.get('game_name')).trim();if(!isFullName(fullName))return toast('يجب إدخال الاسم والكنية، لا يُقبل الاسم المفرد.',true);
+   const {data,error}=await db.rpc('asf_commander_profile_setup',{p_name:fullName,p_discord:String(f.get('discord_id')).trim(),p_rank:f.get('rank')});
    if(error)return toast(error.message,true);toast('تم إنشاء الملف العسكري للقائد: '+data);await loadIdentity(true);
   };return;
  }
@@ -860,7 +824,8 @@ function renderAccount(){
  set('#page','<div class="grid two"><div class="section-card"><h3>بطاقتي الرقمية</h3><p>الاسم: <b>'+esc(profile.game_name)+'</b></p><p>الرتبة: <b>'+esc(profile.rank)+'</b></p><p>الكود العسكري: <b>'+esc(profile.military_code||'—')+'</b></p><p>Discord ID: <b dir="ltr">'+esc(profile.discord_id)+'</b></p><p>حالة الحساب: '+badge(profile.status)+'</p></div>'+
  '<div class="section-card"><h3>طلب تعديل بيانات</h3><p>طلب تغيير الاسم أو Discord ID يخضع لموافقة القائد، ولا يؤثر على البيانات الحالية قبل قبول الطلب.</p><form id="changeForm">'+input('name','الاسم الجديد',profile.game_name)+input('discord','معرّف Discord الجديد',profile.discord_id)+'<button type="submit" class="btn primary">إرسال طلب التعديل</button></form></div></div>');
  $('#changeForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);
- const {error}=await db.from('asf_change_requests').insert({user_id:user.id,new_game_name:String(f.get('name')).trim(),new_discord_id:String(f.get('discord')).trim()});
+ const fullName=String(f.get('name')).trim();if(!isFullName(fullName))return toast('اكتب الاسم والكنية في طلب التعديل.',true);
+ const {error}=await db.from('asf_change_requests').insert({user_id:user.id,new_game_name:fullName,new_discord_id:String(f.get('discord')).trim()});
  if(error)return toast(error.message,true);toast('تم إرسال طلب التعديل إلى القائد');};
 }
 

@@ -426,9 +426,11 @@
     if (
       trainee.name.length < 3 ||
       trainee.name.length > 60 ||
+      trainee.name.trim().split(/\s+/).length < 2 ||
+      !trainee.name.trim().split(/\s+/).every(part=>part.replace(/[.'’-]/g,'').length>=2) ||
       !/^[\p{L}\p{M}\s.'’-]+$/u.test(trainee.name)
     ) {
-      setFieldError(elements.traineeName, "أدخل اسماً صحيحاً من 3 إلى 60 حرفاً");
+      setFieldError(elements.traineeName, "أدخل الاسم والكنية (كلمتين على الأقل)");
       valid = false;
     }
 

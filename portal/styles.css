@@ -102,3 +102,81 @@ input,textarea,select{background:#091827;border-color:#31516b}.sidebar{backgroun
 
 /* Persistent feedback remains visible when the auth request is slow or fails. */
 .auth-status{padding:11px 13px;border:1px solid #376a77;border-radius:10px;background:#122e40;color:#c9edf0;line-height:1.9;overflow-wrap:anywhere}.auth-status.error{color:#ffd9ce;border-color:#a5685a;background:#422c30}#authForm[aria-busy="true"] #authSubmit{cursor:wait}
+
+/* Simplified dashboard and old-site-style military police search. */
+.mp-dashboard-welcome{display:flex;justify-content:space-between;align-items:center;gap:16px;background:linear-gradient(120deg,#153749,#102536);border:1px solid #356478;border-radius:18px;padding:22px 26px}
+.mp-dashboard-welcome h2{margin:1px 0 3px;font-size:25px;line-height:1.5}
+.mp-dashboard-welcome p{margin:0;color:var(--muted)}
+.mp-dashboard-code{border:1px solid var(--line);border-radius:12px;padding:8px 14px;white-space:nowrap;color:var(--accent)}
+.mp-dashboard-top{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.mp-simple-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.mp-simple-card{min-height:115px;padding:17px;display:flex;align-items:flex-start;gap:12px}
+.mp-simple-card .dashboard-card__icon{width:42px;height:42px;flex:0 0 42px;font-size:21px}
+.mp-simple-card .dashboard-card__body{padding-left:18px}
+.mp-simple-card .dashboard-card__body strong{font-size:15px;margin:0 0 5px}
+.mp-simple-card .dashboard-card__action{bottom:11px;left:13px}
+.mp-dashboard-foot{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-top:16px;padding:15px 18px;background:var(--surface);border:1px solid var(--line);border-radius:13px;color:var(--muted)}
+.mp-notices{margin-top:14px}
+.mp-notices-panel{border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.mp-notices-panel summary{cursor:pointer;padding:14px 18px;font-weight:700}
+.mp-notices-panel summary .badge{margin-right:8px}
+.mp-notices-body{padding:0 18px 18px}
+.mp-intro{margin-bottom:18px}
+.mp-intro strong{font-size:20px}
+.mp-intro p{color:var(--muted);margin:3px 0 0}
+.mp-section-heading{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.mp-section-heading>span{display:grid;place-items:center;border-radius:11px;background:#24505e;color:#fff;width:36px;height:36px;font-weight:800;flex:0 0 36px}
+.mp-section-heading h3{margin:0 0 3px}
+.mp-section-heading p{margin:0;font-size:12px;color:var(--muted)}
+.mp-kind-tabs,.mp-tier-chips{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}
+.mp-kind-tabs button,.mp-tier-chips button{padding:8px 13px;border-radius:10px;border:1px solid var(--line);color:var(--text);background:#142c3e;font:inherit}
+.mp-kind-tabs button.active,.mp-tier-chips button.active{background:#2e6774;border-color:var(--accent);color:#fff}
+.mp-tier-chips button{padding:5px 11px;font-size:12px}
+.mp-results-heading{margin:16px 0 9px}
+.mp-violations{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:310px;overflow:auto;scrollbar-width:thin}
+.mp-violation{border:1px solid var(--line);border-radius:10px;background:#10283a;color:var(--text);padding:11px 13px;text-align:right;font:inherit;display:flex;flex-direction:column;gap:5px;min-width:0}
+.mp-violation:hover,.mp-violation.active{border-color:var(--accent);background:#164354}
+.mp-violation span{font-weight:700;line-height:1.65}
+.mp-violation small{font-size:11px;color:var(--muted)}
+.mp-penalty-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) auto;gap:11px;align-items:end;margin-top:16px}
+.mp-penalty-form label{min-width:0}
+.mp-penalty-form>.btn{min-height:44px;margin-bottom:6px}
+.mp-penalty-result{padding:15px 19px;border-radius:12px;margin-top:15px;border:1px solid #386f75;background:#143b47}
+.mp-penalty-result small,.mp-penalty-result strong{display:block}
+.mp-penalty-result small{color:var(--muted)}
+.mp-penalty-result strong{font-size:18px}
+.mp-tool{padding:0!important;overflow:visible}
+.mp-tool>summary{padding:18px 21px;cursor:pointer;font-weight:800;font-size:15px}
+.mp-tool[open]>summary{border-bottom:1px solid var(--line);margin-bottom:15px}
+.mp-tool[open]>:not(summary){margin-right:20px;margin-left:20px}
+.mp-tool[open]>:last-child{margin-bottom:20px}
+.mp-preview{white-space:pre-wrap;word-break:break-word;background:#0a1828;border:1px solid var(--line);border-radius:12px;padding:14px;max-height:500px;overflow:auto}
+.mp-role-members{display:grid;gap:9px;max-height:410px;overflow:auto;margin-top:14px}
+.mp-role-person{border:1px solid var(--line);background:#112a3b;border-radius:11px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mp-role-person strong,.mp-role-person small{display:block}
+.mp-role-person small{color:var(--muted)}
+.mp-role-buttons{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}
+.mp-court-lookup{padding:16px;background:#0e283a;border:1px solid var(--line);border-radius:12px;margin:14px 0}
+.mp-court-lookup h4{margin:0 0 5px}
+.mp-court-lookup p{margin:0}
+#warningLookupResult{margin-top:12px}
+@media(max-width:1000px){.mp-simple-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.mp-penalty-form{grid-template-columns:repeat(2,minmax(0,1fr))}.mp-penalty-form>.btn{grid-column:1/-1}}
+@media(max-width:600px){
+ .mp-dashboard-welcome{align-items:flex-start;flex-direction:column;padding:18px}
+ .mp-dashboard-code{max-width:100%;white-space:normal}
+ .mp-dashboard-top .btn{flex:1 1 100%}
+ .mp-simple-grid,.mp-violations,.mp-penalty-form{grid-template-columns:1fr}
+ .mp-simple-card{min-height:108px}
+ .mp-dashboard-foot,.mp-role-person{flex-direction:column;align-items:stretch}
+ .mp-role-buttons{justify-content:flex-start}
+ .mp-tier-chips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:5px}
+ .mp-violations{max-height:370px}
+ .mp-section-heading{align-items:flex-start}
+}
+
+/* Repeat-offense option from the original police calculator. */
+.mp-penalty-form{grid-template-columns:repeat(2,minmax(0,1fr)) minmax(180px,auto) auto}
+.mp-penalty-form .mp-repeat{display:flex;gap:9px;align-items:center;min-width:0;line-height:1.5;margin:0 0 8px;font-size:12px;font-weight:700}
+.mp-penalty-form .mp-repeat input{width:18px;height:18px;min-height:18px;flex:0 0 18px;accent-color:var(--accent)}
+@media(max-width:1000px){.mp-penalty-form{grid-template-columns:repeat(2,minmax(0,1fr))}.mp-penalty-form .mp-repeat{grid-column:1/-1}}
+@media(max-width:600px){.mp-penalty-form{grid-template-columns:1fr}.mp-penalty-form .mp-repeat{grid-column:1}}

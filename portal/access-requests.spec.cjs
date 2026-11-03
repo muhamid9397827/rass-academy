@@ -55,11 +55,12 @@ const sdk=String.raw`
  const base='http://127.0.0.1:8000/portal/';
  await page.goto(base,{waitUntil:'domcontentloaded'});
  await page.locator('#workspace').waitFor({state:'visible'});
- await page.locator('[data-section="court"]').click();
- assert.equal(await page.locator('#restrictedModal').isVisible(),true,'restricted court modal');
- await page.locator('#requestRestrictedAccess').click();
+ assert.equal(await page.locator('[data-page="court"]').isVisible(),false,'court hidden for non-members');
+ assert.equal(await page.locator('[data-page="police"]').isVisible(),false,'police hidden for non-members');
+ assert.equal(await page.locator('[data-section="court"]').count(),0,'no locked court card on dashboard');
+ await page.locator('#accessDashboardShortcut').click();
  await page.locator('#accessRequestForm').waitFor({state:'visible'});
- assert.equal(await page.locator('#accessPermission').inputValue(),'court.manage','court preselected');
+ await page.locator('#accessPermission').selectOption('court.manage');
  await page.locator('#accessRequestForm textarea[name="reason"]').fill('أحتاج تصريح المجلس لمراجعة القضايا داخل القطاع.');
  await page.locator('#sendAccessRequest').click();
  await page.getByText('قيد المراجعة').waitFor({state:'visible'});

@@ -13,7 +13,7 @@ export function gradeSubmission(payload) {
   const name = String(payload.trainee?.name || '').trim().replace(/\s+/g, ' ');
   const discord = String(payload.trainee?.discord || '');
   const rank = course.applicant ? 'متقدم جديد' : payload.trainee?.rank;
-  if (name.length < 3 || name.length > 60 || !/^[\p{L}\p{M}\s.'’-]+$/u.test(name)) throw new SubmissionError('اسم المتدرّب غير صحيح.');
+  if (name.length < 5 || name.length > 60 || name.split(/\s+/).length<2 || !name.split(/\s+/).every(part=>part.replace(/[.'’-]/g,'').length>=2) || !/^[\p{L}\p{M}\s.'’-]+$/u.test(name)) throw new SubmissionError('أدخل الاسم والكنية للمتدرب؛ الاسم المفرد غير مقبول.');
   if (!/^\d{15,20}$/.test(discord) || (!course.applicant && !ranks.includes(rank))) throw new SubmissionError('بيانات المتدرّب غير صحيحة.');
   if (!Array.isArray(payload.answers) || payload.answers.length !== course.count) throw new SubmissionError('عدد إجابات المحاولة غير صحيح.');
   const seen = new Set();

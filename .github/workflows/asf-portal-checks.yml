@@ -24,7 +24,7 @@ jobs:
         with:
           node-version: '22'
       - name: JavaScript syntax
-        run: node --check portal/auth-client.js && node --check portal/app.js && node --check portal/mobile.js && node --check portal/confirmation.js && node --check portal/config.js && node --check portal/academy-app.js && node --check portal/academy-filter.js && node --check portal/mp-data.js
+        run: node --check portal/auth-client.js && node --check portal/app.js && node --check portal/mobile.js && node --check portal/confirmation.js && node --check portal/config.js && node --check portal/academy-app.js && node --check portal/academy-filter.js && node --check portal/mp-data.js && node --check portal/police-workspace.js && node --check portal/police-simple.spec.cjs
       - name: Browser smoke test
         run: |
           npm install --no-save playwright@1.58.0
@@ -44,6 +44,7 @@ jobs:
           node portal/mobile.spec.cjs
           node portal/responsibilities.spec.cjs
           node portal/departments.spec.cjs
+          node portal/police-simple.spec.cjs
       - name: Mobile QA screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -88,6 +89,8 @@ jobs:
           grep -q "Another supervisor must review your own reward" portal/supabase/migrations/20261103221000_departments_trainers_rewards.sql
           grep -q "check(amount=150000)" portal/supabase/migrations/20261103221000_departments_trainers_rewards.sql
           grep -q "asf_department_roles enable row level security" portal/supabase/migrations/20261103221000_departments_trainers_rewards.sql
+          grep -q "revoke all on function public.asf_police_set_role(uuid,text,boolean)" portal/supabase/migrations/20261103225500_police_leadership_names_warning_lookup.sql
+          grep -q "create trigger asf_guard_profile_name" portal/supabase/migrations/20261103225500_police_leadership_names_warning_lookup.sql
           grep -q "revoke all on public.asf_access_requests from public, anon, authenticated" portal/supabase/18-access-requests.sql
           grep -q "grant select on public.asf_access_requests to authenticated" portal/supabase/18-access-requests.sql
           grep -q "if auth.uid() is null or not public.asf_is_commander()" portal/supabase/18-access-requests.sql
