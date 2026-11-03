@@ -38,17 +38,35 @@ create policy "department roles self or department head"
  using(user_id=(select auth.uid()) or (select public.asf_is_commander())
        or (select public.asf_department_can_manage(department)));
 
--- Supervisors can find approved members to appoint as instructors.
--- Recruitment teachers can see only pending candidates; never secret reports.
-drop policy if exists "department heads browse members and recruitment reviews pending" on public.asf_profiles;
-create policy "department heads browse members and recruitment reviews pending"
+-- Recruitment teachers can read pending applications only, including explanation.
+-- The training head may NOT bulk-read full profiles and private activation reasons.
+drop policy if exists "recruitment reviews pending only" on public.asf_profiles;
+create policy "recruitment reviews pending only"
  on public.asf_profiles for select to authenticated
- using(
-  (status='approved' and ((select public.asf_department_can_manage('training'))
-    or (select public.asf_department_can_manage('recruitment'))))
-  or (status='pending' and ((select public.asf_department_has_role('recruitment','trainer'))
-    or (select public.asf_department_can_manage('recruitment'))))
- );
+ using(status='pending' and (
+   (select public.asf_department_has_role('recruitment','trainer'))
+   or (select public.asf_department_can_manage('recruitment'))));
+
+-- Safe instructor-assignment directory returns only names/ranks/codes.
+-- Do not expose all public.asf_profiles columns to department leaders.
+create or replace function public.asf_department_candidates(p_department text)
+returns table(user_id uuid,game_name text,rank text,military_code text)
+language plpgsql stable security definer set search_path=''
+as $
+begin
+ if auth.uid() is null or p_department not in ('training','recruitment')
+  or not public.asf_department_can_manage(p_department)
+ then raise exception 'Department head only'; end if;
+ return query select p.user_id,p.game_name,p.rank,p.military_code
+  from public.asf_profiles p
+  where p.status='approved'
+  and p.user_id<>auth.uid()
+  and not exists(select 1 from app_private.commanders c where c.user_id=p.user_id)
+  order by p.game_name;
+end;
+$;
+revoke all on function public.asf_department_candidates(text) from public,anon,authenticated;
+grant execute on function public.asf_department_candidates(text) to authenticated;
 
 create or replace function public.asf_department_set_role(
  p_user uuid,p_department text,p_role text,p_enable boolean
