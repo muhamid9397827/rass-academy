@@ -38,7 +38,7 @@ const recoveryTokenHash=recoveryHash.get('token_hash')||recoveryQuery.get('token
 const recoveryLinkOpened=recoveryHash.get('type')==='recovery'||recoveryQuery.get('type')==='recovery';
 let db=ready?window.ASF_AUTH.createClient():null;
 let authEpoch=0,authNeedsReload=false,signingOut=false;
-let user=null, profile=null, commander=false, grants=[], departmentRoles=[], pageName=new URLSearchParams(location.search).get('view')==='academy-results'?'academy-results':'dashboard', draftId=null, latestReports=[], correctionSource=null, notificationChannel=null;
+let user=null, profile=null, commander=false, policeHead=false, grants=[], departmentRoles=[], pageName=new URLSearchParams(location.search).get('view')==='academy-results'?'academy-results':'dashboard', draftId=null, latestReports=[], correctionSource=null, notificationChannel=null;
 const toast=(m,error=false)=>{const b=$('#toast');b.textContent=m;b.className='show'+(error?' error':'');clearTimeout(toast.t);toast.t=setTimeout(()=>b.className='',5800)};
 const set=(s,html)=>{$(s).innerHTML=html};
 const date=d=>d?new Date(d).toLocaleString('ar-SA',{dateStyle:'short',timeStyle:'short'}):'—';
@@ -48,9 +48,11 @@ const input=(name,label,value='',type='text')=>'<label>'+esc(label)+'<input name
 const btn=(label,act,id='',kind='ghost')=>'<button class="btn '+kind+' small" data-action="'+esc(act)+'" data-id="'+esc(id)+'">'+esc(label)+'</button>';
 const badge=(s,secret=false)=>'<span class="badge '+(secret?'secret':'')+'">'+esc(s)+'</span>';
 const empty=msg=>'<div class="empty">'+esc(msg)+'</div>';
+const isFullName=value=>{const name=String(value||'').trim();const parts=name.split(/\s+/);return name.length<=80&&parts.length>=2&&parts.every(p=>p.length>=2&&/^\p{L}+$/u.test(p));};
 const has=(permission,kind=null)=>commander||grants.some(g=>g.permission===permission&&(kind===null||g.report_kind===null||g.report_kind===kind));
 const hasDeptRole=(department,role)=>commander||departmentRoles.some(r=>r.department===department&&r.role===role);
 const hasDept=(department)=>commander||departmentRoles.some(r=>r.department===department);
+const policeUI=window.ASF_POLICE_UI.create({db,getContext:()=>({user,commander,hasPolice:has('police.manage'),isPoliceHead:policeHead,gameName:profile?.game_name}),notify:toast});
 const deptUI=window.ASF_DEPARTMENTS.create({
  db,
  getContext:()=>({user,commander,roles:departmentRoles,legacyAcademyManage:has('academy.manage')}),
@@ -90,7 +92,7 @@ $('#verifyEmailBack').onclick=()=>showScreen('welcome');
 $('#rank').innerHTML=opt(RANKS.map(r=>[r,r]));
 $('#signOut').onclick=async()=>{
  if(signingOut)return;signingOut=true;['showLogin','showRegister','registerFromHero','signOut'].forEach(id=>$('#'+id).disabled=true);
- authEpoch++;user=null;profile=null;commander=false;grants=[];departmentRoles=[];departmentRoles=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');showScreen('welcome');$('#signOut').hidden=true;$('#sessionLabel').textContent='';
+ authEpoch++;user=null;profile=null;commander=false;policeHead=false;grants=[];departmentRoles=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');showScreen('welcome');$('#signOut').hidden=true;$('#sessionLabel').textContent='';
  if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
  try{const {error}=await window.ASF_AUTH.deadline(()=>db.auth.signOut(),()=>{authNeedsReload=true;window.ASF_AUTH.cancel(db)});if(error)throw error;}catch(err){
   authNeedsReload=true;window.ASF_AUTH.cancel(db);
@@ -124,9 +126,10 @@ $('#authForm').onsubmit=async e=>{
  try{
   await window.ASF_AUTH.deadline(async()=>{
   if(registering){
-    const game_name=$('#gameName').value.trim(),discord_id=$('#discordId').value.trim(),rank=$('#rank').value,
+    const game_name=$('#gameName').value.trim().replace(/\s+/g,' '),discord_id=$('#discordId').value.trim(),rank=$('#rank').value,
       activation_reason=$('#activationReason').value.trim();
-    if(!/^[0-9]{17,20}$/.test(discord_id))throw Error('معرّف Discord يجب أن يكون رقميًا من 17 إلى 20 خانة.');
+    if(!isFullName(game_name))throw Error('اكتب الاسم والكنية، مثل: مجاهد ال عباد. لا يُقبل اسم واحد فقط.');
+     if(!/^[0-9]{17,20}$/.test(discord_id))throw Error('معرّف Discord يجب أن يكون رقميًا من 17 إلى 20 خانة.');
     if(activation_reason.length<10||activation_reason.length>500)throw Error('سبب طلب التفعيل إلزامي ويجب أن يتراوح بين 10 و500 حرف.');
     const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:PORTAL_CONFIRMATION_REDIRECT,data:{asf_portal:'true',game_name,discord_id,rank,activation_reason}}});
     if(attempt!==authEpoch)return;
@@ -172,7 +175,7 @@ async function init(){
    return;
   }
   if(event==='SIGNED_OUT'){
-   authEpoch++;user=null;commander=false;profile=null;grants=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');
+   authEpoch++;user=null;commander=false;policeHead=false;profile=null;grants=[];departmentRoles=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');
    if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
    if(!recoveryMode)showScreen('welcome');
   }
@@ -249,16 +252,17 @@ async function loadIdentity(silent=false,fromAuth=false){
  try{
   const {data:{user:u},error:ue}=await db.auth.getUser();if(epoch!==authEpoch)return;if(ue)throw ue;
   if(!u){showScreen('welcome');return}user=u;
- const [{data:p,error:pe},{data:cm,error:ce},{data:dg,error:de},{data:responsibilities,error:re},{data:departmentMemberships,error:dme}]=await Promise.all([
+ const [{data:p,error:pe},{data:cm,error:ce},{data:dg,error:de},{data:responsibilities,error:re},{data:departmentMemberships,error:dme},{data:policeMembership,error:hme}]=await Promise.all([
     db.from('asf_profiles').select('*').eq('user_id',user.id).maybeSingle(),
     db.rpc('asf_is_commander'),
     db.from('asf_delegations').select('*').eq('user_id',user.id),
     db.from('asf_responsibilities').select('*').eq('user_id',user.id),
-    db.from('asf_department_roles').select('user_id,department,role').eq('user_id',user.id)
+    db.from('asf_department_roles').select('user_id,department,role').eq('user_id',user.id),
+    db.from('asf_police_heads').select('user_id').eq('user_id',user.id)
   ]);
   if(epoch!==authEpoch)return;
-  if(pe||ce||de||re||dme)throw pe||ce||de||re||dme;
-  profile=p;commander=!!cm;grants=[...(dg||[]),...(responsibilities||[])];departmentRoles=departmentMemberships||[];
+  if(pe||ce||de||re||dme||hme)throw pe||ce||de||re||dme||hme;
+  profile=p;commander=!!cm;policeHead=!!policeMembership?.length;grants=[...(dg||[]),...(responsibilities||[])];departmentRoles=departmentMemberships||[];
   if(!notificationChannel){
     // All signed-in members can receive their own decision notices. RLS stays authoritative.
     notificationChannel=db.channel('asf-notices-'+user.id)
@@ -286,6 +290,7 @@ async function loadIdentity(silent=false,fromAuth=false){
   $('#sessionLabel').textContent=p?.game_name||user.email;$('#signOut').hidden=false;
   if(commander||p?.status==='approved'){
    showScreen('workspace');$('#courtNav').hidden=!(commander||p?.court_enabled||has('court.manage'));
+    $('#policeNav').hidden=!(commander||policeHead||has('police.manage'));
    $('#adminNav').hidden=!(commander||has('reports.read')||has('reports.review')||has('users.review')||has('users.approve'));
    document.querySelector('[data-page="members"]').hidden=!(commander||has('users.review')||has('users.approve'));
    document.querySelector('[data-page="changes"]').hidden=!(commander||has('users.review'));
@@ -598,57 +603,7 @@ async function buildPdf(report){
  if(typeof window.html2pdf!=='function')throw Error('مكتبة PDF لم تُحمّل');
  return window.html2pdf().set({margin:5,filename:code(report.report_number)+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(renderPaper(report)).outputPdf('blob');
 }
-async function renderPolice(){
- if(!commander&&!has('police.manage'))return showRestricted('الشرطة العسكرية');
- const data=window.MP_DATA;
- if(!data)return set('#page',empty('تعذر تحميل قواعد مخالفات الشرطة العسكرية'));
- const list=[...(data.standardViolations||[]),...(data.fixedViolations||[])];
- const overrides=await query('asf_police_overrides');
- const ranks=Object.keys(data.penaltyMatrix);
- const mayManage=commander||has('police.manage');
- const penaltyFor=(v,rank)=>{
-  const custom=overrides.find(o=>o.rule_key===v.key&&o.rank_key===rank);
-  return custom?.penalty||(v?.calc?v.calc(rank):data.penaltyMatrix[rank]?.[v?.tier])||'تُحال للتقدير';
- };
- set('#page','<div class="section-card"><h3>حساب العقوبة المقترحة</h3><p>القواعد الأصلية محفوظة؛ التعديلات القيادية تظهر في البوابة فقط.</p><form id="policeForm"><label>رتبة المخالف<select name="rank">'+opt(ranks.map(r=>[r,r]))+'</select></label>'+
- '<label>المخالفة<select name="violation">'+opt(list.map((v,i)=>[String(i),String(v.id||'')+' — '+v.text]))+'</select></label><button class="btn primary" type="submit">احتساب العقوبة</button></form><div id="policeResult" class="notice" hidden></div></div>'+
- (mayManage?'<section class="section-card"><h3>إدارة العقوبات المقترحة</h3><p>يمكنك تغيير العقوبة لمخالفة ورتبة محددتين. لا تتغير ملفات الشرطة العسكرية القديمة، ويمكن العودة إلى العقوبة الأصلية.</p><form id="policeAdminForm"><label>المخالفة<select name="rule">'+opt(list.map(v=>[v.key,String(v.id||'')+' — '+v.text]))+'</select></label>'+
- '<label>الرتبة<select name="rank">'+opt(ranks.map(r=>[r,r]))+'</select></label>'+
- '<label>العقوبة المقترحة<textarea name="penalty" maxlength="500" required></textarea></label><div class="row"><button class="btn primary" name="action" value="save" type="submit">حفظ التعديل</button><button class="btn ghost" name="action" value="reset" type="submit">استعادة العقوبة الأصلية</button></div></form></section>':'')+
- '<section class="section-card"><h3>تقرير التحقيق العسكري</h3><form id="investigationForm"><div class="grid two"><label>رقم ملف التحقيق<input name="reportNumber" required maxlength="100" value="'+esc('INV-'+Date.now().toString(36).toUpperCase())+'"></label><label>اسم المحقق<input name="investigator" required maxlength="80" value="'+esc(profile.game_name)+'"></label><label>اسم العسكري المتهم<input name="accused" required maxlength="80"></label><label>Discord المتهم<input name="discord" required inputmode="numeric" pattern="[0-9]{15,22}" maxlength="22"></label></div><p class="muted">اختر المخالفة والرتبة من حاسبة العقوبة أعلاه. راجع نتيجة التحقيق والحكم قبل الإرسال.</p><button class="btn primary" type="submit">تجهيز تقرير التحقيق</button></form><pre id="investigationPreview" style="white-space:pre-wrap" hidden></pre><div class="row"><button class="btn ghost" id="copyInvestigation" type="button" hidden>نسخ تقرير التحقيق</button><button class="btn ghost" id="useInvestigation" type="button" hidden>استخدامه في إحالة للمجلس</button></div></section>'+
- '<section class="section-card"><h3>إحالة قضية جديدة إلى مجلس القضاء</h3><form id="caseForm"><label>الموضوع<input name="subject" required maxlength="200"></label><label>التفاصيل<textarea name="details" required maxlength="12000"></textarea></label><button class="btn ghost" type="submit">إرسال للمجلس</button></form></section>');
- $('#policeForm').onsubmit=e=>{
-  e.preventDefault();const f=new FormData(e.target),v=list[Number(f.get('violation'))],rank=f.get('rank');
-  $('#policeResult').hidden=false;$('#policeResult').textContent='العقوبة المقترحة: '+penaltyFor(v,rank);
- };
- let investigationText='';
- $('#investigationForm').onsubmit=e=>{
-  e.preventDefault();const f=new FormData(e.target),calc=new FormData($('#policeForm')),v=list[Number(calc.get('violation'))],rank=calc.get('rank');
-  investigationText=window.ASF_WORKFLOW.buildInvestigation({reportNumber:f.get('reportNumber'),investigator:f.get('investigator'),accused:String(f.get('accused'))+' <@'+f.get('discord')+'>',violationText:v.text,classification:v.tier?'بند ('+v.id+') — '+v.tierName:'قوانين مخالفات ثابتة',penalty:penaltyFor(v,rank)});
-  $('#investigationPreview').hidden=false;$('#investigationPreview').textContent=investigationText;
-  $('#copyInvestigation').hidden=false;$('#useInvestigation').hidden=false;
- };
- $('#copyInvestigation').onclick=async()=>{try{await navigator.clipboard.writeText(investigationText);toast('تم نسخ تقرير التحقيق')}catch{toast('تعذر النسخ التلقائي؛ يمكنك تحديد نص التقرير ونسخه.',true)}};
- $('#useInvestigation').onclick=()=>{const form=$('#caseForm');form.elements.subject.value='ملف تحقيق '+$('#investigationForm').elements.reportNumber.value;form.elements.details.value=investigationText;form.scrollIntoView({behavior:'smooth',block:'center'})};
- if(mayManage){
-  const form=$('#policeAdminForm'),sync=()=>{
-   const rule=list.find(v=>v.key===form.elements.rule.value);
-   form.elements.penalty.value=penaltyFor(rule,form.elements.rank.value);
-  };
-  form.elements.rule.onchange=sync;form.elements.rank.onchange=sync;sync();
-  form.onsubmit=async e=>{
-   e.preventDefault();const sender=e.submitter||document.activeElement;
-   const erase=sender?.value==='reset',f=new FormData(form);
-   const {error}=await db.rpc('asf_set_police_override',{p_key:f.get('rule'),p_rank:f.get('rank'),p_penalty:erase?'':String(f.get('penalty')||'').trim()});
-   if(error)return toast(error.message,true);
-   toast(erase?'تمت استعادة العقوبة الأصلية':'تم تحديث العقوبة المقترحة');renderPolice();
-  };
- }
- $('#caseForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);
- const {error}=await db.from('asf_court_cases').insert({submitted_by:user.id,subject:String(f.get('subject')).trim(),details:String(f.get('details')).trim()});
- if(error)return toast(error.message,true);toast('تم إرسال القضية لمجلس القضاء');e.target.reset();
- };
-}
+async function renderPolice(){return policeUI.render();}
 async function renderCourt(){
  if(!(commander||profile?.court_enabled||has('court.manage')))return set('#page',empty('مجلس القضاء يتطلب تفعيلًا خاصًا من القائد.'));
  const [cases,decisions,warnings]=await Promise.all([query('asf_court_cases'),query('asf_court_decisions'),query('asf_court_warnings')]);
