@@ -29,7 +29,7 @@ function create({db,getContext,notify,go,mountResults}){
   const box=$('#departmentRewards');if(!box)return;
   box.textContent='جاري تحميل المكافآت…';
   const {data,error}=await db.from('asf_department_rewards')
-   .select('id,department,subject_label,actor_id,actor_name,actor_code,amount,earned_at,paid_at,paid_by')
+   .select('id,department,subject_label,actor_id,actor_name,actor_code,amount,earned_at,paid_at,paid_by,paid_by_name')
    .eq('department',dept).order('earned_at',{ascending:false}).limit(100);
   if(error){box.textContent='تعذر تحميل المكافآت.';return}
   const ctx=context(),canPay=isHead(dept);
@@ -42,7 +42,7 @@ function create({db,getContext,notify,go,mountResults}){
     '<span class="'+(r.paid_at?'dept-state-paid':'dept-state-unpaid')+'">'+(r.paid_at?'✓ تم صرف المكافأة':'بانتظار المكافأة')+'</span></div>'+
     '<div class="dept-record-description">'+esc(r.subject_label)+'</div>'+
     '<small>المكافأة: '+amount+' · الاستحقاق: '+when(r.earned_at)+(r.actor_code?' · '+esc(r.actor_code):'')+'</small>'+
-    (r.paid_at?'<small>تم تأشير الصرف: '+when(r.paid_at)+'</small>':canPay&&r.actor_id!==ctx.user?.id?
+    (r.paid_at?'<small>تم تأشير الصرف بواسطة '+esc(r.paid_by_name||'الرئاسة')+' — '+when(r.paid_at)+'</small>':canPay&&r.actor_id!==ctx.user?.id?
     '<button type="button" class="btn primary small" data-reward-paid="'+esc(r.id)+'">✓ تم إعطاء المكافأة</button>':'')+
     '</article>').join('')+'</div>':'<div class="dept-empty">لا توجد مكافآت مسجلة في هذا القسم بعد.</div>');
   box.querySelectorAll('[data-reward-paid]').forEach(button=>button.onclick=async()=>{
