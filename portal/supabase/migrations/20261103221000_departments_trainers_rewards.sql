@@ -52,7 +52,7 @@ create policy "recruitment reviews pending only"
 create or replace function public.asf_department_candidates(p_department text)
 returns table(user_id uuid,game_name text,rank text,military_code text)
 language plpgsql stable security definer set search_path=''
-as $
+as $$
 begin
  if auth.uid() is null or p_department not in ('training','recruitment')
   or not public.asf_department_can_manage(p_department)
@@ -64,7 +64,7 @@ begin
   and not exists(select 1 from app_private.commanders c where c.user_id=p.user_id)
   order by p.game_name;
 end;
-$;
+$$;
 revoke all on function public.asf_department_candidates(text) from public,anon,authenticated;
 grant execute on function public.asf_department_candidates(text) to authenticated;
 
