@@ -85,7 +85,7 @@ begin
    category_name:='registration';
  else return new; end if;
  insert into app_private.asf_email_outbox(category,event_id)
- values(category_name,new.id)
+ values(category_name,case when TG_TABLE_NAME='asf_profiles' then new.user_id else new.id end)
  on conflict(category,event_id) do nothing;
  perform app_private.asf_dispatch_email_outbox();
  return new;
