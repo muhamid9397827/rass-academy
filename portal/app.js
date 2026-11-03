@@ -5,6 +5,24 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const KINDS={personnel:'تقرير مسؤول الأفراد',officers:'تقرير مسؤول الضباط',joint:'تقرير مشترك للأفراد والضباط',presidencies:'تقرير مسؤولي الرئاسات',secret:'سري للغاية — للقائد فقط'};
 const STATES={new:'جديد',reviewing:'قيد المراجعة',reviewed:'تمت المراجعة',needs_more:'يحتاج استكمال'};
+
+const ACCESS_PERMISSIONS={
+ 'court.manage':'إدارة مجلس القضاء',
+ 'police.manage':'إدارة إجراءات الشرطة العسكرية',
+ 'reports.read':'الاطلاع على التقارير العادية',
+ 'reports.review':'مراجعة التقارير العادية',
+ 'users.review':'الاطلاع على طلبات الأعضاء'
+};
+const ACCESS_HINTS={
+ 'court.manage':'القضايا والقرارات القضائية، بعد تصريح القيادة فقط.',
+ 'police.manage':'تعديل العقوبات المقترحة داخل قسم الشرطة العسكرية.',
+ 'reports.read':'التقارير غير السرية فقط؛ لا يشمل تقارير «سري للغاية».',
+ 'reports.review':'إضافة ملاحظات ومراجعة التقارير غير السرية فقط.',
+ 'users.review':'الاطلاع على طلبات الأعضاء وتعديل البيانات دون صلاحية اعتماد الحسابات.'
+};
+const ACCESS_STATES={pending:'قيد المراجعة',approved:'موافق عليه',rejected:'مرفوض'};
+let accessPrefill='court.manage';
+
 const RANKS=['جندي','جندي أول','عريف','وكيل رقيب','رقيب','رقيب أول','رئيس رقباء','ملازم','ملازم أول','نقيب','رائد','مقدم','عقيد','عميد','لواء','فريق','فريق أول'];
 const cfg=window.ASF_CONFIG||{}, ready=!!(cfg.supabaseUrl&&cfg.supabaseAnonKey&&window.supabase);
 const PORTAL_AUTH_REDIRECT='https://muhamid9397827.github.io/rass-academy/portal/';
@@ -30,12 +48,14 @@ function openAcademy(){window.open('academy.html','_blank','noopener')}
 $('#openAcademy').onclick=openAcademy;
 const restrictedModal=$('#restrictedModal');
 function showRestricted(section){
+ accessPrefill=section.includes('القضاء')?'court.manage':'police.manage';
  $('#restrictedTitle').textContent=section+' — يتطلب تصريحًا خاصًا';
- $('#restrictedMessage').textContent='لا تملك صلاحية الدخول إلى قسم '+section+'. هذا القسم مخصص للمصرّح لهم فقط؛ تواصل مع القيادة لطلب التصريح المناسب.';
- restrictedModal.hidden=false;document.body.classList.add('modal-open');$('#ackRestricted').focus();
+ $('#restrictedMessage').textContent='لا تملك صلاحية الدخول إلى قسم '+section+'. يمكنك إرسال طلب تصريح إلى القائد مع توضيح السبب.';
+ restrictedModal.hidden=false;document.body.classList.add('modal-open');$('#requestRestrictedAccess').focus();
 }
 function closeRestricted(){restrictedModal.hidden=true;document.body.classList.remove('modal-open')}
 $('#closeRestricted').onclick=closeRestricted;$('#ackRestricted').onclick=closeRestricted;
+$('#requestRestrictedAccess').onclick=()=>{closeRestricted();navigate('access')};
 restrictedModal.onclick=e=>{if(e.target===restrictedModal)closeRestricted()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!restrictedModal.hidden)closeRestricted()});
 let registering=false,recoveryMode=recoveryLinkOpened;
@@ -177,6 +197,7 @@ async function loadIdentity(silent=false){
    document.querySelectorAll('[data-page="members"],[data-page="changes"]').forEach(n=>n.hidden=!(commander||has('users.review')));
    document.querySelectorAll('[data-page="delegations"],[data-page="trash"],[data-page="audit"]').forEach(n=>n.hidden=!commander);
    document.querySelector('[data-page="inbox"]').hidden=!(commander||has('reports.read')||has('reports.review'));
+   document.querySelector('[data-page="access-queue"]').hidden=!commander;
    await navigate(pageName);
   }else{
    showScreen('pendingScreen');$('#pendingText').textContent=p?.status==='rejected'?'تم رفض الطلب. تواصل مع الإدارة.':p?.status==='suspended'?'الحساب موقوف حاليًا.':'الحساب بانتظار موافقة القائد. يمكنك دخول الدورات العامة من الصفحة الرئيسية.';
@@ -188,7 +209,7 @@ document.querySelectorAll('.nav').forEach(n=>n.onclick=()=>navigate(n.dataset.pa
 async function navigate(name){
  if(!user||!(commander||profile?.status==='approved'))return;
  pageName=name;document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page===name));
- const titles={dashboard:'لوحة التحكم',academy:'الأكاديمية والدورات',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
+ const titles={dashboard:'لوحة التحكم',academy:'الأكاديمية والدورات',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',access:'طلب تصريح ومتابعته','access-queue':'طلبات التصاريح الواردة',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
  set('#pageTitle','<div><h1>'+esc(titles[name]||'بوابة أمن المنشآت')+'</h1><p>المنصة الموحدة · إعدادات الصلاحيات حسب حسابك</p></div>');
  set('#page','<div class="empty">جارٍ تحميل البيانات...</div>');
  try{
@@ -201,6 +222,8 @@ async function navigate(name){
   if(name==='members'&&(commander||has('users.review')))return renderMembers();
   if(name==='changes'&&(commander||has('users.review')))return renderChanges();
   if(name==='delegations'&&commander)return renderDelegations();
+  if(name==='access')return renderAccessRequests();
+  if(name==='access-queue'&&commander)return renderAccessQueue();
   if(name==='audit'&&commander)return renderAudit();
   if(name==='account')return renderAccount();
   set('#page',empty('لا تملك صلاحية الوصول إلى هذا القسم.'));
@@ -223,6 +246,8 @@ async function renderDashboard(){
  sectionCard('police','🛡','الشرطة العسكرية','اللوائح واحتساب العقوبات')+
  sectionCard('academy','🎓','الأكاديمية والتأهيل','الدورات والمسارات التدريبية')+'</div>');
  $('#page').querySelectorAll('.dashboard-card').forEach(card=>card.onclick=()=>{if(card.classList.contains('is-restricted'))showRestricted(card.querySelector('strong')?.textContent||'القسم');else navigate(card.dataset.section)});
+ $('#page').insertAdjacentHTML('beforeend','<div class="access-shortcut"><div><strong>التصاريح والصلاحيات</strong><p>'+(commander?'راجع طلبات أعضاء القطاع واتخذ قرارك.':'تحتاج صلاحية إضافية؟ قدّم طلبًا إلى القائد وتابع الرد هنا.')+'</p></div><button type="button" class="btn ghost" id="accessDashboardShortcut">'+(commander?'مراجعة الطلبات':'طلب تصريح')+'</button></div>');
+ $('#accessDashboardShortcut').onclick=()=>navigate(commander?'access-queue':'access');
  if(commander){
   const {data:notices,error:nerr}=await db.from('asf_notifications').select('*').order('created_at',{ascending:false}).limit(20);
   if(!nerr){
@@ -504,7 +529,7 @@ async function renderAudit(){
  const actors=new Map((users||[]).map(p=>[p.user_id,p]));
  const names={approve:'تفعيل عضو',suspend:'إيقاف عضو',reject:'رفض عضو',rank:'تعديل رتبة',court_on:'منح القضاء',court_off:'سحب القضاء',
  delegation:'تعديل صلاحية',review:'مراجعة تقرير',restore:'استعادة تقرير',trash:'حذف إلى السلة',
- police_rule_override:'تعديل عقوبة',court_warning_cancel:'إلغاء إنذار',pdf_finalized:'تأكيد ملف PDF',permanent_delete:'حذف نهائي تلقائي',profile_change:'تعديل بيانات',commander_profile_init:'ملف القائد'};
+ access_requested:'طلب تصريح',access_reviewed:'قرار تصريح',police_rule_override:'تعديل عقوبة',court_warning_cancel:'إلغاء إنذار',pdf_finalized:'تأكيد ملف PDF',permanent_delete:'حذف نهائي تلقائي',profile_change:'تعديل بيانات',commander_profile_init:'ملف القائد'};
  set('#page','<section class="section-card"><h3>سجل الإجراءات الإدارية</h3>'+
  '<p>يُعرض للقائد فقط، ويحتفظ بتاريخ التعديلات دون منح صلاحية حذف السجل.</p>'+
  '<input id="auditSearch" placeholder="بحث بالعملية أو المستخدم أو السجل" style="margin-bottom:15px">'+
