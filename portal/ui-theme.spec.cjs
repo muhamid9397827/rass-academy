@@ -13,7 +13,7 @@ const mockSupabase=String.raw`(() => {
  }
  const client={
   auth:{getUser:async()=>({data:{user:{id:'u1',email:'qa@example.invalid'}},error:null}),onAuthStateChange:()=>({})},
-  from:table=>new Query(table),rpc:async name=>({data:name==='asf_is_commander'?false:null,error:null}),removeChannel(){}
+  from:table=>new Query(table),rpc:async name=>({data:name==='asf_is_commander'?false:null,error:null}),channel:()=>({on(){return this},subscribe(){return this}}),removeChannel(){}
  };
  window.supabase={createClient(){return client}};
 })();`;
