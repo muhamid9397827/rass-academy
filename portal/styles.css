@@ -70,3 +70,22 @@ input,textarea,select{background:#091827;border-color:#31516b}.sidebar{backgroun
 .access-decision-form>.row{flex-wrap:wrap;gap:10px}
 .access-decision-form .btn:disabled,.access-request-form .btn:disabled{opacity:.56;cursor:wait}
 @media(max-width:620px){.access-shortcut{padding:18px;align-items:stretch;flex-direction:column}.access-shortcut .btn{width:100%}.access-request-item{padding:15px}.access-request-item .row.between{align-items:flex-start;flex-wrap:wrap}.access-modal-actions{flex-direction:column}.access-actions{align-items:stretch;flex-direction:column}.access-actions .btn{width:100%}.access-decision-form>.row .btn{flex:1 1 100%}}
+
+
+/* Activation explanation — shown only on new-account and pending screens. */
+.activation-reason-field{display:grid;gap:8px;color:#e8f5f7;font-weight:700}
+.activation-reason-field textarea,#pendingReason{width:100%;min-height:103px;padding:12px 14px;border:1px solid rgba(146,200,215,.34);background:#0d2437;color:#effcfc;line-height:1.9;border-radius:11px;resize:vertical}
+.activation-reason-field textarea:focus-visible,#pendingReason:focus-visible{border-color:#6cdbd5;outline:2px solid rgba(108,219,213,.24);outline-offset:1px}
+.activation-reason-notice{margin:0;color:#ffdfa7;background:rgba(232,166,85,.075);border:1px solid rgba(232,166,85,.22);border-right:3px solid #e8af70;border-radius:9px;padding:10px 13px;font-size:11px;line-height:1.8}
+.activation-reason-notice>span{font-size:15px;font-weight:900;margin-left:6px}
+.pending-reason-section{margin:20px auto;text-align:right;max-width:590px;padding:20px 18px;background:rgba(31,69,78,.26);border:1px solid rgba(120,194,201,.25);border-radius:14px}
+.pending-reason-section h3{margin:0 0 8px;color:#e7f9fa;font-size:18px}
+.pending-reason-section p{font-size:12px}
+.pending-reason-section form{display:grid;gap:13px}
+.pending-reason-section label{display:grid;gap:8px;text-align:right}
+.pending-reason-section .btn{justify-self:start}
+.pending-reason-recorded{margin:18px auto;max-width:560px;border:1px solid rgba(113,207,175,.3);border-radius:10px;padding:11px 14px;color:#a4ecd5;background:rgba(113,207,175,.06)}
+.pending-reason-recorded>span{font-size:17px;margin-left:7px}
+.activation-missing{display:inline-flex;color:#f7c4a1;font-weight:700;font-size:11px}
+.member-reason{min-width:160px;max-width:315px;line-height:1.9;overflow-wrap:anywhere;white-space:pre-wrap;font-size:11px;color:#cce1e7}
+@media(max-width:540px){.pending-reason-section{padding:16px 13px}.pending-reason-section .btn{width:100%;justify-self:stretch}.activation-reason-notice{font-size:10px}}
