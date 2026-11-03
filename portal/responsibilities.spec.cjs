@@ -23,6 +23,10 @@ let sdk=portalMock.replace(" const userId=",' const role=new URLSearchParams(loc
  assert.equal(await page.locator('[data-action="rank"]').count(),0);assert.equal(await page.locator('[data-action="suspend"]').count(),0);
  assert.equal(await page.locator('#academyReviewNav').isVisible(),false);
  await page.goto(base+'?role=courses');await page.locator('[data-open-notice="academy-results"]').click();await page.locator('[data-deliver-result]').waitFor();
+ assert.match(await page.locator('#courseGoogleSheet').getAttribute('href'),/1PC5iXwHWyFT4kd7qa6oa_JL1-r3F_anv3fPniF8rfdM/);
+ await page.locator('.course-notice-flow summary').click();
+ assert.match(await page.locator('.course-notice-flow').innerText(),/الإضافة اليدوية إلى Google لا تولّد إشعارًا/);
+ await page.locator('.course-notice-flow summary').click();
  page.once('dialog',d=>d.accept());await page.locator('[data-deliver-result]').click();
  await page.getByText('✓ تم تسليم الدورة',{exact:true}).waitFor();
  assert.match(await page.locator('#academyResultsRows').innerText(),/مسؤول الدورة التجريبي/);
@@ -31,6 +35,16 @@ let sdk=portalMock.replace(" const userId=",' const role=new URLSearchParams(loc
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));
  await page.goto(base+'?role=ordinary');await page.locator('#workspace').waitFor({state:'visible'});
  assert.equal(await page.locator('#academyReviewNav').isVisible(),false);
+ await page.locator('[data-mobile-page="compose"]').click();
+ assert.equal(await page.locator('#secretReportGuidance').isVisible(),false);
+ await page.locator('#reportKind').selectOption('secret');
+ assert.equal(await page.locator('#secretReportGuidance').isVisible(),true);
+ assert.match(await page.locator('#secretReportGuidance').innerText(),/جميع الرتب/);
+ assert.match(await page.locator('#secretReportGuidance u').innerText(),/إلا القائد نفسه/);
+ assert.match(await page.locator('#secretReportGuidance').innerText(),/500 ألف و5 ملايين/);
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));
+ await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:'/tmp/asf-mobile/secret-guidance-390.png',fullPage:true});
+ await page.locator('#reportKind').selectOption('personnel');assert.equal(await page.locator('#secretReportGuidance').isVisible(),false);
  await page.goto(base);await page.locator('#workspace').waitFor({state:'visible'});
  await page.locator('#mobileMenuToggle').click();await page.locator('[data-page="delegations"]').click();
  await page.locator('input[name="users"]').nth(0).check();await page.locator('input[name="users"]').nth(1).check();
