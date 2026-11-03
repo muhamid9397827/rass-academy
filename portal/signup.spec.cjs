@@ -17,7 +17,13 @@ const sdk="(() => {\n const data={signupCalls:[],signinCalls:[],getUserCalls:0,s
  await page.locator('#showRegister').click();
  await page.locator('#email').fill('qa@example.invalid');
  await page.locator('#password').fill('SafeTestPass2026!');
+ await page.locator('#gameName').fill('مجاهد');
+ await page.locator('#discordId').fill('123456789012345678');
+ await page.locator('#activationReason').fill('أحتاج تفعيل العضوية لأداء العمل الإداري.');
+ await page.locator('#authSubmit').click();
+ assert.equal(await page.evaluate(()=>window.__signupQA.signupCalls.length),0,'single-word name rejected before signup');
  await page.locator('#gameName').fill('متدرب اختبار');
+ await page.locator('#activationReason').fill('');
  await page.locator('#discordId').fill('123456789012345678');
  assert.equal(await page.locator('#activationReasonNotice').isVisible(),true,'mandatory reason notice visible');
  await page.locator('#authSubmit').click();
