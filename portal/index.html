@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#081321"><meta name="description" content="بوابة أمن المنشآت — الدورات الإلكترونية والتأهيل، والتدريب المتخصص لأمن المنشآت">
-<title>بوابة أمن المنشآت</title><link rel="stylesheet" href="styles.css?v=20261103-auth-fix-1"><link rel="stylesheet" href="landing.css?v=20261103-4"><link rel="stylesheet" href="mobile.css?v=20261103-mobile-1"><link rel="stylesheet" href="departments.css?v=20261103-depts-1"><link rel="stylesheet" href="notice-center.css?v=20261103-1"></head>
+<title>بوابة أمن المنشآت</title><link rel="stylesheet" href="styles.css?v=20261103-auth-fix-1"><link rel="stylesheet" href="landing.css?v=20261103-4"><link rel="stylesheet" href="mobile.css?v=20261103-mobile-1"><link rel="stylesheet" href="departments.css?v=20261103-depts-1"><link rel="stylesheet" href="notice-center.css?v=20261103-1"><link rel="stylesheet" href="mfa-commander.css?v=20261104-1"></head>
 <body>
 <header class="topbar"><div class="brand"><span class="brand-icon">◆</span><span>بوابة أمن المنشآت<small>المنصة الإدارية الموحدة · رول بلاي</small></span></div>
 <div class="top-actions"><span id="sessionLabel"></span><button type="button" class="notification-top-button" id="notificationTrigger" aria-label="مركز الإشعارات" hidden><span aria-hidden="true">🔔</span><span class="notification-top-count" id="notificationCount" hidden></span></button><button class="btn ghost" id="signOut" hidden>تسجيل الخروج</button><button class="mobile-menu-button" id="mobileMenuToggle" type="button" aria-label="فتح قائمة الأقسام" aria-controls="portalSidebar" aria-expanded="false" hidden>☰</button></div></header>
@@ -69,6 +69,28 @@
  <button class="btn primary full" type="submit" id="authSubmit">دخول</button>
  </form><button class="link-button" id="authToggle">ليس لديك حساب؟ إنشاء حساب</button><button class="link-button" id="forgotPassword" type="button">نسيت كلمة المرور؟</button><button class="link-button" id="authBack">العودة للرئيسية</button>
  <p class="hint">بعد إنشاء الحساب، يراجع القائد البيانات ويوافق على التفعيل يدويًا.</p></div></section>
+<section id="mfaScreen" class="auth-layout" hidden aria-labelledby="mfaTitle">
+ <div class="panel auth-panel mfa-setup">
+  <span class="recovery-icon" aria-hidden="true">🛡️</span>
+  <h2 id="mfaTitle">حماية حساب القائد</h2>
+  <p>للدخول إلى صلاحيات القيادة، يلزم رمز من تطبيق المصادقة الخاص بحساب البوابة.</p>
+  <p id="mfaStatus" class="auth-status" role="status" aria-live="polite"></p>
+  <div id="mfaSetup" hidden>
+   <p>هذه الحماية مستقلة عن تحقق حساب Supabase Dashboard. أضف تطبيق Google Authenticator أو Microsoft Authenticator.</p>
+   <button type="button" class="btn primary full" id="mfaStart">إنشاء رمز QR لتفعيل الحماية</button>
+   <img id="mfaQr" class="mfa-qr" alt="رمز QR خاص بتفعيل التحقق بخطوتين على بوابة أمن المنشآت" hidden>
+   <div id="mfaSecretRow" class="mfa-secret-row" hidden><span>المفتاح اليدوي عند تعذّر مسح QR:</span><code id="mfaSecret"></code></div>
+  </div>
+  <form id="mfaVerify" hidden>
+   <label for="mfaCode">رمز تطبيق المصادقة (6 أرقام)
+    <input id="mfaCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required placeholder="000000">
+   </label>
+   <button id="mfaVerifySubmit" type="submit" class="btn primary full">تأكيد الرمز وفتح الحساب</button>
+  </form>
+  <p class="mfa-help">لا تشارك رمز QR أو المفتاح مع أحد. جهّز جهاز مصادقة احتياطياً حتى لا تفقد الوصول.</p>
+  <button id="mfaSignOut" type="button" class="link-button">تسجيل الخروج</button>
+ </div>
+</section>
 <section id="verifyEmailScreen" class="auth-layout" hidden>
  <div class="panel auth-panel">
   <span class="recovery-icon" aria-hidden="true">✉</span>
@@ -144,5 +166,6 @@
 <script src="departments.js?v=20261103-depts-1"></script>
 <script src="police-workspace.js?v=20261103-police-1"></script>
 <script src="notice-center.js?v=20261103-1"></script>
-<script src="app.js?v=20261103-security-notices-1" defer></script>
+<script src="mfa-commander.js?v=20261104-1"></script>
+<script src="app.js?v=20261104-commander-mfa-1" defer></script>
 </body></html>

@@ -55,6 +55,7 @@ const hasDept=(department)=>commander||departmentRoles.some(r=>r.department===de
 const policeUI=window.ASF_POLICE_UI.create({db,getContext:()=>({user,commander,hasPolice:has('police.manage'),isPoliceHead:policeHead,gameName:profile?.game_name}),notify:toast});
 const noticeUI=window.ASF_NOTICE_CENTER.create({db,getUser:()=>user,go:navigate,notify:toast});
 $('#notificationTrigger').onclick=()=>navigate('notifications');
+const commanderMfaUI=window.ASF_COMMANDER_MFA.create({db,onVerified:()=>loadIdentity(true,true),onCancel:()=>$('#signOut').click()});
 const deptUI=window.ASF_DEPARTMENTS.create({
  db,
  getContext:()=>({user,commander,roles:departmentRoles,legacyAcademyManage:has('academy.manage')}),
@@ -63,7 +64,7 @@ const deptUI=window.ASF_DEPARTMENTS.create({
  mountResults:mountAcademyResults
 });
 
-function showScreen(which){['welcome','authScreen','verifyEmailScreen','recoveryScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which);$('#notificationTrigger').hidden=which!=='workspace';window.ASF_MOBILE?.setWorkspace(which==='workspace')}
+function showScreen(which){['welcome','authScreen','mfaScreen','verifyEmailScreen','recoveryScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which);$('#notificationTrigger').hidden=which!=='workspace';window.ASF_MOBILE?.setWorkspace(which==='workspace')}
 function openAcademy(){window.open('academy.html','_blank','noopener')}
 $('#openAcademy').onclick=openAcademy;
 const restrictedModal=$('#restrictedModal');
@@ -179,7 +180,7 @@ async function init(){
   if(event==='SIGNED_OUT'){
    authEpoch++;user=null;commander=false;policeHead=false;profile=null;grants=[];departmentRoles=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');
    if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
-   noticeUI.reset();if(!recoveryMode)showScreen('welcome');
+   commanderMfaUI.reset();noticeUI.reset();if(!recoveryMode)showScreen('welcome');
   }
  });
  try{
@@ -254,6 +255,22 @@ async function loadIdentity(silent=false,fromAuth=false){
  try{
   const {data:{user:u},error:ue}=await db.auth.getUser();if(epoch!==authEpoch)return;if(ue)throw ue;
   if(!u){showScreen('welcome');return}user=u;
+  // Require commander's AAL2 before loading any internal app data.
+  const {data:mfaRequired,error:mfaError}=await db.rpc('asf_commander_mfa_required');
+  if(epoch!==authEpoch)return;
+  if(mfaError)throw mfaError;
+  if(mfaRequired===true){
+   if(!db.auth.mfa)throw Error('المتصفح لا يدعم تحقق القائد؛ حدّث الصفحة.');
+   const {data:assurance,error:aalError}=await db.auth.mfa.getAuthenticatorAssuranceLevel();
+   if(epoch!==authEpoch)return;
+   if(aalError)throw aalError;
+   if(assurance?.currentLevel!=='aal2'){
+    $('#sessionLabel').textContent=user.email||'القائد';$('#signOut').hidden=false;
+    showScreen('mfaScreen');
+    await commanderMfaUI.enter();
+    return;
+   }
+  }
  const [{data:p,error:pe},{data:cm,error:ce},{data:dg,error:de},{data:responsibilities,error:re},{data:departmentMemberships,error:dme},{data:policeMembership,error:hme}]=await Promise.all([
     db.from('asf_profiles').select('*').eq('user_id',user.id).maybeSingle(),
     db.rpc('asf_is_commander'),
