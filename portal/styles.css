@@ -28,3 +28,12 @@ input,textarea,select{background:#091827;border-color:#31516b}.sidebar{backgroun
 #toast{background:#1c6769;border:1px solid #55aeb3}.badge.pending{color:var(--warning)}
 @media(max-width:950px){.welcome-cards{grid-template-columns:repeat(2,1fr)}.hero-seal{min-width:175px}.user-welcome{align-items:flex-start;flex-direction:column}.identity-chips{width:100%}.identity-chips span{flex:1}.dashboard-sections{grid-template-columns:1fr}}
 @media(max-width:560px){.hero{padding:29px 22px;min-height:auto}.hero-seal{display:none}.hero h1{font-size:34px}.hero p{font-size:14px}.welcome-cards{grid-template-columns:1fr}.tile{min-height:155px}.tile-academy{min-height:205px}.top-actions #sessionLabel{display:none}.user-welcome{padding:22px}.identity-chips{flex-direction:column}.identity-chips span{width:100%;min-width:0}.dashboard-card{min-height:165px;padding:18px}.dashboard-card__icon{width:44px;height:44px}.section-intro{align-items:flex-start;flex-direction:column}.section-intro p{margin-top:4px}.access-modal{padding:30px 20px}.sidebar{scrollbar-width:none}}
+
+/* Password reset: clear, accessible recovery form, isolated from other sections. */
+#recoveryScreen .auth-panel{border:1px solid rgba(117,213,206,.28);box-shadow:0 20px 55px rgba(0,0,0,.2)}
+.recovery-icon{display:grid;place-items:center;width:55px;height:55px;border-radius:15px;background:rgba(117,213,206,.10);border:1px solid rgba(117,213,206,.30);font-size:27px;margin-bottom:16px}
+#recoveryScreen .subtle{line-height:1.85;margin-bottom:18px}
+#recoveryForm{display:grid;gap:12px}
+#recoveryForm label{display:grid;gap:7px}
+#recoveryForm input:focus-visible{outline:2px solid #79d4cc;outline-offset:2px}
+#recoverySubmit:disabled{opacity:.65;cursor:wait}
