@@ -31,9 +31,9 @@
    return;
   }
   try{
-   const auth=window.supabase.createClient(window.ASF_CONFIG.supabaseUrl,window.ASF_CONFIG.supabaseAnonKey);
+   const auth=window.ASF_AUTH.createClient();
    // getUser validates the session server-side, including a signup callback session.
-   const {data,error}=await auth.auth.getUser();
+   const {data,error}=await window.ASF_AUTH.deadline(()=>auth.auth.getUser(),()=>window.ASF_AUTH.cancel(auth));
    if(error||!data?.user)throw new Error('Unverified session');
    const confirmed=Boolean(data.user.email_confirmed_at||data.user.confirmed_at);
    if(!confirmed)throw new Error('Email not confirmed');

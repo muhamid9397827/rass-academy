@@ -71,6 +71,10 @@ begin
  execute 'reset role';
  perform set_config('request.jwt.claims',jsonb_build_object('sub',a,'role','authenticated')::text,true);
  execute 'set local role authenticated';
+ blocked:=false;begin perform answers from public.asf_academy_results where id=qa_result_id;exception when insufficient_privilege then blocked:=true;end;if not blocked then raise exception 'Course lead reads answer data';end if;
+ blocked:=false;begin perform client_hash from public.asf_academy_results where id=qa_result_id;exception when insufficient_privilege then blocked:=true;end;if not blocked then raise exception 'Course lead reads client fingerprint';end if;
+ blocked:=false;begin update public.asf_notifications set message='تزوير إشعار' where recipient_id=a;exception when insufficient_privilege then blocked:=true;end;if not blocked then raise exception 'Member rewrites server notices';end if;
+ update public.asf_notifications set read_at=now() where recipient_id=a;
  blocked:=false;begin update public.asf_academy_results set delivered_by_name='اسم مزور' where id=qa_result_id;exception when others then blocked:=true;end;if not blocked then raise exception 'Raw delivery update permitted';end if;
  answer:=public.asf_confirm_academy_delivery(qa_result_id);
  if answer->>'delivered_by_name'<>'مسؤول تجريبي' or (answer->>'already_delivered')::boolean then raise exception 'Wrong server identity';end if;
@@ -88,5 +92,5 @@ begin
  if has_table_privilege('anon','public.asf_academy_results','select') then raise exception 'Public course ledger';end if;
  if (select public from storage.buckets where id='asf-reports') then raise exception 'Report bucket is public';end if;
 end $qa$;
-select 'PASS: all 17 approved ranks submit secret reports without retaining read access, scoped admissions, seven independent permissions, secret reports/PDF/reviews/notifications denied, passed-course notices and private email queue without duplicates or failed-attempt notices, immutable delivery identity, idempotence and immediate revocation' as verification;
+select 'PASS: all 17 approved ranks submit secret reports without retaining read access, scoped admissions, seven independent permissions, secret reports/PDF/reviews/notifications denied, passed-course notices and private email queue without duplicates or failed-attempt notices, hidden answer/fingerprint fields and immutable server notices, immutable delivery identity, idempotence and immediate revocation' as verification;
 rollback;

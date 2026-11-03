@@ -1,0 +1,17 @@
+const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
+const window={fetch,ASF_CONFIG:{supabaseUrl:'https://example.invalid',supabaseAnonKey:'public'},supabase:{createClient:(_u,_k,opts)=>({opts,auth:{stopAutoRefresh(){}}})}};
+vm.runInNewContext(fs.readFileSync(__dirname+'/auth-client.js','utf8'),{window,WeakMap,Error,Promise,AbortController,Request,Response,URL,DOMException,setTimeout,clearTimeout});
+(async()=>{
+ const {boundedFetch,deadline,cancel,createClient}=window.ASF_AUTH;
+ const client=createClient();assert.equal(typeof client.opts.global.fetch,'function');
+ const hanging=(_u,{signal})=>new Promise((_,reject)=>signal.addEventListener('abort',()=>reject(signal.reason),{once:true}));
+ await assert.rejects(()=>boundedFetch(null,hanging,20)('https://example.invalid/auth/v1/token'),e=>e.name==='AuthTimeoutError');
+ const bodyStall=async(_u,{signal})=>new Response(new ReadableStream({start(controller){signal.addEventListener('abort',()=>controller.error(signal.reason));}}));
+ await assert.rejects(()=>boundedFetch(null,bodyStall,20)('https://example.invalid/rest/v1/asf_profiles'),e=>e.name==='AuthTimeoutError');
+ const parent=new AbortController();const req=boundedFetch(null,hanging,1000)('https://example.invalid/auth/v1/user',{signal:parent.signal});parent.abort();await assert.rejects(()=>req,e=>e.name==='AbortError');
+ let cancelled=false;await assert.rejects(()=>deadline(()=>new Promise(()=>{}),()=>cancelled=true,20),e=>e.name==='AuthTimeoutError');assert.equal(cancelled,true);
+ const json=await boundedFetch(null,async()=>Response.json({ok:true},{headers:{'content-range':'0-0/1'}}),100)('https://example.invalid/rest/v1/test');assert.deepEqual(await json.json(),{ok:true});assert.equal(json.headers.get('content-range'),'0-0/1');
+ const empty=await boundedFetch(null,async()=>new Response(null,{status:204}),100)('https://example.invalid/auth/v1/logout');assert.equal(empty.status,204);
+ cancel(client);await assert.rejects(()=>client.opts.global.fetch('https://example.invalid/auth/v1/user'),e=>e.name==='AuthTimeoutError');
+ console.log('PASS: auth and identity request/body deadlines, caller cancellation, safe client shutdown, JSON headers and empty responses');
+})().catch(e=>{console.error(e);process.exit(1)});

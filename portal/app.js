@@ -36,7 +36,8 @@ const recoveryHash=new URLSearchParams(window.location.hash.replace(/^#/,'')),
       recoveryQuery=new URLSearchParams(window.location.search);
 const recoveryTokenHash=recoveryHash.get('token_hash')||recoveryQuery.get('token_hash');
 const recoveryLinkOpened=recoveryHash.get('type')==='recovery'||recoveryQuery.get('type')==='recovery';
-let db=ready?window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey):null;
+let db=ready?window.ASF_AUTH.createClient():null;
+let authEpoch=0,authNeedsReload=false;
 let user=null, profile=null, commander=false, grants=[], pageName=new URLSearchParams(location.search).get('view')==='academy-results'?'academy-results':'dashboard', draftId=null, latestReports=[], correctionSource=null, notificationChannel=null;
 const toast=(m,error=false)=>{const b=$('#toast');b.textContent=m;b.className='show'+(error?' error':'');clearTimeout(toast.t);toast.t=setTimeout(()=>b.className='',5800)};
 const set=(s,html)=>{$(s).innerHTML=html};
@@ -64,10 +65,10 @@ $('#requestRestrictedAccess').onclick=()=>{closeRestricted();navigate('access')}
 restrictedModal.onclick=e=>{if(e.target===restrictedModal)closeRestricted()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!restrictedModal.hidden)closeRestricted()});
 let registering=false,recoveryMode=recoveryLinkOpened;
-function authForm(mode){registering=mode==='register';showScreen('authScreen');$('#authTitle').textContent=registering?'إنشاء حساب جديد':'تسجيل الدخول';$('#registerFields').hidden=!registering;$('#authSubmit').textContent=registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authToggle').textContent=registering?'لديك حساب بالفعل؟ تسجيل الدخول':'ليس لديك حساب؟ إنشاء حساب';$('#forgotPassword').hidden=registering;['gameName','discordId','rank','activationReason'].forEach(id=>$('#'+id).required=registering);}
+function authForm(mode){$('#authStatus').hidden=true;registering=mode==='register';showScreen('authScreen');$('#authTitle').textContent=registering?'إنشاء حساب جديد':'تسجيل الدخول';$('#registerFields').hidden=!registering;$('#authSubmit').textContent=registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authToggle').textContent=registering?'لديك حساب بالفعل؟ تسجيل الدخول':'ليس لديك حساب؟ إنشاء حساب';$('#forgotPassword').hidden=registering;['gameName','discordId','rank','activationReason'].forEach(id=>$('#'+id).required=registering);}
 $('#showLogin').onclick=()=>authForm('login');$('#showRegister').onclick=()=>authForm('register');
 $('#registerFromHero').onclick=()=>authForm('register');
-$('#authToggle').onclick=()=>authForm(registering?'login':'register');
+$('#authToggle').onclick=()=>{if(!$('#authSubmit').disabled)authForm(registering?'login':'register')};
 $('#forgotPassword').onclick=async()=>{
  if(!ready)return toast('ربط قاعدة البيانات غير متاح',true);
  const email=$('#email').value.trim();if(!email)return toast('أدخل بريدك الإلكتروني أولًا',true);
@@ -77,7 +78,11 @@ $('#forgotPassword').onclick=async()=>{
 $('#verifyEmailLogin').onclick=()=>authForm('login');
 $('#verifyEmailBack').onclick=()=>showScreen('welcome');
 $('#rank').innerHTML=opt(RANKS.map(r=>[r,r]));
-$('#signOut').onclick=async()=>{if(db)await db.auth.signOut();user=null;profile=null;commander=false;grants=[];showScreen('welcome');$('#signOut').hidden=true;$('#sessionLabel').textContent='';};
+$('#signOut').onclick=async()=>{
+ authEpoch++;user=null;profile=null;commander=false;grants=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');showScreen('welcome');$('#signOut').hidden=true;$('#sessionLabel').textContent='';
+ if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
+ try{const {error}=await window.ASF_AUTH.deadline(()=>db.auth.signOut(),()=>{authNeedsReload=true;window.ASF_AUTH.cancel(db)});if(error)throw error;}catch(err){toast('تعذر تأكيد إنهاء الجلسة: '+err.message,true);}
+};
 $('#refreshProfile').onclick=()=>loadIdentity(true);
 $('#pendingReasonForm').onsubmit=async e=>{
  e.preventDefault();
@@ -95,15 +100,21 @@ $('#pendingReasonForm').onsubmit=async e=>{
 };
 $('#authForm').onsubmit=async e=>{
  e.preventDefault();if(!ready)return toast('يلزم إعداد Supabase أولًا. الدورات العامة متاحة.',true);
- const email=$('#email').value.trim(),password=$('#password').value;
+ if(authNeedsReload){location.replace(PORTAL_AUTH_REDIRECT+'?login=1&v=20261103-auth-fix');return;}
+ const email=$('#email').value.trim(),password=$('#password').value,attempt=++authEpoch;
+ const status=$('#authStatus');status.hidden=false;status.className='auth-status';status.textContent=registering?'جارٍ إنشاء الحساب…':'جارٍ التحقق من بيانات الدخول…';
+ $('#authSubmit').textContent=registering?'جارٍ إنشاء الحساب…':'جارٍ تسجيل الدخول…';$('#authForm').setAttribute('aria-busy','true');
+ $('#authToggle').disabled=true;$('#forgotPassword').disabled=true;
  $('#authSubmit').disabled=true;
  try{
+  await window.ASF_AUTH.deadline(async()=>{
   if(registering){
     const game_name=$('#gameName').value.trim(),discord_id=$('#discordId').value.trim(),rank=$('#rank').value,
       activation_reason=$('#activationReason').value.trim();
     if(!/^[0-9]{17,20}$/.test(discord_id))throw Error('معرّف Discord يجب أن يكون رقميًا من 17 إلى 20 خانة.');
     if(activation_reason.length<10||activation_reason.length>500)throw Error('سبب طلب التفعيل إلزامي ويجب أن يتراوح بين 10 و500 حرف.');
     const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:PORTAL_CONFIRMATION_REDIRECT,data:{asf_portal:'true',game_name,discord_id,rank,activation_reason}}});
+    if(attempt!==authEpoch)return;
     if(error)throw error;
     if(!data?.session){
       // With email confirmation enabled Supabase returns a user but NO session.
@@ -113,9 +124,11 @@ $('#authForm').onsubmit=async e=>{
       showScreen('verifyEmailScreen');
       return;
     }
-    await loadIdentity();
+    status.textContent='تم تسجيل الدخول؛ جارٍ تحميل بيانات الحساب…';
+    await loadIdentity(false,true);
   }else{
     const {data,error}=await db.auth.signInWithPassword({email,password});
+    if(attempt!==authEpoch)return;
     if(error){
       const message=String(error.message||'');
       if(/email not confirmed/i.test(message))throw Error('بريدك الإلكتروني لم يتم تأكيده بعد. افتح رسالة التأكيد، ثم عد لتسجيل الدخول.');
@@ -123,12 +136,18 @@ $('#authForm').onsubmit=async e=>{
       throw error;
     }
     if(!data?.session)throw Error('تعذر إنشاء جلسة الدخول. حاول مجددًا.');
-    await loadIdentity();
+    status.textContent='تم تسجيل الدخول؛ جارٍ تحميل بيانات الحساب…';
+    await loadIdentity(false,true);
   }
- }catch(err){toast(err.message||'تعذر تنفيذ العملية',true)}
- finally{$('#authSubmit').disabled=false}
+  },()=>{authEpoch++;authNeedsReload=true;window.ASF_AUTH.cancel(db)});
+ }catch(err){
+  const timedOut=err?.name==='AuthTimeoutError'||/abort|timeout|fetch|network|lock/i.test(String(err?.message||''));
+  if(timedOut){authEpoch++;authNeedsReload=true;window.ASF_AUTH.cancel(db);}
+  status.hidden=false;status.className='auth-status error';status.textContent=timedOut?'تأخر الاتصال أو تعذّر إكمال الجلسة. اضغط «إعادة فتح تسجيل الدخول» للمحاولة بأمان.':err.message||'تعذر تنفيذ العملية';toast(status.textContent,true);
+ }finally{$('#authSubmit').disabled=false;$('#authSubmit').textContent=authNeedsReload?'إعادة فتح تسجيل الدخول':registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authForm').removeAttribute('aria-busy');$('#authToggle').disabled=false;$('#forgotPassword').disabled=false;}
 };
 async function init(){
+ const epoch=authEpoch;
  if(!ready){showScreen('welcome');toast('البوابة بحاجة لربط قاعدة البيانات لتفعيل الحسابات.',true);return}
  // Subscribe before checking the session: Supabase may complete the recovery redirect immediately.
  db.auth.onAuthStateChange((event,session)=>{
@@ -159,7 +178,8 @@ async function init(){
    }
    return;
   }
-  const {data,error}=await db.auth.getUser();
+  const {data,error}=await window.ASF_AUTH.deadline(()=>db.auth.getUser(),()=>{if(epoch===authEpoch){authEpoch++;authNeedsReload=true;window.ASF_AUTH.cancel(db)}});
+  if(epoch!==authEpoch)return;
   if(recoveryMode){
    showRecoveryScreen();
    if(error||!data?.user){
@@ -170,6 +190,7 @@ async function init(){
   }
   if(data?.user){user=data.user;await loadIdentity()}else if(new URLSearchParams(window.location.search).get('login')==='1')authForm('login');else showScreen('welcome');
  }catch(err){
+  if(epoch!==authEpoch&&!authNeedsReload)return;
   showScreen(recoveryMode?'recoveryScreen':'welcome');
   toast('تعذر التحقق من جلسة تسجيل الدخول.',true);
  }
@@ -207,10 +228,11 @@ $('#recoveryForm').onsubmit=async e=>{
  finally{submit.disabled=false}
 };
 async function query(name,select='*'){const {data,error}=await db.from(name).select(select);if(error)throw error;return data||[]}
-async function loadIdentity(silent=false){
+async function loadIdentity(silent=false,fromAuth=false){
+ const epoch=authEpoch;
  if(!ready)return;
  try{
-  const {data:{user:u},error:ue}=await db.auth.getUser();if(ue)throw ue;
+  const {data:{user:u},error:ue}=await db.auth.getUser();if(epoch!==authEpoch)return;if(ue)throw ue;
   if(!u){showScreen('welcome');return}user=u;
  const [{data:p,error:pe},{data:cm,error:ce},{data:dg,error:de},{data:responsibilities,error:re}]=await Promise.all([
     db.from('asf_profiles').select('*').eq('user_id',user.id).maybeSingle(),
@@ -218,6 +240,7 @@ async function loadIdentity(silent=false){
     db.from('asf_delegations').select('*').eq('user_id',user.id),
     db.from('asf_responsibilities').select('*').eq('user_id',user.id)
   ]);
+  if(epoch!==authEpoch)return;
   if(pe||ce||de||re)throw pe||ce||de||re;
   profile=p;commander=!!cm;grants=[...(dg||[]),...(responsibilities||[])];
   if(!notificationChannel){
@@ -265,6 +288,7 @@ async function loadIdentity(silent=false){
   }
   if(!silent)toast('تم تحديث حالة الحساب');
  }catch(err){
+  if(epoch!==authEpoch)return;
   const message=String(err?.message||'');
   if(err?.name==='AuthSessionMissingError'||/auth session missing|session expired|invalid jwt/i.test(message)){
    user=null;profile=null;commander=false;grants=[];
@@ -273,6 +297,7 @@ async function loadIdentity(silent=false){
    toast('انتهت جلسة تسجيل الدخول أو لم تبدأ بعد. سجّل الدخول ببريدك وكلمة المرور.',true);
    return;
   }
+  if(fromAuth)throw err;
   toast('تعذر تحميل بيانات المستخدم: '+message,true);
   showScreen('welcome');
  }
@@ -286,20 +311,20 @@ async function navigate(name){
  set('#pageTitle','<div><h1>'+esc(titles[name]||'بوابة أمن المنشآت')+'</h1><p>المنصة الموحدة · إعدادات الصلاحيات حسب حسابك</p></div>');
  set('#page','<div class="empty">جارٍ تحميل البيانات...</div>');
  try{
-  if(name==='dashboard')return renderDashboard();
-  if(name==='academy')return renderAcademy();
-  if(name==='academy-results')return renderAcademyResults();
-  if(name==='reports'||name==='inbox'||name==='trash')return renderReports(name);
-  if(name==='compose')return renderCompose();
-  if(name==='police')return renderPolice();
-  if(name==='court')return renderCourt();
-  if(name==='members'&&(commander||has('users.review')||has('users.approve')))return renderMembers();
-  if(name==='changes'&&(commander||has('users.review')))return renderChanges();
-  if(name==='delegations'&&commander)return renderDelegations();
-  if(name==='access')return renderAccessRequests();
-  if(name==='access-queue'&&commander)return renderAccessQueue();
-  if(name==='audit'&&commander)return renderAudit();
-  if(name==='account')return renderAccount();
+  if(name==='dashboard')return await renderDashboard();
+  if(name==='academy')return await renderAcademy();
+  if(name==='academy-results')return await renderAcademyResults();
+  if(name==='reports'||name==='inbox'||name==='trash')return await renderReports(name);
+  if(name==='compose')return await renderCompose();
+  if(name==='police')return await renderPolice();
+  if(name==='court')return await renderCourt();
+  if(name==='members'&&(commander||has('users.review')||has('users.approve')))return await renderMembers();
+  if(name==='changes'&&(commander||has('users.review')))return await renderChanges();
+  if(name==='delegations'&&commander)return await renderDelegations();
+  if(name==='access')return await renderAccessRequests();
+  if(name==='access-queue'&&commander)return await renderAccessQueue();
+  if(name==='audit'&&commander)return await renderAudit();
+  if(name==='account')return await renderAccount();
   set('#page',empty('لا تملك صلاحية الوصول إلى هذا القسم.'));
  }catch(err){set('#page',empty('تعذر تحميل القسم: '+err.message));toast(err.message,true)}
 }
