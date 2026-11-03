@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: '22'
       - name: JavaScript syntax
-        run: node --check portal/app.js && node --check portal/config.js && node --check portal/academy-app.js && node --check portal/academy-filter.js && node --check portal/mp-data.js
+        run: node --check portal/app.js && node --check portal/confirmation.js && node --check portal/config.js && node --check portal/academy-app.js && node --check portal/academy-filter.js && node --check portal/mp-data.js
       - name: Browser smoke test
         run: |
           npm install --no-save playwright@1.58.0
@@ -29,6 +29,7 @@ jobs:
           node portal/landing.spec.cjs
           node portal/recovery.spec.cjs
           node portal/signup.spec.cjs
+          node portal/confirmation.spec.cjs
           node portal/ui-theme.spec.cjs
           node portal/access-requests.spec.cjs
       - name: Server cleanup policy tests
@@ -52,6 +53,9 @@ jobs:
           fi
           grep -q "grant execute on function public.asf_commander_email_for_delivery() to service_role" portal/supabase/16-commander-delivery-address.sql
           grep -q "app_private.asf_email_bridge_key" portal/supabase/15-email-webhook-bridge.sql
+          grep -q "Activation reason is required before approval" portal/supabase/20-activation-reason-required.sql
+          grep -q "where user_id=auth.uid() and status='pending'" portal/supabase/20-activation-reason-required.sql
+          grep -q "revoke all on function public.asf_submit_activation_reason(text) from public,anon,authenticated" portal/supabase/20-activation-reason-required.sql
           grep -q "revoke all on public.asf_access_requests from public, anon, authenticated" portal/supabase/18-access-requests.sql
           grep -q "grant select on public.asf_access_requests to authenticated" portal/supabase/18-access-requests.sql
           grep -q "if auth.uid() is null or not public.asf_is_commander()" portal/supabase/18-access-requests.sql
