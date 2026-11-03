@@ -385,7 +385,9 @@ async function renderDashboard(){
  if(error||!$('#dashboardNotices'))return;
  const pending=(notices||[]).filter(n=>!n.read_at).length;
  $('#dashboardNotices').innerHTML='<details class="mp-notices-panel"><summary>الإشعارات <span class="badge">'+pending+' غير مقروء</span></summary><div class="mp-notices-body"><button type="button" class="btn ghost small" id="markAllRead">تحديد الكل كمقروء</button>'+
- ((notices||[]).map(n=>'<div class="notice-item">'+(n.read_at?'':'● ')+esc(n.message)+'<small class="muted">'+date(n.created_at)+'</small></div>').join('')||empty('لا توجد إشعارات حاليًا'))+'</div></details>';
+ ((notices||[]).map(n=>'<div class="notice-item">'+(n.read_at?'':'● ')+esc(n.message)+'<small class="muted">'+date(n.created_at)+'</small>'+
+ (['academy_pass','academy_assigned'].includes(n.event_kind||n.category)&&canDeliver?'<button type="button" class="btn ghost small" data-open-notice="academy-results">فتح نتائج الدورات</button>':n.category==='registration'&&(commander||has('users.approve'))?'<button type="button" class="btn ghost small" data-open-notice="members">طلبات العضوية</button>':'')+'</div>').join('')||empty('لا توجد إشعارات حاليًا'))+'</div></details>';
+ $('#dashboardNotices').querySelectorAll('[data-open-notice]').forEach(b=>b.onclick=()=>navigate(b.dataset.openNotice));
  $('#markAllRead').onclick=async()=>{const {error:err}=await db.from('asf_notifications').update({read_at:new Date().toISOString()}).is('read_at',null);if(err)return toast(err.message,true);toast('تم تحديد الإشعارات كمقروءة');renderDashboard();};
 }
 
