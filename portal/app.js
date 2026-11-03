@@ -43,7 +43,7 @@ const btn=(label,act,id='',kind='ghost')=>'<button class="btn '+kind+' small" da
 const badge=(s,secret=false)=>'<span class="badge '+(secret?'secret':'')+'">'+esc(s)+'</span>';
 const empty=msg=>'<div class="empty">'+esc(msg)+'</div>';
 const has=(permission,kind=null)=>commander||grants.some(g=>g.permission===permission&&(kind===null||g.report_kind===null||g.report_kind===kind));
-function showScreen(which){['welcome','authScreen','recoveryScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which)}
+function showScreen(which){['welcome','authScreen','verifyEmailScreen','recoveryScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which)}
 function openAcademy(){window.open('academy.html','_blank','noopener')}
 $('#openAcademy').onclick=openAcademy;
 const restrictedModal=$('#restrictedModal');
@@ -68,6 +68,8 @@ $('#forgotPassword').onclick=async()=>{
  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:PORTAL_AUTH_REDIRECT});
  toast(error?'تعذر إرسال رابط الاستعادة: '+error.message:'إذا كان البريد مسجلًا، سيتم إرسال رابط استعادة كلمة المرور.',!!error);
 };$('#authBack').onclick=()=>showScreen('welcome');
+$('#verifyEmailLogin').onclick=()=>authForm('login');
+$('#verifyEmailBack').onclick=()=>showScreen('welcome');
 $('#rank').innerHTML=opt(RANKS.map(r=>[r,r]));
 $('#signOut').onclick=async()=>{if(db)await db.auth.signOut();user=null;profile=null;commander=false;grants=[];showScreen('welcome');$('#signOut').hidden=true;$('#sessionLabel').textContent='';};
 $('#refreshProfile').onclick=()=>loadIdentity(true);
@@ -79,11 +81,27 @@ $('#authForm').onsubmit=async e=>{
   if(registering){
     const game_name=$('#gameName').value.trim(),discord_id=$('#discordId').value.trim(),rank=$('#rank').value;
     if(!/^[0-9]{17,20}$/.test(discord_id))throw Error('معرّف Discord يجب أن يكون رقميًا من 17 إلى 20 خانة.');
-    const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:PORTAL_AUTH_REDIRECT,data:{asf_portal:'true',game_name,discord_id,rank}}});if(error)throw error;
-    toast(data.session?'تم إنشاء الحساب، بانتظار موافقة القائد.':'تم إرسال طلب التسجيل. تحقق من بريدك لتأكيد الحساب إن طُلب ذلك.');
+    const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:PORTAL_AUTH_REDIRECT,data:{asf_portal:'true',game_name,discord_id,rank}}});
+    if(error)throw error;
+    if(!data?.session){
+      // With email confirmation enabled Supabase returns a user but NO session.
+      // Never call getUser() or loadIdentity() before email verification/sign-in.
+      $('#verifyEmailMessage').textContent='إذا قُبل طلب التسجيل، ستصلك رسالة على بريدك الإلكتروني لتأكيد الحساب. افتحها، ثم ارجع لتسجيل الدخول.';
+      $('#password').value='';
+      showScreen('verifyEmailScreen');
+      return;
+    }
     await loadIdentity();
   }else{
-    const {error}=await db.auth.signInWithPassword({email,password});if(error)throw error;await loadIdentity();
+    const {data,error}=await db.auth.signInWithPassword({email,password});
+    if(error){
+      const message=String(error.message||'');
+      if(/email not confirmed/i.test(message))throw Error('بريدك الإلكتروني لم يتم تأكيده بعد. افتح رسالة التأكيد، ثم عد لتسجيل الدخول.');
+      if(/invalid login credentials/i.test(message))throw Error('البريد الإلكتروني أو كلمة المرور غير صحيحة.');
+      throw error;
+    }
+    if(!data?.session)throw Error('تعذر إنشاء جلسة الدخول. حاول مجددًا.');
+    await loadIdentity();
   }
  }catch(err){toast(err.message||'تعذر تنفيذ العملية',true)}
  finally{$('#authSubmit').disabled=false}
