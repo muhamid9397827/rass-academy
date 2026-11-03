@@ -1012,9 +1012,9 @@
         if (state.sessionId === submittedSessionId) {
           setSubmissionStatus(
             submittedResult.localSaved
-              ? "تم إرسال النتيجة إلى سجل الإدارة وحفظ نسخة محلية"
-              : "تم إرسال النتيجة إلى سجل الإدارة",
-            "success"
+              ? "حُفظت النتيجة على جهازك وأُرسل طلب حفظها للإدارة؛ تأكيد وصولها يحتاج مراجعة السجل"
+              : "أُرسل طلب حفظ النتيجة، لكن لم يمكن التحقق من استلام السجل الإداري؛ احتفظ بنسخة من النتيجة",
+            ""
           );
         }
       } catch (error) {
@@ -1162,7 +1162,7 @@
         : getSectorLabel(state.sector);
     const traineeLabel = course.applicantCourse ? "المتقدم" : "المتدرب";
     const lines = [
-      `نتيجة الأكاديمية التدريبية المشتركة — ${sectorName}`,
+      `نتيجة أكاديمية أمن المنشآت — ${sectorName}`,
       `${traineeLabel}: ${state.trainee.name}`,
       `Discord ID: ${state.trainee.discord}`,
       `الدورة: ${course.title}`,
