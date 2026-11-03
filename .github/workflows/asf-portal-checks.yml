@@ -29,6 +29,7 @@ jobs:
           node portal/landing.spec.cjs
           node portal/recovery.spec.cjs
           node portal/ui-theme.spec.cjs
+          node portal/access-requests.spec.cjs
       - name: Server cleanup policy tests
         run: node portal/purge.spec.cjs
       - name: Live Supabase Auth readiness
