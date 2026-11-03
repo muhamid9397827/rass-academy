@@ -32,6 +32,9 @@ const assert=require('node:assert/strict');
  await page.locator('#showRegister').click();
  assert.equal(await page.locator('#registerFields').isVisible(),true);
  await page.locator('#authBack').click();
+ await page.locator('#registerFromHero').click();
+ assert.equal(await page.locator('#registerFields').isVisible(),true,'hero signup action opens member registration');
+ await page.locator('#authBack').click();
  await page.screenshot({path:'/tmp/asf-new-landing-desktop.png',fullPage:true});
  for(const width of [390,360,768]){
   await page.setViewportSize({width,height:844});
