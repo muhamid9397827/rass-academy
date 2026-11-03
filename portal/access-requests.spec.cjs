@@ -1,7 +1,7 @@
 // Permission request UI contract. Supabase is mocked; no production users or data touched.
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
-const sdk=String.raw\`
+const sdk=String.raw`
 (() => {
  const isCommander=new URLSearchParams(location.search).get('role')==='commander';
  const member='11111111-2222-4333-8444-555555555572';
@@ -46,7 +46,7 @@ const sdk=String.raw\`
  };
  window.supabase={createClient:()=>client};
 })();
-\`;
+`;
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  const page=await browser.newPage({viewport:{width:390,height:844}});
