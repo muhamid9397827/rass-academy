@@ -37,7 +37,7 @@ const recoveryHash=new URLSearchParams(window.location.hash.replace(/^#/,'')),
 const recoveryTokenHash=recoveryHash.get('token_hash')||recoveryQuery.get('token_hash');
 const recoveryLinkOpened=recoveryHash.get('type')==='recovery'||recoveryQuery.get('type')==='recovery';
 let db=ready?window.ASF_AUTH.createClient():null;
-let authEpoch=0,authNeedsReload=false;
+let authEpoch=0,authNeedsReload=false,signingOut=false;
 let user=null, profile=null, commander=false, grants=[], pageName=new URLSearchParams(location.search).get('view')==='academy-results'?'academy-results':'dashboard', draftId=null, latestReports=[], correctionSource=null, notificationChannel=null;
 const toast=(m,error=false)=>{const b=$('#toast');b.textContent=m;b.className='show'+(error?' error':'');clearTimeout(toast.t);toast.t=setTimeout(()=>b.className='',5800)};
 const set=(s,html)=>{$(s).innerHTML=html};
@@ -65,7 +65,7 @@ $('#requestRestrictedAccess').onclick=()=>{closeRestricted();navigate('access')}
 restrictedModal.onclick=e=>{if(e.target===restrictedModal)closeRestricted()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!restrictedModal.hidden)closeRestricted()});
 let registering=false,recoveryMode=recoveryLinkOpened;
-function authForm(mode){$('#authStatus').hidden=true;registering=mode==='register';showScreen('authScreen');$('#authTitle').textContent=registering?'إنشاء حساب جديد':'تسجيل الدخول';$('#registerFields').hidden=!registering;$('#authSubmit').textContent=registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authToggle').textContent=registering?'لديك حساب بالفعل؟ تسجيل الدخول':'ليس لديك حساب؟ إنشاء حساب';$('#forgotPassword').hidden=registering;['gameName','discordId','rank','activationReason'].forEach(id=>$('#'+id).required=registering);}
+function authForm(mode){if(signingOut)return;$('#authStatus').hidden=true;registering=mode==='register';showScreen('authScreen');$('#authTitle').textContent=registering?'إنشاء حساب جديد':'تسجيل الدخول';$('#registerFields').hidden=!registering;$('#authSubmit').textContent=registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authToggle').textContent=registering?'لديك حساب بالفعل؟ تسجيل الدخول':'ليس لديك حساب؟ إنشاء حساب';$('#forgotPassword').hidden=registering;['gameName','discordId','rank','activationReason'].forEach(id=>$('#'+id).required=registering);}
 $('#showLogin').onclick=()=>authForm('login');$('#showRegister').onclick=()=>authForm('register');
 $('#registerFromHero').onclick=()=>authForm('register');
 $('#authToggle').onclick=()=>{if(!$('#authSubmit').disabled)authForm(registering?'login':'register')};
@@ -79,9 +79,14 @@ $('#verifyEmailLogin').onclick=()=>authForm('login');
 $('#verifyEmailBack').onclick=()=>showScreen('welcome');
 $('#rank').innerHTML=opt(RANKS.map(r=>[r,r]));
 $('#signOut').onclick=async()=>{
+ if(signingOut)return;signingOut=true;['showLogin','showRegister','registerFromHero','signOut'].forEach(id=>$('#'+id).disabled=true);
  authEpoch++;user=null;profile=null;commander=false;grants=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');showScreen('welcome');$('#signOut').hidden=true;$('#sessionLabel').textContent='';
  if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
- try{const {error}=await window.ASF_AUTH.deadline(()=>db.auth.signOut(),()=>{authNeedsReload=true;window.ASF_AUTH.cancel(db)});if(error)throw error;}catch(err){toast('تعذر تأكيد إنهاء الجلسة: '+err.message,true);}
+ try{const {error}=await window.ASF_AUTH.deadline(()=>db.auth.signOut(),()=>{authNeedsReload=true;window.ASF_AUTH.cancel(db)});if(error)throw error;}catch(err){
+  authNeedsReload=true;window.ASF_AUTH.cancel(db);
+  try{localStorage.removeItem('sb-'+new URL(cfg.supabaseUrl).hostname.split('.')[0]+'-auth-token');}catch{}
+  toast('أُغلقت الجلسة محليًا، وتعذر تأكيد إنهائها على الخادم: '+err.message,true);
+ }finally{signingOut=false;['showLogin','showRegister','registerFromHero','signOut'].forEach(id=>$('#'+id).disabled=false);}
 };
 $('#refreshProfile').onclick=()=>loadIdentity(true);
 $('#pendingReasonForm').onsubmit=async e=>{
@@ -157,7 +162,7 @@ async function init(){
    return;
   }
   if(event==='SIGNED_OUT'){
-   user=null;commander=false;profile=null;grants=[];
+   authEpoch++;user=null;commander=false;profile=null;grants=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');
    if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
    if(!recoveryMode)showScreen('welcome');
   }
