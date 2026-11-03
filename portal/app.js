@@ -229,7 +229,18 @@ async function loadIdentity(silent=false){
    showScreen('pendingScreen');$('#pendingText').textContent=p?.status==='rejected'?'تم رفض الطلب. تواصل مع الإدارة.':p?.status==='suspended'?'الحساب موقوف حاليًا.':'الحساب بانتظار موافقة القائد. يمكنك دخول الدورات العامة من الصفحة الرئيسية.';
   }
   if(!silent)toast('تم تحديث حالة الحساب');
- }catch(err){toast('تعذر تحميل بيانات المستخدم: '+err.message,true);showScreen('welcome')}
+ }catch(err){
+  const message=String(err?.message||'');
+  if(err?.name==='AuthSessionMissingError'||/auth session missing|session expired|invalid jwt/i.test(message)){
+   user=null;profile=null;commander=false;grants=[];
+   if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null}
+   authForm('login');
+   toast('انتهت جلسة تسجيل الدخول أو لم تبدأ بعد. سجّل الدخول ببريدك وكلمة المرور.',true);
+   return;
+  }
+  toast('تعذر تحميل بيانات المستخدم: '+message,true);
+  showScreen('welcome');
+ }
 }
 document.querySelectorAll('.nav').forEach(n=>n.onclick=()=>navigate(n.dataset.page));
 async function navigate(name){
