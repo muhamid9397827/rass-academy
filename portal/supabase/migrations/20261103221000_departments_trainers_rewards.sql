@@ -97,8 +97,10 @@ create table if not exists public.asf_department_rewards(
  earned_at timestamptz not null default now(),
  paid_at timestamptz,
  paid_by uuid references auth.users(id),
+ paid_by_name text,
  constraint asf_department_reward_paid_consistency check(
-  (paid_at is null and paid_by is null) or (paid_at is not null and paid_by is not null)
+  (paid_at is null and paid_by is null and paid_by_name is null)
+   or (paid_at is not null and paid_by is not null and paid_by_name is not null)
  ),
  unique(department,subject_id)
 );
@@ -211,7 +213,8 @@ begin
  if not public.asf_department_can_manage(r.department) then raise exception 'Department head only'; end if;
  if r.actor_id=auth.uid() then raise exception 'Another supervisor must review your own reward'; end if;
  if r.paid_at is not null then raise exception 'Reward already marked paid'; end if;
- update public.asf_department_rewards set paid_at=clock_timestamp(),paid_by=auth.uid()
+ update public.asf_department_rewards set paid_at=clock_timestamp(),paid_by=auth.uid(),
+  paid_by_name=coalesce((select p.game_name from public.asf_profiles p where p.user_id=auth.uid()),'القيادة')
   where id=p_reward returning * into r;
  insert into public.asf_audit(actor_id,action,target_id,detail)
   values(auth.uid(),'department_reward_paid',p_reward::text,
