@@ -5,6 +5,24 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const KINDS={personnel:'تقرير مسؤول الأفراد',officers:'تقرير مسؤول الضباط',joint:'تقرير مشترك للأفراد والضباط',presidencies:'تقرير مسؤولي الرئاسات',secret:'سري للغاية — للقائد فقط'};
 const STATES={new:'جديد',reviewing:'قيد المراجعة',reviewed:'تمت المراجعة',needs_more:'يحتاج استكمال'};
+
+const ACCESS_PERMISSIONS={
+ 'court.manage':'إدارة مجلس القضاء',
+ 'police.manage':'إدارة إجراءات الشرطة العسكرية',
+ 'reports.read':'الاطلاع على التقارير العادية',
+ 'reports.review':'مراجعة التقارير العادية',
+ 'users.review':'الاطلاع على طلبات الأعضاء'
+};
+const ACCESS_HINTS={
+ 'court.manage':'القضايا والقرارات القضائية، بعد تصريح القيادة فقط.',
+ 'police.manage':'تعديل العقوبات المقترحة داخل قسم الشرطة العسكرية.',
+ 'reports.read':'التقارير غير السرية فقط؛ لا يشمل تقارير «سري للغاية».',
+ 'reports.review':'إضافة ملاحظات ومراجعة التقارير غير السرية فقط.',
+ 'users.review':'الاطلاع على طلبات الأعضاء وتعديل البيانات دون صلاحية اعتماد الحسابات.'
+};
+const ACCESS_STATES={pending:'قيد المراجعة',approved:'موافق عليه',rejected:'مرفوض'};
+let accessPrefill='court.manage';
+
 const RANKS=['جندي','جندي أول','عريف','وكيل رقيب','رقيب','رقيب أول','رئيس رقباء','ملازم','ملازم أول','نقيب','رائد','مقدم','عقيد','عميد','لواء','فريق','فريق أول'];
 const cfg=window.ASF_CONFIG||{}, ready=!!(cfg.supabaseUrl&&cfg.supabaseAnonKey&&window.supabase);
 const PORTAL_AUTH_REDIRECT='https://muhamid9397827.github.io/rass-academy/portal/';
@@ -30,12 +48,14 @@ function openAcademy(){window.open('academy.html','_blank','noopener')}
 $('#openAcademy').onclick=openAcademy;
 const restrictedModal=$('#restrictedModal');
 function showRestricted(section){
+ accessPrefill=section.includes('القضاء')?'court.manage':'police.manage';
  $('#restrictedTitle').textContent=section+' — يتطلب تصريحًا خاصًا';
- $('#restrictedMessage').textContent='لا تملك صلاحية الدخول إلى قسم '+section+'. هذا القسم مخصص للمصرّح لهم فقط؛ تواصل مع القيادة لطلب التصريح المناسب.';
- restrictedModal.hidden=false;document.body.classList.add('modal-open');$('#ackRestricted').focus();
+ $('#restrictedMessage').textContent='لا تملك صلاحية الدخول إلى قسم '+section+'. يمكنك إرسال طلب تصريح إلى القائد مع توضيح السبب.';
+ restrictedModal.hidden=false;document.body.classList.add('modal-open');$('#requestRestrictedAccess').focus();
 }
 function closeRestricted(){restrictedModal.hidden=true;document.body.classList.remove('modal-open')}
 $('#closeRestricted').onclick=closeRestricted;$('#ackRestricted').onclick=closeRestricted;
+$('#requestRestrictedAccess').onclick=()=>{closeRestricted();navigate('access')};
 restrictedModal.onclick=e=>{if(e.target===restrictedModal)closeRestricted()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!restrictedModal.hidden)closeRestricted()});
 let registering=false,recoveryMode=recoveryLinkOpened;
@@ -159,16 +179,24 @@ async function loadIdentity(silent=false){
   ]);
   if(pe||ce||de)throw pe||ce||de;
   profile=p;commander=!!cm;grants=dg||[];
-  if(commander && !notificationChannel){
-    notificationChannel=db.channel('asf-commander-notices-'+user.id)
+  if(!notificationChannel){
+    // All signed-in members can receive their own decision notices. RLS stays authoritative.
+    notificationChannel=db.channel('asf-notices-'+user.id)
      .on('postgres_changes',{event:'INSERT',schema:'public',table:'asf_notifications',filter:'recipient_id=eq.'+user.id},
-      payload=>{toast(payload.new?.message||'وصل إشعار جديد للقيادة');
-       if(pageName==='dashboard')renderDashboard().catch(err=>toast(err.message,true));
-       if(pageName==='inbox')renderReports('inbox').catch(err=>toast(err.message,true));
-       if(pageName==='members' && payload.new?.category==='registration')renderMembers().catch(err=>toast(err.message,true));
+      payload=>{
+       const notice=payload.new||{};
+       toast(notice.message||'وصل إشعار جديد');
+       if(notice.category==='access_decision'){
+        loadIdentity(true).catch(err=>toast(err.message,true));
+        return;
+       }
+       if(commander){
+        if(pageName==='dashboard')renderDashboard().catch(err=>toast(err.message,true));
+        if(pageName==='inbox')renderReports('inbox').catch(err=>toast(err.message,true));
+        if(pageName==='members'&&notice.category==='registration')renderMembers().catch(err=>toast(err.message,true));
+        if(pageName==='access-queue'&&notice.category==='access_request')renderAccessQueue().catch(err=>toast(err.message,true));
+       }
       }).subscribe();
-  }else if(!commander && notificationChannel){
-    db.removeChannel(notificationChannel);notificationChannel=null;
   }
   $('#sessionLabel').textContent=p?.game_name||user.email;$('#signOut').hidden=false;
   if(commander||p?.status==='approved'){
@@ -177,6 +205,7 @@ async function loadIdentity(silent=false){
    document.querySelectorAll('[data-page="members"],[data-page="changes"]').forEach(n=>n.hidden=!(commander||has('users.review')));
    document.querySelectorAll('[data-page="delegations"],[data-page="trash"],[data-page="audit"]').forEach(n=>n.hidden=!commander);
    document.querySelector('[data-page="inbox"]').hidden=!(commander||has('reports.read')||has('reports.review'));
+   document.querySelector('[data-page="access-queue"]').hidden=!commander;
    await navigate(pageName);
   }else{
    showScreen('pendingScreen');$('#pendingText').textContent=p?.status==='rejected'?'تم رفض الطلب. تواصل مع الإدارة.':p?.status==='suspended'?'الحساب موقوف حاليًا.':'الحساب بانتظار موافقة القائد. يمكنك دخول الدورات العامة من الصفحة الرئيسية.';
@@ -188,7 +217,7 @@ document.querySelectorAll('.nav').forEach(n=>n.onclick=()=>navigate(n.dataset.pa
 async function navigate(name){
  if(!user||!(commander||profile?.status==='approved'))return;
  pageName=name;document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page===name));
- const titles={dashboard:'لوحة التحكم',academy:'الأكاديمية والدورات',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
+ const titles={dashboard:'لوحة التحكم',academy:'الأكاديمية والدورات',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',access:'طلب تصريح ومتابعته','access-queue':'طلبات التصاريح الواردة',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
  set('#pageTitle','<div><h1>'+esc(titles[name]||'بوابة أمن المنشآت')+'</h1><p>المنصة الموحدة · إعدادات الصلاحيات حسب حسابك</p></div>');
  set('#page','<div class="empty">جارٍ تحميل البيانات...</div>');
  try{
@@ -201,6 +230,8 @@ async function navigate(name){
   if(name==='members'&&(commander||has('users.review')))return renderMembers();
   if(name==='changes'&&(commander||has('users.review')))return renderChanges();
   if(name==='delegations'&&commander)return renderDelegations();
+  if(name==='access')return renderAccessRequests();
+  if(name==='access-queue'&&commander)return renderAccessQueue();
   if(name==='audit'&&commander)return renderAudit();
   if(name==='account')return renderAccount();
   set('#page',empty('لا تملك صلاحية الوصول إلى هذا القسم.'));
@@ -223,6 +254,8 @@ async function renderDashboard(){
  sectionCard('police','🛡','الشرطة العسكرية','اللوائح واحتساب العقوبات')+
  sectionCard('academy','🎓','الأكاديمية والتأهيل','الدورات والمسارات التدريبية')+'</div>');
  $('#page').querySelectorAll('.dashboard-card').forEach(card=>card.onclick=()=>{if(card.classList.contains('is-restricted'))showRestricted(card.querySelector('strong')?.textContent||'القسم');else navigate(card.dataset.section)});
+ $('#page').insertAdjacentHTML('beforeend','<div class="access-shortcut"><div><strong>التصاريح والصلاحيات</strong><p>'+(commander?'راجع طلبات أعضاء القطاع واتخذ قرارك.':'تحتاج صلاحية إضافية؟ قدّم طلبًا إلى القائد وتابع الرد هنا.')+'</p></div><button type="button" class="btn ghost" id="accessDashboardShortcut">'+(commander?'مراجعة الطلبات':'طلب تصريح')+'</button></div>');
+ $('#accessDashboardShortcut').onclick=()=>navigate(commander?'access-queue':'access');
  if(commander){
   const {data:notices,error:nerr}=await db.from('asf_notifications').select('*').order('created_at',{ascending:false}).limit(20);
   if(!nerr){
@@ -504,7 +537,7 @@ async function renderAudit(){
  const actors=new Map((users||[]).map(p=>[p.user_id,p]));
  const names={approve:'تفعيل عضو',suspend:'إيقاف عضو',reject:'رفض عضو',rank:'تعديل رتبة',court_on:'منح القضاء',court_off:'سحب القضاء',
  delegation:'تعديل صلاحية',review:'مراجعة تقرير',restore:'استعادة تقرير',trash:'حذف إلى السلة',
- police_rule_override:'تعديل عقوبة',court_warning_cancel:'إلغاء إنذار',pdf_finalized:'تأكيد ملف PDF',permanent_delete:'حذف نهائي تلقائي',profile_change:'تعديل بيانات',commander_profile_init:'ملف القائد'};
+ access_requested:'طلب تصريح',access_reviewed:'قرار تصريح',police_rule_override:'تعديل عقوبة',court_warning_cancel:'إلغاء إنذار',pdf_finalized:'تأكيد ملف PDF',permanent_delete:'حذف نهائي تلقائي',profile_change:'تعديل بيانات',commander_profile_init:'ملف القائد'};
  set('#page','<section class="section-card"><h3>سجل الإجراءات الإدارية</h3>'+
  '<p>يُعرض للقائد فقط، ويحتفظ بتاريخ التعديلات دون منح صلاحية حذف السجل.</p>'+
  '<input id="auditSearch" placeholder="بحث بالعملية أو المستخدم أو السجل" style="margin-bottom:15px">'+
@@ -536,6 +569,86 @@ async function renderDelegations(){
  const {error}=await db.rpc('asf_set_delegation',{target:f.get('user'),feature,kind,enabled:submitEnable});
  if(error)return toast(error.message,true);toast('تم تحديث الصلاحيات');loadIdentity(true)};
 }
+
+async function renderAccessRequests(){
+ const {data:rows,error}=await db.from('asf_access_requests').select('*').order('created_at',{ascending:false}).limit(80);
+ if(error)throw error;
+ const options=Object.entries(ACCESS_PERMISSIONS).map(([feature,label])=>
+  '<option value="'+esc(feature)+'">'+esc(label)+'</option>').join('');
+ const form=commander
+ ? '<div class="notice">حساب القائد يراجع جميع طلبات الأعضاء من صفحة «مراجعة طلبات التصاريح».</div><button class="btn primary" id="openAccessQueue" type="button">فتح طلبات الأعضاء</button>'
+ : '<form id="accessRequestForm" class="access-request-form"><label>الصلاحية المطلوبة<select id="accessPermission" name="permission" required>'+options+'</select></label>'+
+   '<p id="accessPermissionHint" class="muted"></p>'+
+   '<label>سبب طلب التصريح<textarea name="reason" rows="3" required minlength="8" maxlength="400" placeholder="اذكر سبب الحاجة إلى الصلاحية والمهام التي ستستخدمها فيها."></textarea></label>'+
+   '<div class="row between access-actions"><small class="muted">الحد الأقصى 3 طلبات خلال 24 ساعة. الطلب لا يمنح أي صلاحية قبل موافقة القائد.</small><button class="btn primary" id="sendAccessRequest" type="submit">إرسال الطلب للقائد</button></div></form>';
+ set('#page','<div class="access-workflow"><section class="section-card"><div class="access-heading"><span class="eyebrow">طلبات الصلاحيات</span><h3>طلب تصريح جديد</h3><p>تقدر تطلب الصلاحيات الإدارية المطلوبة، والقرار للقائد فقط. «سري للغاية» لا يمكن تفويضه لأي شخص.</p></div>'+form+'</section>'+
+ '<section class="section-card"><h3>سجل طلباتي</h3><div class="access-request-list">'+
+ ((rows||[]).map(r=>'<article class="access-request-item"><div class="row between"><strong>'+esc(ACCESS_PERMISSIONS[r.permission]||r.permission)+'</strong><span class="access-state access-state-'+esc(r.status)+'">'+esc(ACCESS_STATES[r.status]||r.status)+'</span></div>'+
+ '<p>'+esc(r.reason)+'</p><small class="muted">تاريخ الطلب: '+date(r.created_at)+'</small>'+
+ (r.reviewed_at?'<div class="access-review-note">القرار بتاريخ '+date(r.reviewed_at)+(r.decision_note?' — '+esc(r.decision_note):'')+'</div>':'')+'</article>').join('')||empty('ما أرسلت أي طلب تصريح بعد.'))+'</div></section></div>');
+ if(commander){$('#openAccessQueue').onclick=()=>navigate('access-queue');return}
+ const select=$('#accessPermission'),hint=$('#accessPermissionHint'),formElement=$('#accessRequestForm');
+ if(accessPrefill && ACCESS_PERMISSIONS[accessPrefill])select.value=accessPrefill;
+ accessPrefill='';
+ const updateHint=()=>{hint.textContent=ACCESS_HINTS[select.value]||''};
+ select.onchange=updateHint;updateHint();
+ formElement.onsubmit=async e=>{
+  e.preventDefault();
+  const submit=$('#sendAccessRequest');
+  const formData=new FormData(formElement);
+  const p_permission=String(formData.get('permission')||'');
+  const p_reason=String(formData.get('reason')||'').trim();
+  if(!ACCESS_PERMISSIONS[p_permission]||p_reason.length<8||p_reason.length>400)
+   return toast('حدد الصلاحية وأدخل سببًا من 8 إلى 400 حرف.',true);
+  submit.disabled=true;
+  try{
+   const {error:err}=await db.rpc('asf_request_access',{p_permission,p_reason});
+   if(err)throw err;
+   toast('تم إرسال طلب التصريح للقائد، ويمكنك متابعة حالته هنا.');
+   await renderAccessRequests();
+  }catch(err){toast('تعذر إرسال الطلب: '+(err.message||'خطأ غير معروف'),true)}
+  finally{if(submit.isConnected)submit.disabled=false}
+ };
+}
+async function renderAccessQueue(){
+ if(!commander)return set('#page',empty('مراجعة طلبات التصاريح خاصة بالقائد فقط.'));
+ const [requestResult,profileResult]=await Promise.all([
+  db.from('asf_access_requests').select('*').order('created_at',{ascending:false}).limit(200),
+  db.from('asf_profiles').select('user_id,game_name,rank,military_code')
+ ]);
+ if(requestResult.error||profileResult.error)throw requestResult.error||profileResult.error;
+ const people=new Map((profileResult.data||[]).map(p=>[p.user_id,p]));
+ const requests=requestResult.data||[];
+ requests.sort((a,b)=>Number(b.status==='pending')-Number(a.status==='pending') ||
+  new Date(b.created_at)-new Date(a.created_at));
+ const pending=requests.filter(r=>r.status==='pending').length;
+ set('#page','<div class="access-workflow"><section class="section-card"><div class="access-heading"><span class="eyebrow">قيادة أمن المنشآت</span><h3>طلبات التصاريح '+badge(String(pending)+' بانتظار القرار')+'</h3><p>لا يُمنح أي تفويض حتى توافق عليه بنفسك. الموافقة تسجَّل وتُرسل للعضو إشعارًا، و«سري للغاية» تبقى للقائد فقط.</p></div></section>'+
+ '<section class="access-request-list">'+
+ (requests.map(r=>{
+  const p=people.get(r.user_id);
+  return '<article class="section-card access-request-item"><div class="row between"><div><strong>'+esc(p?.game_name||'عضو')+' <small class="muted">'+esc(p?.military_code||'')+'</small></strong><p>'+esc(ACCESS_PERMISSIONS[r.permission]||r.permission)+'</p></div><span class="access-state access-state-'+esc(r.status)+'">'+esc(ACCESS_STATES[r.status]||r.status)+'</span></div>'+
+   '<p class="access-reason">'+esc(r.reason)+'</p><small class="muted">تاريخ الطلب: '+date(r.created_at)+'</small>'+
+   (r.status==='pending'?'<form class="access-decision-form" data-access-request="'+esc(r.id)+'"><label>ملاحظة القرار (اختياري)<input type="text" name="note" maxlength="400" placeholder="توضيح يُرسل لصاحب الطلب"></label><div class="row"><button class="btn primary" type="submit" name="decision" value="approve">الموافقة ومنح التصريح</button><button class="btn warn" type="submit" name="decision" value="reject">رفض الطلب</button></div></form>':
+   '<div class="access-review-note">تمت المراجعة '+date(r.reviewed_at)+(r.decision_note?' — '+esc(r.decision_note):'')+'</div>')+'</article>';
+ }).join('')||empty('لا توجد طلبات تصاريح.'))+'</section></div>');
+ $('#page').querySelectorAll('.access-decision-form').forEach(form=>{
+  form.onsubmit=async e=>{
+   e.preventDefault();
+   if(!commander)return;
+   const p_allow=e.submitter?.value==='approve',p_request=form.dataset.accessRequest,p_note=String(new FormData(form).get('note')||'').trim();
+   if(p_allow&&!confirm('الموافقة ستمنح هذه الصلاحية للعضو. هل تؤكد؟'))return;
+   form.querySelectorAll('button').forEach(b=>b.disabled=true);
+   try{
+    const {error:err}=await db.rpc('asf_review_access_request',{p_request,p_allow,p_note});
+    if(err)throw err;
+    toast(p_allow?'تمت الموافقة ومنح التصريح وإشعار العضو.':'تم رفض الطلب وإشعار العضو.');
+    await renderAccessQueue();
+   }catch(err){toast('تعذر معالجة الطلب: '+(err.message||'خطأ غير معروف'),true);
+    form.querySelectorAll('button').forEach(b=>b.disabled=false);}
+  };
+ });
+}
+
 function renderAccount(){
  if(!profile && commander){
   set('#page','<div class="section-card"><h3>إكمال الملف العسكري للقائد</h3><p class="muted">حساب القيادة مرتبط ببريدك المؤكد. لإصدار كود ASF العسكري وتفعيل إمكانية إرسال التقارير، أدخل بيانات شخصيتك داخل اللعبة مرة واحدة.</p><form id="leaderSetup"><label>اسمك داخل اللعبة<input name="game_name" required minlength="2" maxlength="80"></label><label>Discord User ID<input name="discord_id" required pattern="[0-9]{17,20}" inputmode="numeric" dir="ltr"></label><label>الرتبة<select name="rank">'+opt(RANKS.map(r=>[r,r]))+'</select></label><button class="btn primary">اعتماد ملف القائد وإصدار الكود العسكري</button></form></div>');

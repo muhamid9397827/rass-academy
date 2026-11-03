@@ -29,6 +29,7 @@ jobs:
           node portal/landing.spec.cjs
           node portal/recovery.spec.cjs
           node portal/ui-theme.spec.cjs
+          node portal/access-requests.spec.cjs
       - name: Server cleanup policy tests
         run: node portal/purge.spec.cjs
       - name: Live Supabase Auth readiness
@@ -50,6 +51,12 @@ jobs:
           fi
           grep -q "grant execute on function public.asf_commander_email_for_delivery() to service_role" portal/supabase/16-commander-delivery-address.sql
           grep -q "app_private.asf_email_bridge_key" portal/supabase/15-email-webhook-bridge.sql
+          grep -q "revoke all on public.asf_access_requests from public, anon, authenticated" portal/supabase/18-access-requests.sql
+          grep -q "grant select on public.asf_access_requests to authenticated" portal/supabase/18-access-requests.sql
+          grep -q "if auth.uid() is null or not public.asf_is_commander()" portal/supabase/18-access-requests.sql
+          grep -q "perform public.asf_set_delegation" portal/supabase/18-access-requests.sql
+          grep -q "access_decision" portal/supabase/19-access-request-notice-categories.sql
+          grep -q "access_request" portal/supabase/19-access-request-notice-categories.sql
           if grep -Eq 'NEW\.(title|body|sender_name|discord_id)' portal/supabase/15-email-webhook-bridge.sql; then
             echo 'Forbidden private report fields in outbound webhook'; exit 1
           fi
