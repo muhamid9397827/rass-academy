@@ -614,7 +614,7 @@ async function renderCourt(){
   const d=decisions.find(v=>v.case_id===c.id);return '<div class="section-card"><h3>'+esc(c.subject)+'</h3><p style="white-space:pre-wrap">'+esc(c.details)+'</p><p class="muted">'+date(c.created_at)+'</p><div>'+badge(d?(d.outcome==='approved'?'معتمدة':'مرفوضة'):'بانتظار القرار')+'</div>'+
   (!d?'<div class="row">'+btn('اعتماد','decide-yes',c.id)+btn('رفض','decide-no',c.id)+'</div>':'<p>'+esc(d.note||'')+'</p>')+'</div>'}).join('')||empty('لا توجد قضايا بعد'))+'</div>'+
  '<div class="section-card"><h3>تسجيل إنذار قضائي</h3><form id="warningForm">'+
- '<div class="grid two">'+input('player_name','اسم العسكري')+input('player_rank','الرتبة')+input('player_code','الكود العسكري')+
+ '<div class="grid two">'+input('player_name','اسم العسكري الكامل')+input('player_rank','الرتبة')+input('player_code','الكود العسكري')+input('player_discord_id','Discord ID للبحث الدقيق')+
  '<label>درجة الإنذار<select name="warning_level">'+opt([['شفهي','شفهي'],['وظيفي','وظيفي'],['نهائي','نهائي'],['إجراء آخر','إجراء آخر']])+'</select></label>'+
  '<label>مدة الإنذار بالأيام (اختياري)<input name="duration_days" type="number" min="0" max="3650"></label>'+
  '<label>رقم القضية المرتبطة (اختياري)<select name="case_id">'+opt([['','بدون قضية'],...cases.map(c=>[c.id,c.subject])])+'</select></label></div>'+
@@ -622,7 +622,7 @@ async function renderCourt(){
  '<label>العقوبة<textarea name="punishment" required minlength="3" maxlength="4000"></textarea></label>'+
  '<button class="btn primary" type="submit">تثبيت الإنذار في السجل</button></form></div>'+
  '<div class="section-card"><div class="row between"><h3>السجل القضائي والإنذارات</h3>'+badge(String(warnings.length)+' سجل')+'</div>'+
- '<input id="warningSearch" placeholder="ابحث بالاسم أو الكود أو الرتبة أو المخالفة">'+
+ '<div class="mp-court-lookup"><h4>استعلام سريع عن إنذارات عسكري</h4><p class="muted">أدخل الاسم الكامل ومعرّف Discord معًا لعرض الإنذارات النشطة. السجلات القديمة دون معرّف لا تظهر في الاستعلام المزدوج.</p><form id="warningLookupForm" class="grid two"><label>اسم العسكري الكامل<input name="player" required maxlength="80" placeholder="الاسم والكنية"></label><label>Discord ID<input name="discord" required inputmode="numeric" pattern="[0-9]{15,22}" maxlength="22"></label><button class="btn primary" type="submit">بحث عن الإنذارات النشطة</button></form><div id="warningLookupResult" aria-live="polite"></div></div><input id="warningSearch" placeholder="ابحث بالاسم أو الكود أو Discord أو الرتبة أو المخالفة">'+
  '<div class="row"><label>السجل<select id="warningScope"><option value="active">الإنذارات النشطة</option><option value="archive">الأرشيف: المنتهية والملغاة</option><option value="all">جميع السجلات</option></select></label></div><div id="warningRows"></div></div>');
  $('#page').onclick=async e=>{
   const b=e.target.closest('[data-action]');if(!b)return;
@@ -639,13 +639,20 @@ async function renderCourt(){
  };
  const filterWarnings=()=>{
   const text=String($('#warningSearch').value||'').trim().toLowerCase(),scope=$('#warningScope').value;
-  const matches=warnings.filter(w=>{const state=window.ASF_WORKFLOW.warningState(w);return(scope==='all'||(scope==='archive'?state.archived:!state.archived))&&[w.player_name,w.player_code,w.player_rank,w.offense,w.punishment].some(z=>String(z||'').toLowerCase().includes(text))});
+  const matches=warnings.filter(w=>{const state=window.ASF_WORKFLOW.warningState(w);return(scope==='all'||(scope==='archive'?state.archived:!state.archived))&&[w.player_name,w.player_discord_id,w.player_code,w.player_rank,w.offense,w.punishment].some(z=>String(z||'').toLowerCase().includes(text))});
   set('#warningRows',matches.map(w=>courtWarningCard(w)).join('')||empty('لا توجد نتائج'));
  };
  $('#warningSearch').oninput=filterWarnings;$('#warningScope').onchange=filterWarnings;filterWarnings();
+ $('#warningLookupForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),full=String(f.get('player')||'').trim(),discord=String(f.get('discord')||'').trim();
+  if(!isFullName(full)||!/^[0-9]{15,22}$/.test(discord))return toast('أدخل الاسم والكنية ومعرّف Discord الرقمي.',true);
+  const same=window.ASF_POLICE_UI.norm(full);const found=warnings.filter(w=>!window.ASF_WORKFLOW.warningState(w).archived&&w.player_discord_id===discord&&window.ASF_POLICE_UI.norm(w.player_name)===same);
+  set('#warningLookupResult','<p class="muted">'+found.length+' إنذار نشط مطابق</p>'+ (found.map(w=>courtWarningCard(w)).join('')||empty('لا توجد إنذارات نشطة مطابقة.')));
+ };
  $('#warningForm').onsubmit=async e=>{
   e.preventDefault();const f=new FormData(e.target);
-  const row={recorded_by:user.id,player_name:String(f.get('player_name')).trim(),player_rank:String(f.get('player_rank')).trim(),player_code:String(f.get('player_code')).trim(),warning_level:f.get('warning_level'),
+  if(!isFullName(f.get('player_name')))return toast('اكتب اسم العسكري والكنية، ولا تستخدم اسمًا واحدًا.',true);
+  const discord=String(f.get('player_discord_id')||'').trim();if(discord&&!/^[0-9]{15,22}$/.test(discord))return toast('معرّف Discord غير صحيح.',true);
+  const row={recorded_by:user.id,player_name:String(f.get('player_name')).trim(),player_discord_id:discord||null,player_rank:String(f.get('player_rank')).trim(),player_code:String(f.get('player_code')).trim(),warning_level:f.get('warning_level'),
    offense:String(f.get('offense')).trim(),punishment:String(f.get('punishment')).trim(),duration_days:f.get('duration_days')===''?null:Number(f.get('duration_days')),case_id:f.get('case_id')||null};
   const {error}=await db.from('asf_court_warnings').insert(row);if(error)return toast(error.message,true);
   toast('تم تثبيت الإنذار');return renderCourt();
@@ -654,7 +661,7 @@ async function renderCourt(){
 function courtWarningCard(w){
  const state=window.ASF_WORKFLOW.warningState(w);
  return '<div class="section-card"><div class="row between"><b>'+esc(w.player_name)+' — '+esc(w.player_rank)+'</b>'+badge(state.label)+'</div>'+
- '<p class="muted">'+esc(w.player_code||'بدون كود')+' · '+date(w.recorded_at)+' · '+esc(w.warning_level)+'</p>'+
+ '<p class="muted">'+esc(w.player_code||'بدون كود')+(w.player_discord_id?' · Discord: '+esc(w.player_discord_id):'')+' · '+date(w.recorded_at)+' · '+esc(w.warning_level)+'</p>'+
  '<p><b>المخالفة:</b> '+esc(w.offense)+'</p><p><b>العقوبة:</b> '+esc(w.punishment)+'</p>'+
  (state.expiresAt?'<p class="muted">نهاية المدة: '+date(state.expiresAt)+'</p>':'')+
  (w.cancelled_at?'<p class="muted">أُلغي بتاريخ '+date(w.cancelled_at)+'؛ السبب: '+esc(w.cancellation_reason)+'</p>':state.archived?'':btn('إلغاء الإنذار','cancel-warning',w.id,'warn'))+'</div>';
@@ -807,7 +814,8 @@ function renderAccount(){
   set('#page','<div class="section-card"><h3>إكمال الملف العسكري للقائد</h3><p class="muted">حساب القيادة مرتبط ببريدك المؤكد. لإصدار كود ASF العسكري وتفعيل إمكانية إرسال التقارير، أدخل بيانات شخصيتك داخل اللعبة مرة واحدة.</p><form id="leaderSetup"><label>اسمك داخل اللعبة<input name="game_name" required minlength="2" maxlength="80"></label><label>Discord User ID<input name="discord_id" required pattern="[0-9]{17,20}" inputmode="numeric" dir="ltr"></label><label>الرتبة<select name="rank">'+opt(RANKS.map(r=>[r,r]))+'</select></label><button class="btn primary">اعتماد ملف القائد وإصدار الكود العسكري</button></form></div>');
   $('#leaderSetup').onsubmit=async e=>{
    e.preventDefault();let f=new FormData(e.currentTarget);
-   const {data,error}=await db.rpc('asf_commander_profile_setup',{p_name:String(f.get('game_name')).trim(),p_discord:String(f.get('discord_id')).trim(),p_rank:f.get('rank')});
+   const fullName=String(f.get('game_name')).trim();if(!isFullName(fullName))return toast('يجب إدخال الاسم والكنية، لا يُقبل الاسم المفرد.',true);
+   const {data,error}=await db.rpc('asf_commander_profile_setup',{p_name:fullName,p_discord:String(f.get('discord_id')).trim(),p_rank:f.get('rank')});
    if(error)return toast(error.message,true);toast('تم إنشاء الملف العسكري للقائد: '+data);await loadIdentity(true);
   };return;
  }
@@ -815,7 +823,8 @@ function renderAccount(){
  set('#page','<div class="grid two"><div class="section-card"><h3>بطاقتي الرقمية</h3><p>الاسم: <b>'+esc(profile.game_name)+'</b></p><p>الرتبة: <b>'+esc(profile.rank)+'</b></p><p>الكود العسكري: <b>'+esc(profile.military_code||'—')+'</b></p><p>Discord ID: <b dir="ltr">'+esc(profile.discord_id)+'</b></p><p>حالة الحساب: '+badge(profile.status)+'</p></div>'+
  '<div class="section-card"><h3>طلب تعديل بيانات</h3><p>طلب تغيير الاسم أو Discord ID يخضع لموافقة القائد، ولا يؤثر على البيانات الحالية قبل قبول الطلب.</p><form id="changeForm">'+input('name','الاسم الجديد',profile.game_name)+input('discord','معرّف Discord الجديد',profile.discord_id)+'<button type="submit" class="btn primary">إرسال طلب التعديل</button></form></div></div>');
  $('#changeForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);
- const {error}=await db.from('asf_change_requests').insert({user_id:user.id,new_game_name:String(f.get('name')).trim(),new_discord_id:String(f.get('discord')).trim()});
+ const fullName=String(f.get('name')).trim();if(!isFullName(fullName))return toast('اكتب الاسم والكنية في طلب التعديل.',true);
+ const {error}=await db.from('asf_change_requests').insert({user_id:user.id,new_game_name:fullName,new_discord_id:String(f.get('discord')).trim()});
  if(error)return toast(error.message,true);toast('تم إرسال طلب التعديل إلى القائد');};
 }
 
