@@ -29,7 +29,7 @@ const mock="(() => {\n const scenario=new URLSearchParams(location.search).get('
  assert.equal(await page.locator('#confirmation-success').isVisible(),false,'missing session may not see success');
  await page.goto(base+'?scenario=success&error=access_denied',{waitUntil:'domcontentloaded'});
  await page.locator('#confirmation-error').waitFor({state:'visible'});
- assert.equal(await page.evaluate(()=>window.__confirmedQA?.calls),undefined,'explicit auth error prevents success validation');
+ assert.equal(await page.evaluate(()=>window.__confirmedQA?.calls),0,'explicit auth error prevents success validation');
  assert.equal(await page.evaluate(()=>new URLSearchParams(location.search).has('error')),false,'error query cleaned');
  assert.deepEqual(errors,[],'no uncaught JavaScript errors');
  await browser.close();
