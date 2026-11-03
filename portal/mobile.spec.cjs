@@ -51,6 +51,9 @@ async function section(page,name){
   }
   await page.locator('[data-mobile-page="compose"]').click();
   await page.locator('#reportForm').waitFor({state:'visible'});
+  await page.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight));
+  await page.locator('[data-mobile-page="dashboard"]').click();
+  assert.ok(await page.evaluate(()=>scrollY)<5,'changing mobile sections starts at the heading');
   const hit=await page.locator('#mobileBottomNav button').evaluateAll(nodes=>nodes.every(el=>el.getBoundingClientRect().height>=44));
   assert.ok(hit,'quick navigation has finger-sized controls');
   await page.setViewportSize({width:1280,height:900});
