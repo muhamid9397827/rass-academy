@@ -9,7 +9,7 @@ for(const id of ids){
  assert(!/(?:["']?answerIndex["']?)\s*:/.test(src),'Public marking answer detected in '+id);
  vm.runInNewContext(src,sandbox,{timeout:1000});
  const c=Object.values(sandbox.window.COURSES).find(x=>x.id===id);
- assert(c&&c.questions.length>=c.questionsPerQuiz,'Missing questions in '+id);
+ assert(c&&c.questions.length>=(c.questionsPerQuiz||10),'Missing questions in '+id);
  assert(c.questions.every(q=>q.id&&q.text&&Array.isArray(q.options)&&q.options.length>1),'Broken question in '+id);
  total+=c.questions.length;
 }
