@@ -1,6 +1,7 @@
 // Supabase Edge Function — durable, private commander notification outbox.
 // Only the trusted database bridge may invoke; never includes report text or PDF.
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
+import {processCourseMail} from './course-mail.mjs';
 Deno.serve(async (request) => {
  if(request.method!=='POST')return new Response('Method not allowed',{status:405});
  const url=Deno.env.get('SUPABASE_URL'),service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -45,6 +46,7 @@ Deno.serve(async (request) => {
   if(markError||marked!==true){markFailed++;continue}
   if(okay)sent++;else failed++;
  }
- return Response.json({status:'processed',sent,failed,markFailed,claimed:(items||[]).length},
-  {status:markFailed?207:200});
+ const courses=await processCourseMail(admin,{key,from});
+ return Response.json({status:'processed',sent,failed,markFailed,claimed:(items||[]).length,courses},
+  {status:markFailed||courses.markFailed?207:200});
 });

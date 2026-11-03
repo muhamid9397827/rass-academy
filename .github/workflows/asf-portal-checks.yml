@@ -41,6 +41,7 @@ jobs:
           node portal/access-requests.spec.cjs
           node portal/completion.spec.cjs
           node portal/mobile.spec.cjs
+          node portal/responsibilities.spec.cjs
       - name: Mobile QA screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -57,6 +58,7 @@ jobs:
           node portal/build-academy-catalog.cjs --check
           node portal/academy-results.spec.mjs
           node portal/workflow-tools.spec.cjs
+          node portal/course-mail.spec.mjs
       - name: Live Supabase Auth readiness
         run: node portal/auth-health.spec.cjs && node portal/result-health.spec.cjs
       - name: Security regression guards
