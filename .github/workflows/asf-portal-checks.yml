@@ -26,6 +26,7 @@ jobs:
           node portal/smoke.spec.cjs
           node portal/flow.spec.cjs
           node portal/landing.spec.cjs
+          node portal/recovery.spec.cjs
           node portal/ui-theme.spec.cjs
       - name: Server cleanup policy tests
         run: node portal/purge.spec.cjs
