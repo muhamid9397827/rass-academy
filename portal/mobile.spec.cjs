@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {portalMock,academyState}=require('./completion-fixtures.cjs');
 const reason='سبب طلب التفعيل مع تفاصيل طويلة لاختبار التفاف النص وظهور الإجراءات بوضوح. '.repeat(5);
-const ledger={receipt:'ACD-00000001',trainee_name:'اسم متدرب طويل لاختبار الشاشة الصغيرة',trainee_rank:'ملازم أول',discord_id:'99999999999999999999',course_title:'دورة الشخصية العسكرية',score:9,total:10,percentage:90,passed:true,received_at:new Date().toISOString(),legacy_status:'unconfirmed'};
+const ledger={is_test:false,receipt:'ACD-00000001',trainee_name:'اسم متدرب طويل لاختبار الشاشة الصغيرة',trainee_rank:'ملازم أول',discord_id:'99999999999999999999',course_title:'دورة الشخصية العسكرية',score:9,total:10,percentage:90,passed:true,received_at:new Date().toISOString(),legacy_status:'unconfirmed'};
 let sdk=portalMock.replace("military_code:'ASF-QA001'",'activation_reason:'+JSON.stringify(reason)+",military_code:'ASF-QA001'")
  .replace('asf_police_overrides:[]','asf_police_overrides:[],asf_academy_results:'+JSON.stringify([ledger]))
  .replace('asf_change_requests:[]','asf_change_requests:'+JSON.stringify([{id:'qa-change',user_id:'11111111-2222-4333-8444-555555555572',new_game_name:'اسم تجريبي طويل لتعديل العضوية',new_discord_id:'99999999999999999999',state:'pending'}]));

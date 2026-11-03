@@ -7,7 +7,7 @@ const mockSupabase=String.raw`(() => {
  const profile={user_id:'u1',game_name:'مستخدم تجريبي',rank:'رقيب',military_code:'ASF-QA003',status:'approved',court_enabled:false};
  class Query {
   constructor(table){this.table=table}
-  select(){return this} eq(){return this} is(){return this} limit(){return this}
+  select(){return this} eq(){return this} is(){return this} limit(){return this} order(){return this}
   async maybeSingle(){return {data:profile,error:null}}
   then(ok,bad){const rows=this.table==='asf_profiles'?[profile]:[];return Promise.resolve({data:rows,error:null}).then(ok,bad)}
  }
@@ -25,9 +25,9 @@ const mockSupabase=String.raw`(() => {
  await page.goto('http://127.0.0.1:8000/portal/',{waitUntil:'domcontentloaded'});
  await page.locator('#workspace').waitFor({state:'visible'});
  assert.equal(await page.locator('.dashboard-card').count(),4,'all four portal sections stay visible');
- assert.equal(await page.locator('.dashboard-card.is-restricted').count(),1,'court is visibly restricted');
- assert.match(await page.locator('.dashboard-card.is-restricted').textContent(),/لا تملك صلاحية الدخول/);
- await page.locator('.dashboard-card.is-restricted').click();
+ assert.equal(await page.locator('.dashboard-card.is-restricted').count(),2,'court and police are separately restricted');
+ assert.match(await page.locator('[data-section="court"].is-restricted').textContent(),/لا تملك صلاحية الدخول/);
+ await page.locator('[data-section="court"].is-restricted').click();
  assert.equal(await page.locator('#restrictedModal').isVisible(),true,'restriction modal opens');
  assert.match(await page.locator('#restrictedMessage').textContent(),/تصريح/);
  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth);
