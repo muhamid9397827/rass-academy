@@ -19,6 +19,7 @@ async function section(page,name){
  await page.locator('#portalSidebar [data-page="'+name+'"]').click();
  await page.locator('#page .empty').filter({hasText:'جارٍ تحميل البيانات...'}).waitFor({state:'hidden'});
  assert.equal(await page.locator('#mobileMenuToggle').getAttribute('aria-expanded'),'false','navigation closes drawer');
+ await page.locator('#portalSidebar').waitFor({state:'hidden'});
  assert.equal(await page.locator('#portalSidebar').evaluate(el=>el.inert),true,'closed drawer cannot capture keyboard focus');
  assert.doesNotMatch(await page.locator('#page').innerText(),/تعذر تحميل القسم/);
 }
@@ -32,7 +33,7 @@ async function section(page,name){
   await page.goto(base);await page.locator('#workspace').waitFor({state:'visible'});
   assert.equal(await page.locator('#mobileBottomNav').isVisible(),true);
   await fits(page,'dashboard '+width);
-  if(width===390)await page.screenshot({path:'/tmp/asf-mobile/dashboard-390.png',fullPage:true});
+  if(width===390)await page.screenshot({path:'/tmp/asf-mobile/dashboard-390.png',fullPage:true,animations:'disabled'});
   await page.locator('#mobileMore').click();
   assert.equal(await page.locator('#mobileMenuToggle').getAttribute('aria-expanded'),'true');
   await page.keyboard.press('Escape');
@@ -45,7 +46,7 @@ async function section(page,name){
    if(name==='members'&&width<=430){
     await page.waitForFunction(()=>document.querySelector('.mobile-record-table td')?.dataset.label==='الاسم');
     assert.equal(await page.locator('.mobile-record-table').evaluate(el=>getComputedStyle(el).display),'block');
-    if(width===390)await page.screenshot({path:'/tmp/asf-mobile/members-390.png',fullPage:true});
+    if(width===390)await page.screenshot({path:'/tmp/asf-mobile/members-390.png',fullPage:true,animations:'disabled'});
    }
   }
   await page.locator('[data-mobile-page="compose"]').click();
@@ -64,19 +65,19 @@ async function section(page,name){
   await page.locator('#showLogin').click();await page.locator('#authToggle').click();
   await fits(page,'signup '+width);
   assert.ok(Number.parseFloat(await page.locator('#email').evaluate(el=>getComputedStyle(el).fontSize))>=16,'no iOS input zoom');
-  if(width===390)await page.screenshot({path:'/tmp/asf-mobile/signup-390.png',fullPage:true});
+  if(width===390)await page.screenshot({path:'/tmp/asf-mobile/signup-390.png',fullPage:true,animations:'disabled'});
   await page.goto(base+'academy.html');await page.locator('#start-facilities-training').click();await fits(page,'academy entry '+width);
-  await page.locator('#trainee-name').fill('متدرّب تجريبي');await page.locator('#trainee-discord').fill('99999999999999999999');await page.locator('#trainee-rank').selectOption('جندي');await page.locator('#course-select').selectOption('operations');await page.locator('#simulation-consent').check();await page.locator('#entry-submit-button').click();
+  await page.locator('#trainee-name').fill('متدرّب تجريبي');await page.locator('#trainee-discord').fill('99999999999999999999');await page.locator('#trainee-rank').selectOption('جندي');await page.locator('#course-select').selectOption('operations');await page.locator('label[for="simulation-consent"]').click();assert.equal(await page.locator('#simulation-consent').isChecked(),true);await page.locator('#entry-submit-button').click();
   await page.locator('#study-view').waitFor({state:'visible'});await fits(page,'study '+width);await page.close();
   const quiz=await browser.newPage({viewport:{width,height:844}});quiz.on('pageerror',e=>errors.push(e.message));
   const state={...academyState,stage:'quiz',result:null,optionOrders:Object.fromEntries(academyState.questionIds.map(id=>[id,[0,1,2]])),answers:{},visibilityCount:0,studyStartedAt:Date.now()-600000,studyEndsAt:Date.now()-1000,quizStartedAt:Date.now(),quizEndsAt:Date.now()+600000,createdAt:Date.now(),updatedAt:Date.now()};
   await quiz.addInitScript(s=>localStorage.setItem('asf-portal-academy-v1:active-session',JSON.stringify(s)),state);
   await quiz.goto(base+'academy.html');await quiz.locator('#start-facilities-training').click();await quiz.locator('#resume-button').click();await quiz.locator('#quiz-view').waitFor({state:'visible'});await fits(quiz,'quiz '+width);
-  if(width===390)await quiz.screenshot({path:'/tmp/asf-mobile/quiz-390.png',fullPage:true});await quiz.close();
+  if(width===390)await quiz.screenshot({path:'/tmp/asf-mobile/quiz-390.png',fullPage:true,animations:'disabled'});await quiz.close();
   const result=await browser.newPage({viewport:{width,height:844}});
   await result.addInitScript(s=>localStorage.setItem('asf-portal-academy-v1:last-result',JSON.stringify(s)),academyState);
   await result.goto(base+'academy.html');await result.locator('#start-facilities-training').click();await result.locator('#resume-button').click();await result.locator('#result-view').waitFor({state:'visible'});await fits(result,'result '+width);
-  if(width===390)await result.screenshot({path:'/tmp/asf-mobile/result-390.png',fullPage:true});await result.close();
+  if(width===390)await result.screenshot({path:'/tmp/asf-mobile/result-390.png',fullPage:true,animations:'disabled'});await result.close();
  }
  assert.deepEqual(errors,[],'no unhandled JavaScript errors');
  await browser.close();console.log('PASS mobile: 320/390/430/768, 13 workspace sections, drawers, touch controls, tables, signup, study, quiz and result; desktop preserved');
