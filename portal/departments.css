@@ -1,0 +1,46 @@
+/* Department workspaces — academy and recruitment, scoped to internal roles. */
+#departmentNav[hidden],.department-nav[hidden]{display:none!important}
+.department-nav{display:flex;align-items:center;gap:7px}
+.department-nav .nav-role-marker{margin-inline-start:auto;white-space:nowrap;font-size:9px;line-height:1.4;color:#88d8d1;background:rgba(92,192,185,.11);border:1px solid rgba(92,192,185,.21);border-radius:8px;padding:2px 6px}
+.dept-hero{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:clamp(23px,4vw,42px);background:radial-gradient(circle at 90% 10%,rgba(105,220,211,.14),transparent 35%),linear-gradient(120deg,#133344,#0b2234);border:1px solid rgba(116,209,202,.28);border-radius:21px;margin-bottom:20px;box-shadow:0 18px 40px #0002}
+.dept-eyebrow{color:#7fe0d6;font-size:11px;font-weight:900}
+.dept-hero h2{color:#f0f9fa;font-size:clamp(22px,3vw,34px);margin:10px 0}
+.dept-hero p{color:#bdd5dc;line-height:1.8;font-size:12px;max-width:630px;margin:0}
+.dept-current-role{color:#b5f2e3;background:rgba(92,203,180,.1);border:1px solid rgba(92,203,180,.27);border-radius:999px;padding:9px 13px;font-weight:800;font-size:11px;white-space:normal;text-align:center}
+.dept-shortcuts{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:13px;margin-bottom:22px}
+.dept-shortcut{display:flex;flex-direction:column;justify-content:center;gap:6px;text-align:right;border:1px solid rgba(120,196,206,.25);border-radius:15px;padding:19px;background:linear-gradient(135deg,rgba(18,50,67,.95),rgba(11,31,47,.95));color:#e6f9f7;min-height:102px}
+button.dept-shortcut{cursor:pointer}button.dept-shortcut:hover{border-color:#7ee1d6;background:#214653}
+.dept-shortcut b{font-size:11px;color:#b2cbd2}.dept-shortcut strong{font-size:16px;color:#e9faf7}
+.dept-section{margin-bottom:19px;overflow:hidden}
+.dept-section-title{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:13px}
+.dept-section-title h3{margin:0;font-size:20px;color:#eefafa}
+.dept-section-title small{font-size:11px;color:#c7d9da;font-weight:400}
+.dept-chip{display:inline-flex;align-items:center;border-radius:999px;color:#8ae1d5;background:rgba(95,199,183,.09);border:1px solid rgba(95,199,183,.27);padding:5px 11px;font-size:11px;font-weight:800}
+.dept-hint{font-size:12px;color:#b4ccd3;line-height:1.9;margin:0 0 15px}
+.dept-record-list,.dept-reward-list{display:grid;gap:11px;margin-top:14px}
+.dept-record{border:1px solid rgba(126,186,197,.22);border-radius:14px;background:rgba(17,44,62,.72);padding:17px;min-width:0}
+.dept-record-head{display:flex;align-items:center;justify-content:space-between;gap:13px;flex-wrap:wrap;margin-bottom:9px}
+.dept-record-head strong{color:#f0fafb;font-size:14px}
+.dept-record>small{color:#a6c8d0;font-size:11px;line-height:1.8;display:block}
+.dept-record-description{color:#cee0e6;font-size:12px;line-height:1.85;white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0}
+.dept-state-unpaid,.dept-state-paid{font-size:10px;border-radius:100px;padding:5px 9px;border:1px solid rgba(231,177,114,.34);color:#f2d1a4;background:rgba(231,177,114,.08)}
+.dept-state-paid{border-color:rgba(107,218,177,.39);color:#91f3c7;background:rgba(107,218,177,.09)}
+.dept-record .btn{margin-top:14px;max-width:100%;white-space:normal}
+.dept-empty{text-align:center;padding:25px 18px;color:#b7cfd5;border:1px dashed rgba(120,190,196,.28);border-radius:14px}
+.dept-role-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0 28px}
+.dept-role-form label{display:grid;gap:7px;color:#d4e9eb;font-size:12px}
+.dept-role-form select,#departmentAdminSelect{width:100%;min-height:47px;background:#102639;color:#eef8f9;border:1px solid rgba(139,187,208,.34);border-radius:10px;padding:10px}
+.dept-role-actions{grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap}
+.dept-role-actions .btn{flex:0 1 185px}
+.dept-role-roster{display:grid;gap:7px}
+.dept-roster-item{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(115,196,195,.07);border-radius:10px;padding:10px 13px;font-size:12px}
+.dept-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}
+.dept-quick-access{border:1px solid rgba(115,222,204,.29);border-radius:18px;padding:23px;background:linear-gradient(115deg,rgba(23,75,73,.48),rgba(10,36,51,.75));margin:18px 0}
+.dept-quick-access .dept-section-title{margin-bottom:14px}
+.dept-quick-access .dept-quick-actions{display:flex;gap:10px;flex-wrap:wrap}
+.dept-quick-access .dept-quick-actions button{flex:1 1 190px;min-height:49px}
+.dept-reward-cell{font-size:11px;line-height:1.8;white-space:normal;min-width:120px}
+.dept-reward-cell .btn{display:block;margin-top:6px;white-space:normal}
+.dept-role-form select:focus-visible,#departmentAdminSelect:focus-visible,.dept-record button:focus-visible{outline:3px solid #f1c78f;outline-offset:2px}
+@media(max-width:750px){.dept-hero{align-items:flex-start;flex-direction:column}.dept-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr))}.dept-grid{grid-template-columns:1fr}}
+@media(max-width:520px){.dept-hero{padding:23px 17px}.dept-hero h2{font-size:25px}.dept-shortcuts,.dept-role-form{grid-template-columns:1fr}.dept-role-actions{flex-direction:column}.dept-role-actions .btn{flex:1 1 44px;width:100%}.dept-record{padding:14px}.dept-quick-access{padding:18px}}

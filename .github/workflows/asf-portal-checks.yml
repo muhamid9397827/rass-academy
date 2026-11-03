@@ -43,6 +43,7 @@ jobs:
           node portal/completion.spec.cjs
           node portal/mobile.spec.cjs
           node portal/responsibilities.spec.cjs
+          node portal/departments.spec.cjs
       - name: Mobile QA screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -56,6 +57,7 @@ jobs:
         run: |
           node --check portal/academy-config.js
           node --check portal/workflow-tools.js
+          node --check portal/departments.js
           node portal/build-academy-catalog.cjs --check
           node portal/academy-results.spec.mjs
           node portal/workflow-tools.spec.cjs
@@ -82,6 +84,10 @@ jobs:
           grep -q "Activation reason is required before approval" portal/supabase/20-activation-reason-required.sql
           grep -q "where user_id=auth.uid() and status='pending'" portal/supabase/20-activation-reason-required.sql
           grep -q "revoke all on function public.asf_submit_activation_reason(text) from public,anon,authenticated" portal/supabase/20-activation-reason-required.sql
+          grep -q "Only this department head can appoint its instructors" portal/supabase/migrations/20261103221000_departments_trainers_rewards.sql
+          grep -q "Another supervisor must review your own reward" portal/supabase/migrations/20261103221000_departments_trainers_rewards.sql
+          grep -q "check(amount=150000)" portal/supabase/migrations/20261103221000_departments_trainers_rewards.sql
+          grep -q "asf_department_roles enable row level security" portal/supabase/migrations/20261103221000_departments_trainers_rewards.sql
           grep -q "revoke all on public.asf_access_requests from public, anon, authenticated" portal/supabase/18-access-requests.sql
           grep -q "grant select on public.asf_access_requests to authenticated" portal/supabase/18-access-requests.sql
           grep -q "if auth.uid() is null or not public.asf_is_commander()" portal/supabase/18-access-requests.sql

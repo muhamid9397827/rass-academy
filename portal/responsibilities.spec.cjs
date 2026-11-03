@@ -28,7 +28,7 @@ let sdk=portalMock.replace(" const userId=",' const role=new URLSearchParams(loc
  assert.match(await page.locator('.course-notice-flow').innerText(),/الإضافة اليدوية إلى Google لا تولّد إشعارًا/);
  await page.locator('.course-notice-flow summary').click();
  page.once('dialog',d=>d.accept());await page.locator('[data-deliver-result]').click();
- await page.getByText('✓ تم تسليم الدورة',{exact:true}).waitFor();
+ await page.getByText('✓ تم تسليم الرول (توثيق يدوي)',{exact:true}).waitFor();
  assert.match(await page.locator('#academyResultsRows').innerText(),/مسؤول الدورة التجريبي/);
  assert.equal(await page.locator('[data-deliver-result]').count(),0,'confirmed result is not editable');
  await page.screenshot({path:'/tmp/asf-mobile/course-delivery-390.png',fullPage:true});
