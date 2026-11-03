@@ -1,0 +1,35 @@
+:root,
+[data-theme="light"],
+[data-theme="dark"]{
+  --bg:#081321;
+  --background:#081321;
+  --surface:rgba(16,35,56,.94);
+  --surface-solid:#102338;
+  --surface-raised:#16324b;
+  --surface-soft:#193851;
+  --surface-strong:#16324b;
+  --card:#16324b;
+  --border:#294b65;
+  --line:#294b65;
+  --primary:#55c7d9;
+  --primary-hover:#7ee2ee;
+  --primary-soft:rgba(85,199,217,.14);
+  --primary-strong:#7ee2ee;
+  --text:#eaf4ff;
+  --text-soft:#d6e5f2;
+  --text-muted:#9fb7c9;
+  --muted:#9fb7c9;
+  --warning:#ffb347;
+  color-scheme:dark;
+}
+body{background:radial-gradient(circle at 85% -5%,rgba(45,111,128,.28),transparent 32%),#081321!important;color:#eaf4ff!important}
+.site-header{background:rgba(8,19,33,.9)!important;border-color:rgba(85,199,217,.18)!important;backdrop-filter:blur(16px)}
+.brand__mark,.eyebrow{color:#7ee2ee!important}.brand__subtitle,.landing-location,.sectors-section__heading p{color:#9fb7c9!important}
+.landing-hero,.sector-card,.course-card,.entry-card,.study-card,.quiz-card,.result-card,.panel,.progress-steps{background:linear-gradient(145deg,#16324b,#102338)!important;border-color:#294b65!important;box-shadow:0 18px 45px rgba(0,0,0,.2)!important}
+.landing-hero{overflow:hidden}.landing-hero__emblem{color:#7ee2ee!important}.sector-card{transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease!important}.sector-card:hover,.course-card:hover{transform:translateY(-4px)!important;border-color:#55c7d9!important;box-shadow:0 18px 42px rgba(0,0,0,.3)!important}
+.landing-hero h1:focus{outline:none}
+.button--primary{background:linear-gradient(135deg,#55c7d9,#7ee2ee)!important;border-color:#55c7d9!important;color:#061923!important}.button,.icon-button{transition:transform .18s ease,filter .18s ease,border-color .18s ease!important}.button:hover,.icon-button:hover{transform:translateY(-2px);filter:brightness(1.08)}.button--ghost,.icon-button{background:rgba(22,50,75,.48)!important;border-color:#294b65!important;color:#eaf4ff!important}
+input,select,textarea{background:#091827!important;border-color:#31516b!important;color:#eaf4ff!important}input:focus,select:focus,textarea:focus{border-color:#55c7d9!important;box-shadow:0 0 0 3px rgba(85,199,217,.13)!important}
+.progress-step__number{background:#102338!important;border-color:#31516b!important}.progress-step.is-active .progress-step__number,.progress-step.is-complete .progress-step__number{background:#55c7d9!important;color:#061923!important;border-color:#55c7d9!important}
+.status-toast{background:#16324b!important;border-color:#55c7d9!important;color:#eaf4ff!important}
+@media(max-width:640px){.site-header__inner{padding-inline:14px}.brand__subtitle,.simulation-badge{display:none}.landing-hero{padding:24px 19px!important}.landing-hero h1{font-size:2rem!important}.sector-card,.course-card{border-radius:18px!important}}

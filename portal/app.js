@@ -22,6 +22,16 @@ const has=(permission,kind=null)=>commander||grants.some(g=>g.permission===permi
 function showScreen(which){['welcome','authScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which)}
 function openAcademy(){window.open('academy.html','_blank','noopener')}
 $('#openAcademy').onclick=openAcademy;
+const restrictedModal=$('#restrictedModal');
+function showRestricted(section){
+ $('#restrictedTitle').textContent=section+' — يتطلب تصريحًا خاصًا';
+ $('#restrictedMessage').textContent='لا تملك صلاحية الدخول إلى قسم '+section+'. هذا القسم مخصص للمصرّح لهم فقط؛ تواصل مع القيادة لطلب التصريح المناسب.';
+ restrictedModal.hidden=false;document.body.classList.add('modal-open');$('#ackRestricted').focus();
+}
+function closeRestricted(){restrictedModal.hidden=true;document.body.classList.remove('modal-open')}
+$('#closeRestricted').onclick=closeRestricted;$('#ackRestricted').onclick=closeRestricted;
+restrictedModal.onclick=e=>{if(e.target===restrictedModal)closeRestricted()};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!restrictedModal.hidden)closeRestricted()});
 let registering=false;
 function authForm(mode){registering=mode==='register';showScreen('authScreen');$('#authTitle').textContent=registering?'إنشاء حساب جديد':'تسجيل الدخول';$('#registerFields').hidden=!registering;$('#authSubmit').textContent=registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authToggle').textContent=registering?'لديك حساب بالفعل؟ تسجيل الدخول':'ليس لديك حساب؟ إنشاء حساب';$('#forgotPassword').hidden=registering;['gameName','discordId','rank'].forEach(id=>$('#'+id).required=registering);}
 $('#showLogin').onclick=()=>authForm('login');$('#showRegister').onclick=()=>authForm('register');
@@ -121,12 +131,19 @@ async function renderDashboard(){
  const {data:rs,error}=await db.from('asf_reports').select('id,kind,submitted_at,deleted_at',{count:'exact'}).is('deleted_at',null).limit(100);
  if(error)throw error;
  const own=(rs||[]).filter(r=>r.kind!=='secret').length;
+ const courtAllowed=commander||profile?.court_enabled||has('court.manage');
  const info=[
- ['الكود العسكري',profile?.military_code||'القائد'],['تقارير يمكن عرضها',String(rs?.length||0)],['مجلس القضاء',commander||profile?.court_enabled||has('court.manage')?'مسموح':'غير مفعل'],['الحساب','مفعل']
+ ['الكود العسكري',profile?.military_code||'القائد'],['تقارير يمكن عرضها',String(rs?.length||0)],['مجلس القضاء',courtAllowed?'مسموح':'غير مفعل'],['الحساب','مفعل']
  ];
- set('#page','<div class="grid four">'+info.map(([k,v])=>'<div class="metric"><div class="caption">'+esc(k)+'</div><div class="n" style="font-size:20px">'+esc(v)+'</div></div>').join('')+'</div>'+
- '<div class="grid two" style="margin-top:18px"><section class="section-card"><h3>التقارير</h3><p>إنشاء تقرير منظم أو حر، تحميل PDF، متابعة ملاحظات القائد.</p><button class="btn primary" id="dashCompose">إرسال تقرير</button></section><section class="section-card"><h3>الصلاحيات</h3><p>التقارير السرية للغاية تعرض للقائد فقط حتى مع وجود قيادات مفوضة.</p><button class="btn ghost" id="dashAccount">ملفي الشخصي</button></section></div>');
- $('#dashCompose').onclick=()=>navigate('compose');$('#dashAccount').onclick=()=>navigate('account');
+ const sectionCard=(id,icon,title,text,allowed=true,label='دخول القسم')=>'<button class="dashboard-card'+(allowed?'':' is-restricted')+'" data-section="'+id+'" type="button" aria-label="'+esc(title+(allowed?'':' — لا تملك صلاحية الدخول'))+'"><span class="dashboard-card__icon" aria-hidden="true">'+icon+'</span><span class="dashboard-card__body"><span class="dashboard-card__label">قسم البوابة</span><strong>'+esc(title)+'</strong><small>'+esc(text)+'</small></span>'+(allowed?'<span class="dashboard-card__action">'+esc(label)+' <b aria-hidden="true">←</b></span>':'<span class="restricted-overlay"><span class="lock-icon" aria-hidden="true">🔒</span><span class="restricted-badge">مقيّد</span><b>لا تملك صلاحية الدخول</b><small>يتطلب تصريحًا خاصًا</small></span>')+'</button>';
+ set('#page','<section class="user-welcome"><div><span class="eyebrow">مرحبًا بعودتك</span><h2>'+esc(profile?.game_name||'قائد أمن المنشآت')+'</h2><p>يمكنك متابعة أعمالك والوصول إلى الأقسام المصرّح بها من لوحة التحكم.</p></div><div class="identity-chips"><span><small>الرتبة</small><b>'+esc(profile?.rank||'القيادة')+'</b></span><span><small>الكود العسكري</small><b dir="ltr">'+esc(profile?.military_code||'—')+'</b></span></div></section>'+
+ '<div class="grid four dashboard-metrics">'+info.map(([k,v])=>'<div class="metric"><div class="caption">'+esc(k)+'</div><div class="n">'+esc(v)+'</div></div>').join('')+'</div>'+
+ '<div class="section-intro"><div><span class="eyebrow">مساحة العمل</span><h2>أقسام البوابة</h2></div><p>اختر القسم المطلوب للمتابعة</p></div><div class="dashboard-sections">'+
+ sectionCard('reports','▤','التقارير','إنشاء التقارير ومتابعة المراجعات')+
+ sectionCard('court','⚖','مجلس القضاء','القضايا والقرارات والسجل القضائي',courtAllowed)+
+ sectionCard('police','🛡','الشرطة العسكرية','اللوائح واحتساب العقوبات')+
+ sectionCard('academy','🎓','الأكاديمية والتأهيل','الدورات والمسارات التدريبية')+'</div>');
+ $('#page').querySelectorAll('.dashboard-card').forEach(card=>card.onclick=()=>{if(card.classList.contains('is-restricted'))showRestricted(card.querySelector('strong')?.textContent||'القسم');else navigate(card.dataset.section)});
  if(commander){
   const {data:notices,error:nerr}=await db.from('asf_notifications').select('*').order('created_at',{ascending:false}).limit(20);
   if(!nerr){
