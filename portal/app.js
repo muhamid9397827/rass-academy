@@ -26,6 +26,7 @@ let accessPrefill='court.manage';
 const RANKS=['جندي','جندي أول','عريف','وكيل رقيب','رقيب','رقيب أول','رئيس رقباء','ملازم','ملازم أول','نقيب','رائد','مقدم','عقيد','عميد','لواء','فريق','فريق أول'];
 const cfg=window.ASF_CONFIG||{}, ready=!!(cfg.supabaseUrl&&cfg.supabaseAnonKey&&window.supabase);
 const PORTAL_AUTH_REDIRECT='https://muhamid9397827.github.io/rass-academy/portal/';
+const PORTAL_CONFIRMATION_REDIRECT='https://muhamid9397827.github.io/rass-academy/portal/confirmed.html';
 // Snapshot the recovery intent BEFORE Supabase processes and removes the URL fragment.
 const recoveryHash=new URLSearchParams(window.location.hash.replace(/^#/,'')),
       recoveryQuery=new URLSearchParams(window.location.search);
@@ -59,8 +60,9 @@ $('#requestRestrictedAccess').onclick=()=>{closeRestricted();navigate('access')}
 restrictedModal.onclick=e=>{if(e.target===restrictedModal)closeRestricted()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!restrictedModal.hidden)closeRestricted()});
 let registering=false,recoveryMode=recoveryLinkOpened;
-function authForm(mode){registering=mode==='register';showScreen('authScreen');$('#authTitle').textContent=registering?'إنشاء حساب جديد':'تسجيل الدخول';$('#registerFields').hidden=!registering;$('#authSubmit').textContent=registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authToggle').textContent=registering?'لديك حساب بالفعل؟ تسجيل الدخول':'ليس لديك حساب؟ إنشاء حساب';$('#forgotPassword').hidden=registering;['gameName','discordId','rank'].forEach(id=>$('#'+id).required=registering);}
+function authForm(mode){registering=mode==='register';showScreen('authScreen');$('#authTitle').textContent=registering?'إنشاء حساب جديد':'تسجيل الدخول';$('#registerFields').hidden=!registering;$('#authSubmit').textContent=registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authToggle').textContent=registering?'لديك حساب بالفعل؟ تسجيل الدخول':'ليس لديك حساب؟ إنشاء حساب';$('#forgotPassword').hidden=registering;['gameName','discordId','rank','activationReason'].forEach(id=>$('#'+id).required=registering);}
 $('#showLogin').onclick=()=>authForm('login');$('#showRegister').onclick=()=>authForm('register');
+$('#registerFromHero').onclick=()=>authForm('register');
 $('#authToggle').onclick=()=>authForm(registering?'login':'register');
 $('#forgotPassword').onclick=async()=>{
  if(!ready)return toast('ربط قاعدة البيانات غير متاح',true);
@@ -73,15 +75,31 @@ $('#verifyEmailBack').onclick=()=>showScreen('welcome');
 $('#rank').innerHTML=opt(RANKS.map(r=>[r,r]));
 $('#signOut').onclick=async()=>{if(db)await db.auth.signOut();user=null;profile=null;commander=false;grants=[];showScreen('welcome');$('#signOut').hidden=true;$('#sessionLabel').textContent='';};
 $('#refreshProfile').onclick=()=>loadIdentity(true);
+$('#pendingReasonForm').onsubmit=async e=>{
+ e.preventDefault();
+ if(!ready||!user)return toast('سجّل الدخول أولًا لاستكمال طلب التفعيل.',true);
+ const p_reason=$('#pendingReason').value.trim();
+ if(p_reason.length<10||p_reason.length>500)return toast('اذكر سببًا واضحًا من 10 إلى 500 حرف.',true);
+ const submit=$('#submitPendingReason');submit.disabled=true;
+ try{
+  const {error}=await db.rpc('asf_submit_activation_reason',{p_reason});
+  if(error)throw error;
+  toast('تم تسجيل سبب التفعيل وإشعار القيادة.');
+  await loadIdentity(true);
+ }catch(err){toast('تعذر إرسال السبب: '+(err.message||'خطأ غير معروف'),true)}
+ finally{submit.disabled=false}
+};
 $('#authForm').onsubmit=async e=>{
  e.preventDefault();if(!ready)return toast('يلزم إعداد Supabase أولًا. الدورات العامة متاحة.',true);
  const email=$('#email').value.trim(),password=$('#password').value;
  $('#authSubmit').disabled=true;
  try{
   if(registering){
-    const game_name=$('#gameName').value.trim(),discord_id=$('#discordId').value.trim(),rank=$('#rank').value;
+    const game_name=$('#gameName').value.trim(),discord_id=$('#discordId').value.trim(),rank=$('#rank').value,
+      activation_reason=$('#activationReason').value.trim();
     if(!/^[0-9]{17,20}$/.test(discord_id))throw Error('معرّف Discord يجب أن يكون رقميًا من 17 إلى 20 خانة.');
-    const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:PORTAL_AUTH_REDIRECT,data:{asf_portal:'true',game_name,discord_id,rank}}});
+    if(activation_reason.length<10||activation_reason.length>500)throw Error('سبب طلب التفعيل إلزامي ويجب أن يتراوح بين 10 و500 حرف.');
+    const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:PORTAL_CONFIRMATION_REDIRECT,data:{asf_portal:'true',game_name,discord_id,rank,activation_reason}}});
     if(error)throw error;
     if(!data?.session){
       // With email confirmation enabled Supabase returns a user but NO session.
@@ -146,7 +164,7 @@ async function init(){
    }
    return;
   }
-  if(data?.user){user=data.user;await loadIdentity()}else showScreen('welcome');
+  if(data?.user){user=data.user;await loadIdentity()}else if(new URLSearchParams(window.location.search).get('login')==='1')authForm('login');else showScreen('welcome');
  }catch(err){
   showScreen(recoveryMode?'recoveryScreen':'welcome');
   toast('تعذر التحقق من جلسة تسجيل الدخول.',true);
@@ -226,7 +244,12 @@ async function loadIdentity(silent=false){
    document.querySelector('[data-page="access-queue"]').hidden=!commander;
    await navigate(pageName);
   }else{
-   showScreen('pendingScreen');$('#pendingText').textContent=p?.status==='rejected'?'تم رفض الطلب. تواصل مع الإدارة.':p?.status==='suspended'?'الحساب موقوف حاليًا.':'الحساب بانتظار موافقة القائد. يمكنك دخول الدورات العامة من الصفحة الرئيسية.';
+   showScreen('pendingScreen');
+   const missingReason=p?.status==='pending'&&String(p?.activation_reason||'').trim().length<10;
+   $('#pendingText').textContent=p?.status==='rejected'?'تم رفض الطلب. تواصل مع الإدارة.':p?.status==='suspended'?'الحساب موقوف حاليًا.':missingReason?'يجب استكمال سبب طلب التفعيل قبل أن يتمكن القائد من الموافقة.':'حسابك بانتظار موافقة القائد. يمكنك دخول الدورات العامة.';
+   $('#pendingReasonSection').hidden=!missingReason;
+   $('#pendingReasonRecorded').hidden=p?.status!=='pending'||missingReason;
+   if(missingReason)$('#pendingReason').value=String(p?.activation_reason||'');
   }
   if(!silent)toast('تم تحديث حالة الحساب');
  }catch(err){
