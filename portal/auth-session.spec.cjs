@@ -35,7 +35,7 @@ const enc=o=>Buffer.from(JSON.stringify(o)).toString('base64url');const jwt=enc(
  // A lock held by an old tab must not stall the current SDK's initialization or sign-in.
  await page.goto(base+'?login=1');await page.locator('#authScreen').waitFor({state:'visible'});
  await page.locator('#email').fill('qa@example.invalid');await page.locator('#password').fill('TestPass2026!');await page.locator('#authSubmit').click();
- await page.locator('#workspace').waitFor({state:'visible',timeout:12000});assert.equal(tokens,1);assert.equal(await page.locator('#authSubmit').isDisabled(),false);
+ await page.locator('#workspace').waitFor({state:'visible',timeout:12000});await page.waitForFunction(()=>!document.querySelector('#authSubmit').disabled,{},{timeout:12000});assert.equal(tokens,1);assert.equal(await page.locator('#authSubmit').isDisabled(),false);
  fs.mkdirSync('/tmp/asf-mobile',{recursive:true});await page.screenshot({path:'/tmp/asf-mobile/login-fixed-390.png',fullPage:true});
  assert.ok(await holder.evaluate(async()=>{const state=await navigator.locks.query();return state.held.some(l=>l.name.includes('auth-token'));}),'old lock remains held, without blocking new SDK');
  // Persisted session survives a mobile reload while the old tab's lock still exists.
