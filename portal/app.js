@@ -44,7 +44,7 @@ const btn=(label,act,id='',kind='ghost')=>'<button class="btn '+kind+' small" da
 const badge=(s,secret=false)=>'<span class="badge '+(secret?'secret':'')+'">'+esc(s)+'</span>';
 const empty=msg=>'<div class="empty">'+esc(msg)+'</div>';
 const has=(permission,kind=null)=>commander||grants.some(g=>g.permission===permission&&(kind===null||g.report_kind===null||g.report_kind===kind));
-function showScreen(which){['welcome','authScreen','verifyEmailScreen','recoveryScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which)}
+function showScreen(which){['welcome','authScreen','verifyEmailScreen','recoveryScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which);window.ASF_MOBILE?.setWorkspace(which==='workspace')}
 function openAcademy(){window.open('academy.html','_blank','noopener')}
 $('#openAcademy').onclick=openAcademy;
 const restrictedModal=$('#restrictedModal');
@@ -268,6 +268,7 @@ async function loadIdentity(silent=false){
 document.querySelectorAll('.nav').forEach(n=>n.onclick=()=>navigate(n.dataset.page));
 async function navigate(name){
  if(!user||!(commander||profile?.status==='approved'))return;
+ window.ASF_MOBILE?.closeMenu();window.ASF_MOBILE?.setPage(name);
  pageName=name;document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page===name));
  const titles={dashboard:'لوحة التحكم',academy:'الأكاديمية والدورات',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',access:'طلب تصريح ومتابعته','access-queue':'طلبات التصاريح الواردة',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
  set('#pageTitle','<div><h1>'+esc(titles[name]||'بوابة أمن المنشآت')+'</h1><p>المنصة الموحدة · إعدادات الصلاحيات حسب حسابك</p></div>');

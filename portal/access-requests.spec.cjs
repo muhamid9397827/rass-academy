@@ -70,6 +70,7 @@ const sdk=String.raw`
  assert.ok(overflow<=2,'mobile access form overflow '+overflow);
  await page.goto(base+'?role=commander',{waitUntil:'domcontentloaded'});
  await page.locator('#workspace').waitFor({state:'visible'});
+ await page.locator('#mobileMenuToggle').click();
  await page.locator('[data-page="access-queue"]').click();
  await page.locator('.access-decision-form').waitFor({state:'visible'});
  await page.locator('.access-decision-form input[name="note"]').fill('تم اعتماد التصريح بعد مراجعة السبب.');
