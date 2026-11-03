@@ -131,6 +131,11 @@ begin
  select * into p from public.asf_profiles where user_id=p_user for update;
  if not found or p.status<>'pending' then raise exception 'Applicant must be pending'; end if;
  if char_length(btrim(coalesce(p.activation_reason,'')))<10 then raise exception 'Activation reason is missing'; end if;
+ if not exists(select 1 from auth.users u where u.id=p_user and u.email_confirmed_at is not null)
+ then raise exception 'Applicant email must be confirmed first'; end if;
+ if exists(select 1 from public.asf_profiles other
+   where other.user_id<>p_user and other.discord_id=p.discord_id and other.status='approved')
+ then raise exception 'This Discord account already has an approved membership'; end if;
  v_code:=coalesce(p.military_code,'ASF-'||lpad(nextval('public.asf_military_seq'::regclass)::text,6,'0'));
  update public.asf_profiles set status='approved',military_code=v_code,updated_at=now() where user_id=p_user;
  v_is_trainer:=public.asf_department_has_role('recruitment','trainer');
