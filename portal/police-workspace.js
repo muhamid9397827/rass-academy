@@ -51,7 +51,9 @@ function create({db,getContext,notify}){
   const canModify=ctx.commander||ctx.hasPolice||ctx.isPoliceHead,canLead=ctx.commander||ctx.isPoliceHead;
   const penaltyFor=(v,rank)=>{
    const match=(overrides||[]).find(x=>x.rule_key===v?.key&&x.rank_key===rank);
-   return match?.penalty||(v?.calc?v.calc(rank):rules.penaltyMatrix[rank]?.[v?.tier])||'تقديري — يُرفع للقيادة';
+   if(match?.penalty)return match.penalty;
+   const original=(v?.calc?v.calc(rank):rules.penaltyMatrix[rank]?.[v?.tier])||'تقديري — يُرفع للقيادة';
+   return ['t5','t6'].includes(v?.tier)?original+' + كسر رتبة':original;
   };
   $('#page').innerHTML='<div class="mp-intro"><strong>الشرطة العسكرية</strong><p>ابحث عن المخالفة واختر الرتبة، وستظهر العقوبة فورًا. بقية الأدوات متاحة بالأسفل عند الحاجة.</p></div>'+
   '<section class="section-card mp-calculator"><div class="mp-section-heading"><span>1</span><div><h3>بحث المخالفات والعقوبات</h3><p>ابحث برقم البند أو بكلمة من المخالفة بدل تصفّح قوائم طويلة.</p></div></div>'+
@@ -59,7 +61,7 @@ function create({db,getContext,notify}){
   '<div id="mpTierFilters" class="mp-tier-chips">'+tiers.map(([key,name])=>'<button type="button" data-tier="'+key+'" class="'+(key==='all'?'active':'')+'" aria-pressed="'+(key==='all')+'">'+name+'</button>').join('')+'</div>'+
   '<label>بحث سريع<input type="search" id="violationSearch" autocomplete="off" placeholder="مثال: 3-19 أو كشف الهوية"></label>'+
   '<div class="row between mp-results-heading"><strong>المخالفات المطابقة</strong><span id="violationCount" class="badge" aria-live="polite"></span></div><div id="policeViolationList" class="mp-violations"></div>'+
-  '<form id="policeForm" class="mp-penalty-form"><label>رتبة العسكري<select name="rank">'+displayRanks.map(([label,key])=>'<option value="'+esc(key)+'">'+esc(label)+'</option>').join('')+'</select></label><label>المخالفة المختارة<select name="violation"></select></label><button type="submit" class="btn ghost">حساب العقوبة</button></form>'+
+  '<form id="policeForm" class="mp-penalty-form"><label>رتبة العسكري<select name="rank">'+displayRanks.map(([label,key])=>'<option value="'+esc(key)+'">'+esc(label)+'</option>').join('')+'</select></label><label>المخالفة المختارة<select name="violation"></select></label><label class="mp-repeat"><input type="checkbox" name="repeat">تكرار المخالفة (مضاعفة العقوبة)</label><button type="submit" class="btn ghost">حساب العقوبة</button></form>'+
   '<div class="mp-penalty-result" id="policeResult" aria-live="polite"></div></section>'+
   '<details class="section-card mp-tool" id="mpInvestigationDetails"><summary>2 — إعداد ونسخ تقرير التحقيق العسكري</summary><p class="muted">اختر المخالفة والرتبة أولًا. يتكوّن تقرير التحقيق بالتنسيق القديم، ويمكن نسخه أو إحالته للمجلس.</p>'+
   '<form id="investigationForm"><div class="grid two"><label>رقم ملف التحقيق<input name="reportNumber" required maxlength="100" value="INV-'+asDate()+'"></label><label>اسم المحقق الكامل<input name="investigator" required maxlength="80" value="'+esc(ctx.gameName||'')+'" placeholder="الاسم والكنية"></label><label>اسم العسكري المتهم الكامل<input name="accused" required maxlength="80" placeholder="مثال: مجاهد ال عباد"></label><label>Discord ID للمتهم<input name="discord" required inputmode="numeric" pattern="[0-9]{15,22}" maxlength="22" placeholder="المعرّف الرقمي"></label></div><button class="btn primary" type="submit">تجهيز التقرير</button></form><pre id="investigationPreview" class="mp-preview" hidden></pre><div class="row"><button class="btn ghost" id="copyInvestigation" type="button" hidden>نسخ تقرير التحقيق</button><button class="btn ghost" id="useInvestigation" type="button" hidden>إحالته إلى مجلس القضاء</button></div></details>'+
@@ -71,9 +73,10 @@ function create({db,getContext,notify}){
    const raw=kind==='standard'?rules.standardViolations:rules.fixedViolations,q=norm($('#violationSearch').value);
    return raw.filter(v=>(kind!=='standard'||tier==='all'||v.tier===tier)&&norm([v.id,v.text,v.tierName].join(' ')).includes(q));
   };
+  const shownPenalty=(v,rank)=>$('#policeForm')?.elements.repeat?.checked?'⚠️ [عقوبة مضاعفة للتكرار]: '+penaltyFor(v,rank)+' [تُضاعف العقوبة والغرامة ×2]':penaltyFor(v,rank);
   const updatePenalty=()=>{
    if(!selected){$('#policeResult').textContent='لم تُحدّد مخالفة بعد.';return}
-   $('#policeResult').innerHTML='<small>العقوبة المقترحة للبند '+esc(selected.id||'ثابت')+'</small><strong>'+esc(penaltyFor(selected,$('#policeForm').elements.rank.value))+'</strong>';
+   $('#policeResult').innerHTML='<small>العقوبة المقترحة للبند '+esc(selected.id||'ثابت')+'</small><strong>'+esc(shownPenalty(selected,$('#policeForm').elements.rank.value))+'</strong>';
   };
   const choose=key=>{
    selected=all.find(v=>v.key===key)||null;
@@ -97,6 +100,7 @@ function create({db,getContext,notify}){
   };
   $('#violationSearch').oninput=paint;
   $('#policeForm').elements.rank.onchange=updatePenalty;
+  $('#policeForm').elements.repeat.onchange=updatePenalty;
   $('#policeForm').elements.violation.onchange=e=>choose(all[Number(e.target.value)]?.key);
   $('#policeForm').onsubmit=e=>{e.preventDefault();updatePenalty()};
   $('#mpTierFilters').querySelectorAll('[data-tier]').forEach(b=>b.onclick=()=>{
@@ -120,7 +124,7 @@ function create({db,getContext,notify}){
    investigationText=window.ASF_WORKFLOW.buildInvestigation({
     reportNumber:f.get('reportNumber'),investigator,accused:accused+' <@'+f.get('discord')+'>',
     violationText:selected.text,classification:selected.tier?'بند ('+selected.id+') — '+selected.tierName:'قوانين مخالفات ثابتة',
-    penalty:penaltyFor(selected,rank)
+    penalty:shownPenalty(selected,rank)
    });
    $('#investigationPreview').hidden=false;$('#investigationPreview').textContent=investigationText;
    $('#copyInvestigation').hidden=false;$('#useInvestigation').hidden=!canModify;
