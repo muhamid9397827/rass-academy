@@ -63,6 +63,19 @@
  <button class="btn primary full" type="submit" id="authSubmit">دخول</button>
  </form><button class="link-button" id="authToggle">ليس لديك حساب؟ إنشاء حساب</button><button class="link-button" id="forgotPassword" type="button">نسيت كلمة المرور؟</button><button class="link-button" id="authBack">العودة للرئيسية</button>
  <p class="hint">بعد إنشاء الحساب، يراجع القائد البيانات ويوافق على التفعيل يدويًا.</p></div></section>
+<section id="recoveryScreen" class="auth-layout" hidden>
+ <div class="panel auth-panel">
+  <span class="recovery-icon" aria-hidden="true">🔐</span>
+  <h2>تعيين كلمة مرور جديدة</h2>
+  <p class="subtle" id="recoveryStatus">أدخل كلمة مرور جديدة لحسابك في بوابة أمن المنشآت.</p>
+  <form id="recoveryForm">
+   <label>كلمة المرور الجديدة<input id="recoveryPassword" type="password" required minlength="8" autocomplete="new-password"></label>
+   <label>تأكيد كلمة المرور<input id="recoveryPasswordConfirm" type="password" required minlength="8" autocomplete="new-password"></label>
+   <button class="btn primary full" type="submit" id="recoverySubmit">حفظ كلمة المرور الجديدة</button>
+  </form>
+  <button class="link-button" id="recoveryBack" type="button">العودة لتسجيل الدخول</button>
+ </div>
+</section>
 <section class="shell" id="pendingScreen" hidden><article class="panel center"><span class="big-icon">⏳</span><h2>حسابك بانتظار موافقة القائد</h2><p id="pendingText">لن تتاح الأنظمة الداخلية حتى يتم تفعيل حسابك.</p><button class="btn ghost" id="refreshProfile">تحديث حالة الحساب</button></article></section>
 <div class="workspace" id="workspace" hidden>
 <aside class="sidebar"><div class="side-label">لوحة التحكم</div>
