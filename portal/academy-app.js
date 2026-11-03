@@ -77,7 +77,6 @@
       "progress-steps",
       "course-field",
       "entry-submit-button",
-      "theme-button",
       "footer-version",
       "courses-count",
       "questions-count",
@@ -177,7 +176,6 @@
 
 
   function bindEvents() {
-    elements.themeButton.addEventListener("click", toggleTheme);
     document.querySelectorAll("[data-sector]").forEach((button) => {
       button.addEventListener("click", () => selectSector(button.dataset.sector));
     });
@@ -283,20 +281,7 @@
   }
 
   function restoreTheme() {
-    const saved = storageGet(STORAGE.theme, "");
-    const preferred =
-      saved ||
-      (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches
-        ? "light"
-        : "dark");
-    document.documentElement.dataset.theme = preferred;
-  }
-
-  function toggleTheme() {
-    const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
-    document.documentElement.dataset.theme = next;
-    storageSet(STORAGE.theme, next);
-    showToast(next === "light" ? "تم تفعيل النمط الفاتح" : "تم تفعيل النمط الداكن");
+    document.documentElement.dataset.theme = "dark";
   }
 
   function getAvailableCourses() {
