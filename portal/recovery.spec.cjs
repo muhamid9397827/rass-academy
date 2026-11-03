@@ -33,6 +33,8 @@ const sdk = `
  assert.equal(reset.email,'qa@example.invalid');
  assert.equal(reset.redirectTo,'https://muhamid9397827.github.io/rass-academy/portal/','reset must never redirect to localhost');
  await page.goto(base+'#access_token=mock&refresh_token=mock&type=recovery',{waitUntil:'domcontentloaded'});
+ // A click from an email opens a fresh document, not a same-page hash navigation.
+ await page.reload({waitUntil:'domcontentloaded'});
  await page.locator('#recoveryScreen').waitFor({state:'visible'});
  assert.equal(await page.locator('#welcome').isVisible(),false);
  assert.equal(await page.locator('#workspace').isVisible(),false);
@@ -49,6 +51,7 @@ const sdk = `
  assert.equal(result.signedOut,1);
  assert.equal(result.hash,'','sensitive recovery URL fragment must be removed');
  await page.goto(base+'#access_token=invalid&type=recovery',{waitUntil:'domcontentloaded'});
+ await page.reload({waitUntil:'domcontentloaded'});
  await page.locator('#recoveryScreen').waitFor({state:'visible'});
  assert.equal(await page.locator('#recoveryForm').isVisible(),false,'expired/invalid session must not offer submission');
  assert.deepEqual(errors,[],'no unhandled browser errors');
