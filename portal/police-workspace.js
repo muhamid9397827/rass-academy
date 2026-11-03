@@ -47,7 +47,7 @@ function create({db,getContext,notify}){
   const rules=data(),all=[...rules.standardViolations,...rules.fixedViolations],ranks=Object.keys(rules.penaltyMatrix);
   const {data:overrides,error}=await db.from('asf_police_overrides').select('rule_key,rank_key,penalty');
   if(error)throw error;
-  const canModify=ctx.commander||ctx.hasPolice,canLead=ctx.commander||ctx.isPoliceHead;
+  const canModify=ctx.commander||ctx.hasPolice||ctx.isPoliceHead,canLead=ctx.commander||ctx.isPoliceHead;
   const penaltyFor=(v,rank)=>{
    const match=(overrides||[]).find(x=>x.rule_key===v?.key&&x.rank_key===rank);
    return match?.penalty||(v?.calc?v.calc(rank):rules.penaltyMatrix[rank]?.[v?.tier])||'تقديري — يُرفع للقيادة';
