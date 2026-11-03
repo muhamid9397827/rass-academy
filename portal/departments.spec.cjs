@@ -40,6 +40,12 @@ assert.match(sdk,/asf_recruitment_accept/,'the SDK mock must include recruitment
  await page.locator('#departmentApplicants').waitFor({state:'visible'});
  assert.equal(await page.locator('#departmentRolesPanel').count(),0);
  await page.locator('[data-recruit]').click();
+ await page.waitForTimeout(450);
+ console.log('DEPT_QA_RECRUITMENT',JSON.stringify(await page.evaluate(()=>({
+  actions:window.__asfTest.actions,rewards:window.__asfTest.rewards,
+  rewardPanel:document.querySelector('#departmentRewards')?.innerText,
+  toast:document.querySelector('#toast')?.innerText
+ }))));
  await page.locator('#departmentRewards .dept-record').waitFor({state:'visible'});
  assert.match(await page.locator('#departmentRewards').innerText(),/150,000/);
  assert.equal((await page.evaluate(()=>window.__asfTest.actions))[0].name,'asf_recruitment_accept');
