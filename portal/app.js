@@ -564,10 +564,11 @@ function courtWarningCard(w){
 }
 async function renderMembers(){
  const rows=await query('asf_profiles');rows.sort((a,b)=>a.created_at<b.created_at?1:-1);
- const actions=p=>!commander?'—':'<div class="actions">'+(p.status!=='approved'?btn('تفعيل','approve',p.user_id,'primary'):btn('إيقاف','suspend',p.user_id,'warn'))+
+ const hasReason=p=>String(p.activation_reason||'').trim().length>=10;
+ const actions=p=>!commander?'—':'<div class="actions">'+(p.status!=='approved'?(hasReason(p)?btn('تفعيل','approve',p.user_id,'primary'):'<span class="activation-missing">بانتظار سبب التفعيل</span>'):btn('إيقاف','suspend',p.user_id,'warn'))+
  btn('تغيير الرتبة','rank',p.user_id)+btn(p.court_enabled?'إلغاء القضاء':'تفعيل القضاء',p.court_enabled?'court_off':'court_on',p.user_id)+btn('رفض','reject',p.user_id,'warn')+'</div>';
- set('#page','<div class="section-card"><h3>طلبات التفعيل وجميع الأعضاء</h3><div class="table-wrap"><table><thead><tr><th>الاسم</th><th>الرتبة</th><th>الكود</th><th>Discord ID</th><th>الحالة</th><th>إجراءات القائد</th></tr></thead><tbody>'+
- rows.map(p=>'<tr><td>'+esc(p.game_name)+'</td><td>'+esc(p.rank)+'</td><td>'+esc(p.military_code||'—')+'</td><td dir="ltr">'+esc(p.discord_id)+'</td><td>'+badge(p.status)+'</td><td>'+actions(p)+'</td></tr>').join('')+'</tbody></table></div></div>');
+ set('#page','<div class="section-card"><h3>طلبات التفعيل وجميع الأعضاء</h3><p class="muted">سبب طلب التفعيل إلزامي. لن يسمح النظام باعتماد أي حساب غير معتمد لم يقدّم سببًا واضحًا.</p><div class="table-wrap"><table><thead><tr><th>الاسم</th><th>الرتبة</th><th>الكود</th><th>Discord ID</th><th>سبب طلب التفعيل</th><th>الحالة</th><th>إجراءات القائد</th></tr></thead><tbody>'+
+ rows.map(p=>'<tr><td>'+esc(p.game_name)+'</td><td>'+esc(p.rank)+'</td><td>'+esc(p.military_code||'—')+'</td><td dir="ltr">'+esc(p.discord_id)+'</td><td><div class="member-reason">'+(hasReason(p)?esc(p.activation_reason):'<span class="activation-missing">لم يُذكر السبب</span>')+'</div></td><td>'+badge(p.status)+'</td><td>'+actions(p)+'</td></tr>').join('')+'</tbody></table></div></div>');
  $('#page').onclick=async e=>{if(!commander)return;const b=e.target.closest('button[data-action]');if(!b)return;const action=b.dataset.action;
  let arg=null;if(action==='rank'){arg=prompt('الرتبة الجديدة (من القائمة المعتمدة):',rows.find(r=>r.user_id===b.dataset.id)?.rank||'');if(!arg||!RANKS.includes(arg))return toast('الرتبة غير معتمدة',true);}
  if(['reject','suspend'].includes(action)&&!confirm('تأكيد الإجراء على الحساب؟'))return;
@@ -589,7 +590,7 @@ async function renderAudit(){
  const actors=new Map((users||[]).map(p=>[p.user_id,p]));
  const names={approve:'تفعيل عضو',suspend:'إيقاف عضو',reject:'رفض عضو',rank:'تعديل رتبة',court_on:'منح القضاء',court_off:'سحب القضاء',
  delegation:'تعديل صلاحية',review:'مراجعة تقرير',restore:'استعادة تقرير',trash:'حذف إلى السلة',
- access_requested:'طلب تصريح',access_reviewed:'قرار تصريح',police_rule_override:'تعديل عقوبة',court_warning_cancel:'إلغاء إنذار',pdf_finalized:'تأكيد ملف PDF',permanent_delete:'حذف نهائي تلقائي',profile_change:'تعديل بيانات',commander_profile_init:'ملف القائد'};
+ access_requested:'طلب تصريح',access_reviewed:'قرار تصريح',police_rule_override:'تعديل عقوبة',court_warning_cancel:'إلغاء إنذار',pdf_finalized:'تأكيد ملف PDF',permanent_delete:'حذف نهائي تلقائي',profile_change:'تعديل بيانات',activation_reason_submitted:'استكمال سبب التفعيل',commander_profile_init:'ملف القائد'};
  set('#page','<section class="section-card"><h3>سجل الإجراءات الإدارية</h3>'+
  '<p>يُعرض للقائد فقط، ويحتفظ بتاريخ التعديلات دون منح صلاحية حذف السجل.</p>'+
  '<input id="auditSearch" placeholder="بحث بالعملية أو المستخدم أو السجل" style="margin-bottom:15px">'+
