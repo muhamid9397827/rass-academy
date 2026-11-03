@@ -1,20 +1,56 @@
 <!doctype html>
 <html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#081321"><meta name="description" content="بوابة أمن المنشآت — الدورات والأنظمة الإدارية والتقارير">
-<title>بوابة أمن المنشآت</title><link rel="stylesheet" href="styles.css"></head>
+<title>بوابة أمن المنشآت</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="landing.css?v=20261103-2"></head>
 <body>
 <header class="topbar"><div class="brand"><span class="brand-icon">◆</span><span>بوابة أمن المنشآت<small>المنصة الإدارية الموحدة · رول بلاي</small></span></div>
 <div class="top-actions"><span id="sessionLabel"></span><button class="btn ghost" id="signOut" hidden>تسجيل الخروج</button></div></header>
 <div id="toast" role="status" aria-live="polite"></div>
-<section id="welcome" class="welcome shell">
- <div class="hero"><div class="hero-copy"><p class="eyebrow">منصة موحدة · إجراءات منظمة</p><h1>بوابة أمن المنشآت</h1><p>بوابتك الآمنة للتأهيل والأنظمة الإدارية والتقارير الرسمية.</p>
- <div class="hero-actions"><button class="btn primary" id="showLogin">تسجيل الدخول</button><button class="btn light" id="showRegister">إنشاء حساب</button></div></div><div class="hero-seal" aria-hidden="true"><span>◆</span><small>أمن · انضباط · تأهيل</small></div></div>
- <div class="welcome-cards" aria-label="أقسام البوابة">
-  <button class="tile tile-academy" id="openAcademy" type="button"><span class="tile-icon" aria-hidden="true">🎓</span><span class="tile-kicker">متاح للجميع</span><h3>الأكاديمية والتأهيل</h3><p>دورات إلكترونية ومسارات تدريبية واختبارات منظمة.</p><span class="tile-action">استكشف الدورات <b aria-hidden="true">←</b></span></button>
-  <article class="tile"><span class="tile-icon" aria-hidden="true">▤</span><h3>التقارير</h3><p>مراسلات رسمية منظمة ومحفوظة بصيغة PDF.</p></article>
-  <article class="tile"><span class="tile-icon" aria-hidden="true">⚖</span><h3>مجلس القضاء</h3><p>إدارة القضايا والقرارات بتصريح خاص.</p></article>
-  <article class="tile"><span class="tile-icon" aria-hidden="true">🛡</span><h3>الشرطة العسكرية</h3><p>أدوات احتساب العقوبات واللوائح المعتمدة.</p></article>
- </div>
+<section id="welcome" class="welcome landing shell" aria-labelledby="landing-title">
+  <div class="landing-topline"><span class="landing-live-dot" aria-hidden="true"></span><span>المنصة التدريبية الرسمية</span><span class="landing-topline-divider" aria-hidden="true"></span><span>أمن المنشآت · رول بلاي</span></div>
+  <div class="landing-hero">
+    <div class="landing-hero-content">
+      <div class="landing-hero-eyebrow"><span aria-hidden="true">✦</span> أكاديمية أمن المنشآت <span class="landing-eyebrow-line" aria-hidden="true"></span></div>
+      <h1 id="landing-title">طريقك إلى <span>التأهيل</span><br>يبدأ من هنا.</h1>
+      <p class="landing-hero-description">منصة تدريب منظمة تساعدك على تطوير مهاراتك، دراسة المواد التعليمية، واجتياز الاختبارات في تجربة واضحة وسهلة.</p>
+      <div class="landing-hero-actions">
+        <button class="landing-button landing-button-primary" id="openAcademy" type="button"><span>ابدأ رحلتك التدريبية</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5m7 7-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="landing-button landing-button-outline" id="showLogin" type="button">دخول الأعضاء <span aria-hidden="true">↗</span></button>
+      </div>
+      <div class="landing-hero-foot"><span class="landing-foot-check" aria-hidden="true">✓</span> الدورات متاحة للزوار بدون حساب <span class="landing-separator" aria-hidden="true">·</span> <span>الأنظمة الداخلية للأعضاء بعد تسجيل الدخول</span></div>
+    </div>
+    <div class="landing-visual" aria-label="مراحل التأهيل من الدراسة إلى الاختبار">
+      <div class="landing-visual-halo" aria-hidden="true"></div>
+      <div class="landing-glass-panel">
+        <div class="landing-glass-head"><span class="landing-glass-symbol" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="M24 4 39 10v13c0 10.5-6.8 17-15 21C15.8 40 9 33.5 9 23V10L24 4Z" stroke="currentColor" stroke-width="1.5"/><path d="m17 24 5 5 10-11" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><span class="landing-glass-overline">برنامج التأهيل</span><strong>مسارك نحو الإنجاز</strong></div><span class="landing-glass-status">متاح الآن</span></div>
+        <div class="landing-step-list">
+          <div class="landing-step"><span class="landing-step-no">01</span><span class="landing-step-connector" aria-hidden="true"></span><div><strong>اختر دورتك</strong><span>حدد المسار المناسب لك</span></div><span class="landing-step-mark" aria-hidden="true">↗</span></div>
+          <div class="landing-step"><span class="landing-step-no">02</span><span class="landing-step-connector" aria-hidden="true"></span><div><strong>تعلّم واستعد</strong><span>راجع المحتوى التدريبي</span></div><span class="landing-step-mark" aria-hidden="true">↗</span></div>
+          <div class="landing-step"><span class="landing-step-no">03</span><div><strong>اختبر معلوماتك</strong><span>أكمل الاختبار واعرف نتيجتك</span></div><span class="landing-step-mark" aria-hidden="true">✓</span></div>
+        </div>
+        <div class="landing-glass-bottom"><span>حد الاجتياز</span><strong>70<span>%</span></strong><span class="landing-glass-pill">تأهيل منظّم</span></div>
+      </div>
+      <span class="landing-orbit landing-orbit-a" aria-hidden="true"></span><span class="landing-orbit landing-orbit-b" aria-hidden="true"></span>
+    </div>
+  </div>
+  <div class="landing-facts" aria-label="مميزات الأكاديمية">
+    <div><span class="landing-fact-icon" aria-hidden="true">✦</span><p><b>دورات تخصصية</b><small>مسارات متدرجة حسب التدريب</small></p></div>
+    <div><span class="landing-fact-icon" aria-hidden="true">◎</span><p><b>اختبارات إلكترونية</b><small>نتائج واضحة فور إكمال الاختبار</small></p></div>
+    <div><span class="landing-fact-icon" aria-hidden="true">◷</span><p><b>التعلّم بمرونة</b><small>تعلّم في الوقت المناسب لك</small></p></div>
+  </div>
+  <section class="landing-courses" aria-labelledby="landing-courses-title">
+    <div class="landing-section-heading"><div><span class="landing-section-label">التأهيل يبدأ بالمعرفة</span><h2 id="landing-courses-title">مسارات تدريبية تصنع الفارق.</h2></div><a href="academy.html" class="landing-text-link">استعراض الأكاديمية <span aria-hidden="true">←</span></a></div>
+    <div class="landing-program-grid">
+      <a class="landing-program-card" href="academy.html"><span class="landing-program-index">01 / الأساسيات</span><div class="landing-program-icon" aria-hidden="true">✧</div><h3>العمليات</h3><p>انطلق بالمعارف والإجراءات الأساسية للمهام.</p><span class="landing-program-arrow" aria-hidden="true">↗</span></a>
+      <a class="landing-program-card" href="academy.html"><span class="landing-program-index">02 / التطوير</span><div class="landing-program-icon" aria-hidden="true">◈</div><h3>الشخصية العسكرية</h3><p>طوّر انضباطك ومعرفتك بقواعد العمل داخل القطاع.</p><span class="landing-program-arrow" aria-hidden="true">↗</span></a>
+      <a class="landing-program-card" href="academy.html"><span class="landing-program-index">03 / التخصص</span><div class="landing-program-icon" aria-hidden="true">✺</div><h3>المسارات المتقدمة</h3><p>اكتشف تدريبات الجناح الجوي وضابط المنطقة والسوات.</p><span class="landing-program-arrow" aria-hidden="true">↗</span></a>
+    </div>
+  </section>
+  <section class="landing-bottom" aria-label="البدء أو إنشاء حساب">
+    <div class="landing-bottom-copy"><span class="landing-section-label">خطوتك القادمة</span><h2>استعد للدورة القادمة.</h2><p>ابدأ بالأكاديمية مباشرة، أو أنشئ حسابًا للوصول إلى لوحة الأعضاء والأنظمة الداخلية بعد موافقة القيادة.</p></div>
+    <div class="landing-bottom-actions"><a href="academy.html" class="landing-button landing-button-primary">فتح الأكاديمية <span aria-hidden="true">←</span></a><button class="landing-button landing-button-outline" id="showRegister" type="button">إنشاء حساب عضو</button></div>
+  </section>
+  <footer class="landing-footer"><span>بوابة أمن المنشآت <span aria-hidden="true">◆</span> منصة رول بلاي</span><span>تعلّم · تأهّل · تطوّر</span></footer>
 </section>
 <section id="authScreen" class="auth-layout" hidden><div class="panel auth-panel"><h2 id="authTitle">تسجيل الدخول</h2><p class="subtle">سجّل باستخدام بريدك الإلكتروني وكلمة المرور.</p>
 <form id="authForm">
