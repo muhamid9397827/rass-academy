@@ -33,8 +33,9 @@ const applicant = fixture('individual-qualification');
 applicant.answers.slice(10).forEach(a => { a.answerIndex = null; });
 assert.equal(gradeSubmission(applicant).assignedRank, 'جندي', 'existing applicant 50% rule preserved');
 
-let rows = new Map(), forwards = 0, mode = 'html', failure = null;
+let rows = new Map(), forwards = 0, mode = 'html', failure = null;const trace=[];
 const admin = { rpc: async (name, args) => {
+  trace.push(name);
   if (failure) return { data: null, error: { message: failure } };
   if (name === 'asf_mark_academy_legacy_sync') { rows.get(args.p_session).legacy_status = args.p_status; return { error: null }; }
   let row = rows.get(args.p_result.sessionId);
@@ -44,7 +45,7 @@ const admin = { rpc: async (name, args) => {
   return { data: { ...row, inserted: true }, error: null };
 } };
 const handler = createHandler({ admin, salt: 'test-only-salt', fetcher: async (_url, options) => {
-  forwards++; const payload = JSON.parse(options.body);
+  trace.push('forward_google_sheet');forwards++; const payload = JSON.parse(options.body);
   return mode === 'html' ? new Response('<html>Google redirect</html>') : Response.json({ success: true, receipt: payload.receipt });
 } });
 const request = (payload = fixture(), origin = 'https://muhamid9397827.github.io') => new Request('https://example.invalid/results', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: origin }, body: JSON.stringify(payload) });
@@ -52,6 +53,7 @@ let response = await handler(request());
 let data = await response.json();
 assert.equal(response.status, 200);
 assert.equal(data.saved, true);
+assert.deepEqual(trace.slice(0,3),['asf_store_academy_result','forward_google_sheet','asf_mark_academy_legacy_sync'],'authoritative result and its database notification are created before the legacy Sheet request');
 assert.equal(data.legacyStatus, 'unconfirmed', 'HTTP 200 HTML must not claim Sheet confirmation');
 assert.equal(response.headers.get('access-control-allow-origin'), 'https://muhamid9397827.github.io');
 await handler(request());

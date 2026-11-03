@@ -3,7 +3,7 @@
 'use strict';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const KINDS={personnel:'تقرير مسؤول الأفراد',officers:'تقرير مسؤول الضباط',joint:'تقرير مشترك للأفراد والضباط',presidencies:'تقرير مسؤولي الرئاسات',secret:'سري للغاية — للقائد فقط'};
+const KINDS={personnel:'تقرير مسؤول الأفراد',officers:'تقرير مسؤول الضباط',joint:'تقرير مشترك للأفراد والضباط',presidencies:'تقرير مسؤولي الرئاسات',secret:'سري للغاية — اطلاع القائد فقط'};
 const STATES={new:'جديد',reviewing:'قيد المراجعة',reviewed:'تمت المراجعة',needs_more:'يحتاج استكمال'};
 
 const ACCESS_PERMISSIONS={
@@ -351,7 +351,7 @@ function renderAcademyResults(){
 }
 function mountAcademyResults(){
  const panel=$('#academyResultPanel');if(!panel)return;
- panel.innerHTML='<section class="section-card" style="margin-top:20px"><h3>نتائج الدورات والتسليم</h3><p class="muted">نفس نتيجة الاختبار تنتقل من النجاح إلى تأكيد تسليم الدورة. التأكيد يسجّل اسمك ووقت الإجراء، ولا يمنح رتبة أو صلاحية تلقائيًا.</p><form id="academyResultsFilter" class="grid two"><label>الاسم أو Discord أو الإيصال<input name="search" maxlength="60"></label><label>حالة المتابعة<select name="state"><option value="pending">ناجحون بانتظار التسليم</option><option value="delivered">تم تسليم الدورة</option><option value="all" selected>جميع النتائج</option></select></label><button class="btn ghost" type="submit">بحث وتحديث</button></form><div id="academyResultsRows" aria-live="polite"></div></section>';
+ panel.innerHTML='<section class="section-card" style="margin-top:20px"><h3>نتائج الدورات والتسليم</h3><p class="muted">نفس نتيجة الاختبار تنتقل من النجاح إلى تأكيد تسليم الدورة. التأكيد يسجّل اسمك ووقت الإجراء، ولا يمنح رتبة أو صلاحية تلقائيًا.</p><details class="notice course-notice-flow"><summary>إشعارات النتائج والربط مع جدول Google</summary><p>عند حفظ اختبار ناجح في البوابة، يصل إشعار داخل الموقع إلى القائد ومسؤولي الدورات المفوّضين، ثم تُرسل نسخة النتيجة إلى جدول Google المرتبط. الإشعار لا يعني تأكيد وصول نسخة Google؛ حالة النسخة تظهر في عمودها أدناه.</p><p>تأكيد التسليم واسم المسؤول ووقته محفوظة في هذا السجل داخل الموقع. الإضافة اليدوية إلى Google لا تولّد إشعارًا في البوابة.</p><a class="btn ghost small" id="courseGoogleSheet" href="https://docs.google.com/spreadsheets/d/1PC5iXwHWyFT4kd7qa6oa_JL1-r3F_anv3fPniF8rfdM/edit" target="_blank" rel="noopener noreferrer">فتح جدول Google المرتبط</a></details><form id="academyResultsFilter" class="grid two"><label>الاسم أو Discord أو الإيصال<input name="search" maxlength="60"></label><label>حالة المتابعة<select name="state"><option value="pending">ناجحون بانتظار التسليم</option><option value="delivered">تم تسليم الدورة</option><option value="all" selected>جميع النتائج</option></select></label><button class="btn ghost" type="submit">بحث وتحديث</button></form><div id="academyResultsRows" aria-live="polite"></div></section>';
  let offset=0,term='',filter='all',generation=0;
  const load=async()=>{
   const rows=$('#academyResultsRows');if(!rows)return;const request=++generation;rows.textContent='جاري تحميل النتائج…';
@@ -458,8 +458,9 @@ async function detailReport(r,mode){
 async function renderCompose(){
  if(!profile){toast('أكمل ملف القائد العسكري أولًا',true);return navigate('account');}
  const {data:drafts,error}=await db.from('asf_drafts').select('*').order('updated_at',{ascending:false}).limit(30);if(error)throw error;
- set('#page','<div class="section-card"><div class="row between"><h3>تقرير إداري جديد</h3><span class="badge secret">السري للغاية: لا يراه بعد الإرسال إلا القائد</span></div>'+
- '<form id="reportForm"><div class="grid two"><label>نوع التقرير<select name="kind" id="reportKind">'+opt(Object.entries(KINDS))+'</select></label><label>صيغة التقرير<select name="mode" id="reportMode">'+opt([['structured','تقرير منظم'],['free','تقرير حر']])+'</select></label></div>'+
+ set('#page','<div class="section-card"><div class="row between"><h3>تقرير إداري جديد</h3><span class="badge secret">التقرير السري متاح لجميع الرتب</span></div>'+
+ '<form id="reportForm"><div class="grid two"><label>نوع التقرير<select name="kind" id="reportKind">'+opt(Object.entries(KINDS).map(([kind,label])=>[kind,kind==='secret'?'تقرير سري — لجميع الرتب':label]))+'</select></label><label>صيغة التقرير<select name="mode" id="reportMode">'+opt([['structured','تقرير منظم'],['free','تقرير حر']])+'</select></label></div>'+
+ '<aside id="secretReportGuidance" class="secret-report-guidance" aria-labelledby="secretReportHeading" hidden><h4 id="secretReportHeading">مساحة خاصة تصل إلى القيادة</h4><p>متاح للأفراد والضباط من جميع الرتب، بعد تفعيل الحساب.</p><p class="secret-report-privacy"><u>لا يطّلع على هذا التقرير إلا القائد نفسه، ولا يطّلع عليه أي شخص آخر.</u></p><p>بعض الملاحظات تستحق أن تصل في نطاق أضيق. يتيح هذا المسار إيصال ما يستدعي عناية القيادة من معلومات أو مستجدات، بخصوصية تحفظ سياقها وتمنحها ما تستحق من اهتمام.</p><p class="secret-report-reward">قد تُمنح مكافأة للتقرير السري تتراوح بين <strong>500 ألف و5 ملايين</strong>، بحسب أهمية المعلومات وتقدير القائد.</p><small>بعد الإرسال لا يتاح للمرسل إعادة فتح التقرير أو تنزيل ملفه.</small></aside>'+
  input('title','عنوان التقرير')+
  '<div id="structuredFields">'+['achievements','progress','needs','notes'].map((x,i)=>'<label>'+['الإنجازات','التقدم','الاحتياجات','الملاحظات'][i]+'<textarea name="'+x+'" maxlength="9000"></textarea></label>').join('')+'</div>'+
  '<div id="freeFields" hidden><label>نص التقرير<textarea name="text" maxlength="18000" rows="10"></textarea></label></div>'+
@@ -468,8 +469,8 @@ async function renderCompose(){
  '<section class="section-card"><h3>مسوداتي</h3><div class="row">'+(drafts||[]).map(d=>btn(d.title||'مسودة بدون عنوان','load',d.id)).join('')+'</div></section>');
  const form=$('#reportForm');
  if(correctionSource){form.elements.kind.value=correctionSource.kind;form.elements.original.value=correctionSource.id;form.elements.title.value='تصحيح: '+correctionSource.title;}
- const toggle=()=>{$('#freeFields').hidden=$('#reportMode').value!=='free';$('#structuredFields').hidden=$('#reportMode').value==='free'};
- $('#reportMode').onchange=toggle;toggle();
+ const toggle=()=>{$('#freeFields').hidden=$('#reportMode').value!=='free';$('#structuredFields').hidden=$('#reportMode').value==='free';$('#secretReportGuidance').hidden=$('#reportKind').value!=='secret'};
+ $('#reportMode').onchange=toggle;$('#reportKind').onchange=toggle;toggle();
  const collect=()=>{const f=new FormData(form),mode=f.get('mode'),body=mode==='free'?{text:String(f.get('text')||'')}:
  Object.fromEntries(['achievements','progress','needs','notes'].map(x=>[x,String(f.get(x)||'')]));
  return {kind:f.get('kind'),mode,title:String(f.get('title')||'').trim(),body,original:String(f.get('original')||'').trim()||null}};
