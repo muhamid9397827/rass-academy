@@ -341,7 +341,12 @@ async function navigate(name){
   if(name==='academy-results')return await renderAcademyResults();
   if(name==='training-center')return await deptUI.render('training');
   if(name==='recruitment-center')return await deptUI.render('recruitment');
-  if(name==='department-admin'&&commander)return await deptUI.renderAdmin();
+  if(name==='department-admin'&&commander){
+    await deptUI.renderAdmin();
+    $('#page').insertAdjacentHTML('beforeend','<section class="section-card"><h3>رئاسة الشرطة العسكرية</h3><p class="muted">تعيين رئيس الشرطة وتوزيع رول الشرطة العسكرية ورول مجلس القضاء للأعضاء المعتمدين من مكان واحد.</p><button type="button" class="btn primary" id="openPoliceLeadership">فتح إدارة رئاسة الشرطة</button></section>');
+    $('#openPoliceLeadership').onclick=async()=>{await navigate('police');const details=$('#mpLeadershipDetails');if(details){details.open=true;details.scrollIntoView({block:'start',behavior:'smooth'});}};
+    return;
+   }
   if(name==='reports'||name==='inbox'||name==='trash')return await renderReports(name);
   if(name==='compose')return await renderCompose();
   if(name==='police')return await renderPolice();
