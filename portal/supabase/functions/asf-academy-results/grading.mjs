@@ -1,10 +1,9 @@
-import catalog from './catalog.json' with { type: 'json' };
-
 export class SubmissionError extends Error {
   constructor(message, status = 400) { super(message); this.status = status; }
 }
 const ranks = ['جندي','جندي أول','عريف','وكيل رقيب','رقيب','رقيب أول','رئيس رقباء','ملازم','ملازم أول','نقيب','رائد','مقدم','عقيد','عميد','لواء','فريق','فريق أول'];
-export function gradeSubmission(payload) {
+export function gradeSubmission(payload, catalog) {
+  if (!catalog || typeof catalog !== 'object' || Array.isArray(catalog)) throw new SubmissionError('مفاتيح التصحيح الخاصة غير متاحة.',503);
   if (!payload || payload.simulation !== true || payload.demoMode !== false) throw new SubmissionError('هذه المحاولة غير قابلة للاعتماد.');
   const sessionId = payload.sessionId;
   if (typeof sessionId !== 'string' || !/^[A-Za-z0-9_-]{16,100}$/.test(sessionId)) throw new SubmissionError('معرّف المحاولة غير صحيح.');

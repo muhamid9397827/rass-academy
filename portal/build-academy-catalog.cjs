@@ -1,25 +1,17 @@
-// Derive the server's marking keys from the existing, unchanged course banks.
-const fs = require('node:fs');
-const vm = require('node:vm');
-const path = require('node:path');
-const root = path.resolve(__dirname, '..');
-const sandbox = { window: {} };
-for (const file of ['js/courses.js', ...['individual-qualification', 'operations', 'military-character', 'air-wing', 'zone-officer', 'swat'].map(id => `js/banks/${id}.js`)]) {
-  vm.runInNewContext(fs.readFileSync(path.join(root, file), 'utf8'), sandbox, { timeout: 1000 });
+// CI guard: public question banks may contain questions and choices, never marking keys.
+const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'..'),sandbox={window:{}};
+const ids=['individual-qualification','operations','military-character','air-wing','zone-officer','swat'];
+vm.runInNewContext(fs.readFileSync(path.join(root,'js/courses.js'),'utf8'),sandbox,{timeout:1000});
+let total=0;
+for(const id of ids){
+ const src=fs.readFileSync(path.join(root,'js/banks',id+'.js'),'utf8');
+ assert(!/(?:["']?answerIndex["']?)\s*:/.test(src),'Public marking answer detected in '+id);
+ vm.runInNewContext(src,sandbox,{timeout:1000});
+ const c=Object.values(sandbox.window.COURSES).find(x=>x.id===id);
+ assert(c&&c.questions.length>=c.questionsPerQuiz,'Missing questions in '+id);
+ assert(c.questions.every(q=>q.id&&q.text&&Array.isArray(q.options)&&q.options.length>1),'Broken question in '+id);
+ total+=c.questions.length;
 }
-const catalog = Object.fromEntries(Object.values(sandbox.window.COURSES)
-  .filter(c => c.sector === 'facilities_security' && c.hasQuiz)
-  .map(c => [c.id, {
-    title: c.title, applicant: !!c.applicantCourse,
-    count: c.questionsPerQuiz || 10, passing: c.passingPercentage || 70,
-    questions: Object.fromEntries(c.questions.map(q => [q.id, { answer: q.answerIndex, options: q.options.length }]))
-  }]));
-const target = path.join(__dirname, 'supabase/functions/asf-academy-results/catalog.json');
-const output = JSON.stringify(catalog, null, 2) + '\n';
-if (process.argv.includes('--check')) {
-  if (fs.readFileSync(target, 'utf8') !== output) throw Error('Regenerate the academy marking catalog');
-} else {
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, output);
-}
-console.log('Academy marking catalog: ' + Object.keys(catalog).length + ' courses');
+assert(!fs.existsSync(path.join(__dirname,'supabase/functions/asf-academy-results/catalog.json')),'Private marking catalog must never be publicly committed');
+console.log('PASS: '+ids.length+' intact public banks with '+total+' questions and no exposed marking keys');
