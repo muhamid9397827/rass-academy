@@ -37,6 +37,13 @@ jobs:
           grep -q "and public.asf_approved()" portal/supabase/schema.sql
           grep -q "asf_check_email_webhook" portal/supabase/functions/asf-notify/index.ts
           grep -q "asf_commander_email_for_delivery" portal/supabase/functions/asf-notify/index.ts
+          grep -q "asf_email_claim_due" portal/supabase/functions/asf-notify/index.ts
+          grep -q "asf_email_finish" portal/supabase/functions/asf-notify/index.ts
+          grep -q "Idempotency-Key" portal/supabase/functions/asf-notify/index.ts
+          grep -q "asf_email_outbox" portal/supabase/17-durable-email-outbox.sql
+          if grep -Eq 'NEW\\.(title|body|sender_name|discord_id)' portal/supabase/17-durable-email-outbox.sql; then
+            echo 'Confidential report fields in email queue'; exit 1
+          fi
           grep -q "grant execute on function public.asf_commander_email_for_delivery() to service_role" portal/supabase/16-commander-delivery-address.sql
           grep -q "app_private.asf_email_bridge_key" portal/supabase/15-email-webhook-bridge.sql
           if grep -Eq 'NEW\.(title|body|sender_name|discord_id)' portal/supabase/15-email-webhook-bridge.sql; then
