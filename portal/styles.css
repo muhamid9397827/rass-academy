@@ -173,3 +173,10 @@ input,textarea,select{background:#091827;border-color:#31516b}.sidebar{backgroun
  .mp-violations{max-height:370px}
  .mp-section-heading{align-items:flex-start}
 }
+
+/* Repeat-offense option from the original police calculator. */
+.mp-penalty-form{grid-template-columns:repeat(2,minmax(0,1fr)) minmax(180px,auto) auto}
+.mp-penalty-form .mp-repeat{display:flex;gap:9px;align-items:center;min-width:0;line-height:1.5;margin:0 0 8px;font-size:12px;font-weight:700}
+.mp-penalty-form .mp-repeat input{width:18px;height:18px;min-height:18px;flex:0 0 18px;accent-color:var(--accent)}
+@media(max-width:1000px){.mp-penalty-form{grid-template-columns:repeat(2,minmax(0,1fr))}.mp-penalty-form .mp-repeat{grid-column:1/-1}}
+@media(max-width:600px){.mp-penalty-form{grid-template-columns:1fr}.mp-penalty-form .mp-repeat{grid-column:1}}
