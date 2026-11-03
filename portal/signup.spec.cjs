@@ -60,6 +60,9 @@ const sdk="(() => {\n const data={signupCalls:[],signinCalls:[],getUserCalls:0,s
  await page.goto(base+'#access_token=mock&type=signup',{waitUntil:'domcontentloaded'});
  await page.reload({waitUntil:'domcontentloaded'});
  await page.locator('#pendingScreen').waitFor({state:'visible'});
+ await page.goto(base+'?login=1',{waitUntil:'domcontentloaded'});
+ await page.locator('#authScreen').waitFor({state:'visible'});
+ assert.equal(await page.locator('#registerFields').isVisible(),false,'confirmation CTA opens login, not registration');
  assert.deepEqual(jsErrors,[]);
  await browser.close();
  console.log('PASS: guest, signup without session, email return, approved workflow gate, email errors, signup redirect and mobile');
