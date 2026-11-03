@@ -324,6 +324,25 @@ function renderAcademy(){
  '<div class="grid three">'+courses.map(c=>'<section class="section-card"><h3>'+esc(c.title)+'</h3><p>'+esc(c.requiredRank||'')+'</p><a class="btn ghost" href="academy.html" target="_blank" rel="noopener">فتح دورة الأكاديمية</a></section>').join('')+'</div>'+
  '<button class="btn primary" id="allCourses">دخول الأكاديمية</button>');
  $('#allCourses').onclick=openAcademy;
+ if(commander){
+  $('#page').insertAdjacentHTML('beforeend','<section class="section-card" style="margin-top:20px"><h3>سجل نتائج الأكاديمية المؤكدة</h3><p class="muted">نتائج محفوظة على الخادم. بيانات الزوار مُدخلة منهم ولم تُتحقق هويتهم؛ النتيجة لا تغيّر الرتبة تلقائيًا.</p><form id="academyResultsFilter" class="row"><label>البحث بالاسم أو Discord أو رقم الإيصال<input name="search" maxlength="60"></label><button class="btn ghost">بحث</button></form><div id="academyResultsRows" aria-live="polite"></div></section>');
+  let offset=0,term='';
+  const load=async()=>{
+   const rows=$('#academyResultsRows');if(!rows)return;
+   rows.textContent='جاري تحميل النتائج…';
+   let q=db.from('asf_academy_results').select('receipt,trainee_name,trainee_rank,discord_id,course_title,score,total,percentage,passed,received_at,legacy_status',{count:'exact'}).order('received_at',{ascending:false});
+   if(term)q=/^\d{15,20}$/.test(term)?q.eq('discord_id',term):/^ACD-\d+$/.test(term)?q.eq('receipt',term):q.ilike('trainee_name','%'+term.replace(/[%_\\]/g,'')+'%');
+   const {data,error,count}=await q.range(offset,offset+49);
+   if(!rows.isConnected)return;
+   if(error){rows.textContent='تعذر تحميل سجل النتائج. أعد المحاولة.';return;}
+   const sync={pending:'قيد المتابعة',confirmed:'مؤكد',unconfirmed:'غير مؤكد',failed:'تعذر الإرسال'};
+   rows.innerHTML='<p class="muted">'+esc(count||0)+' نتيجة</p>'+(data?.length?'<div class="table-scroll"><table><thead><tr><th>الإيصال والتاريخ</th><th>المتدرّب</th><th>الدورة</th><th>النتيجة</th><th>نسخة الجدول</th></tr></thead><tbody>'+data.map(r=>'<tr><td>'+esc(r.receipt)+'<br>'+date(r.received_at)+'</td><td>'+esc(r.trainee_name)+'<br>'+esc(r.trainee_rank)+'<br>'+esc(r.discord_id)+'</td><td>'+esc(r.course_title)+'</td><td>'+esc(r.score)+' / '+esc(r.total)+' · '+esc(r.percentage)+'%<br>'+badge(r.passed?'اجتياز':'رسوب')+'</td><td>'+esc(sync[r.legacy_status]||'غير مؤكد')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+'<div class="row"><button class="btn ghost small" id="academyResultsPrev" '+(offset===0?'disabled':'')+'>السابق</button><button class="btn ghost small" id="academyResultsNext" '+(offset+50>=(count||0)?'disabled':'')+'>التالي</button></div>';
+   $('#academyResultsPrev').onclick=()=>{offset=Math.max(0,offset-50);load()};
+   $('#academyResultsNext').onclick=()=>{offset+=50;load()};
+  };
+  $('#academyResultsFilter').onsubmit=e=>{e.preventDefault();term=String(new FormData(e.target).get('search')||'').trim();offset=0;load()};
+  load();
+ }
 }
 function cardReport(r,mode){
  const secret=r.kind==='secret',revealed=mode==='inbox'||mode==='trash'||!secret;
@@ -486,11 +505,21 @@ async function renderPolice(){
  (mayManage?'<section class="section-card"><h3>إدارة العقوبات المقترحة</h3><p>يمكنك تغيير العقوبة لمخالفة ورتبة محددتين. لا تتغير ملفات الشرطة العسكرية القديمة، ويمكن العودة إلى العقوبة الأصلية.</p><form id="policeAdminForm"><label>المخالفة<select name="rule">'+opt(list.map(v=>[v.key,String(v.id||'')+' — '+v.text]))+'</select></label>'+
  '<label>الرتبة<select name="rank">'+opt(ranks.map(r=>[r,r]))+'</select></label>'+
  '<label>العقوبة المقترحة<textarea name="penalty" maxlength="500" required></textarea></label><div class="row"><button class="btn primary" name="action" value="save" type="submit">حفظ التعديل</button><button class="btn ghost" name="action" value="reset" type="submit">استعادة العقوبة الأصلية</button></div></form></section>':'')+
+ '<section class="section-card"><h3>تقرير التحقيق العسكري</h3><form id="investigationForm"><div class="grid two"><label>رقم ملف التحقيق<input name="reportNumber" required maxlength="100" value="'+esc('INV-'+Date.now().toString(36).toUpperCase())+'"></label><label>اسم المحقق<input name="investigator" required maxlength="80" value="'+esc(profile.game_name)+'"></label><label>اسم العسكري المتهم<input name="accused" required maxlength="80"></label><label>Discord المتهم<input name="discord" required inputmode="numeric" pattern="[0-9]{15,22}" maxlength="22"></label></div><p class="muted">اختر المخالفة والرتبة من حاسبة العقوبة أعلاه. راجع نتيجة التحقيق والحكم قبل الإرسال.</p><button class="btn primary" type="submit">تجهيز تقرير التحقيق</button></form><pre id="investigationPreview" style="white-space:pre-wrap" hidden></pre><div class="row"><button class="btn ghost" id="copyInvestigation" type="button" hidden>نسخ تقرير التحقيق</button><button class="btn ghost" id="useInvestigation" type="button" hidden>استخدامه في إحالة للمجلس</button></div></section>'+
  '<section class="section-card"><h3>إحالة قضية جديدة إلى مجلس القضاء</h3><form id="caseForm"><label>الموضوع<input name="subject" required maxlength="200"></label><label>التفاصيل<textarea name="details" required maxlength="12000"></textarea></label><button class="btn ghost" type="submit">إرسال للمجلس</button></form></section>');
  $('#policeForm').onsubmit=e=>{
   e.preventDefault();const f=new FormData(e.target),v=list[Number(f.get('violation'))],rank=f.get('rank');
   $('#policeResult').hidden=false;$('#policeResult').textContent='العقوبة المقترحة: '+penaltyFor(v,rank);
  };
+ let investigationText='';
+ $('#investigationForm').onsubmit=e=>{
+  e.preventDefault();const f=new FormData(e.target),calc=new FormData($('#policeForm')),v=list[Number(calc.get('violation'))],rank=calc.get('rank');
+  investigationText=window.ASF_WORKFLOW.buildInvestigation({reportNumber:f.get('reportNumber'),investigator:f.get('investigator'),accused:String(f.get('accused'))+' <@'+f.get('discord')+'>',violationText:v.text,classification:v.tier?'بند ('+v.id+') — '+v.tierName:'قوانين مخالفات ثابتة',penalty:penaltyFor(v,rank)});
+  $('#investigationPreview').hidden=false;$('#investigationPreview').textContent=investigationText;
+  $('#copyInvestigation').hidden=false;$('#useInvestigation').hidden=false;
+ };
+ $('#copyInvestigation').onclick=async()=>{try{await navigator.clipboard.writeText(investigationText);toast('تم نسخ تقرير التحقيق')}catch{toast('تعذر النسخ التلقائي؛ يمكنك تحديد نص التقرير ونسخه.',true)}};
+ $('#useInvestigation').onclick=()=>{const form=$('#caseForm');form.elements.subject.value='ملف تحقيق '+$('#investigationForm').elements.reportNumber.value;form.elements.details.value=investigationText;form.scrollIntoView({behavior:'smooth',block:'center'})};
  if(mayManage){
   const form=$('#policeAdminForm'),sync=()=>{
    const rule=list.find(v=>v.key===form.elements.rule.value);
@@ -529,7 +558,7 @@ async function renderCourt(){
  '<button class="btn primary" type="submit">تثبيت الإنذار في السجل</button></form></div>'+
  '<div class="section-card"><div class="row between"><h3>السجل القضائي والإنذارات</h3>'+badge(String(warnings.length)+' سجل')+'</div>'+
  '<input id="warningSearch" placeholder="ابحث بالاسم أو الكود أو الرتبة أو المخالفة">'+
- '<div id="warningRows">'+(warnings.map(w=>courtWarningCard(w)).join('')||empty('لا توجد إنذارات بعد'))+'</div></div>');
+ '<div class="row"><label>السجل<select id="warningScope"><option value="active">الإنذارات النشطة</option><option value="archive">الأرشيف: المنتهية والملغاة</option><option value="all">جميع السجلات</option></select></label></div><div id="warningRows"></div></div>');
  $('#page').onclick=async e=>{
   const b=e.target.closest('[data-action]');if(!b)return;
   if(b.dataset.action.startsWith('decide')){
@@ -543,11 +572,12 @@ async function renderCourt(){
    if(error)return toast(error.message,true);toast('تم إلغاء الإنذار وتسجيل العملية');return renderCourt();
   }
  };
- $('#warningSearch').oninput=e=>{
-  const text=String(e.target.value||'').trim().toLowerCase();
-  const matches=warnings.filter(w=>[w.player_name,w.player_code,w.player_rank,w.offense,w.punishment].some(z=>String(z||'').toLowerCase().includes(text)));
+ const filterWarnings=()=>{
+  const text=String($('#warningSearch').value||'').trim().toLowerCase(),scope=$('#warningScope').value;
+  const matches=warnings.filter(w=>{const state=window.ASF_WORKFLOW.warningState(w);return(scope==='all'||(scope==='archive'?state.archived:!state.archived))&&[w.player_name,w.player_code,w.player_rank,w.offense,w.punishment].some(z=>String(z||'').toLowerCase().includes(text))});
   set('#warningRows',matches.map(w=>courtWarningCard(w)).join('')||empty('لا توجد نتائج'));
  };
+ $('#warningSearch').oninput=filterWarnings;$('#warningScope').onchange=filterWarnings;filterWarnings();
  $('#warningForm').onsubmit=async e=>{
   e.preventDefault();const f=new FormData(e.target);
   const row={recorded_by:user.id,player_name:String(f.get('player_name')).trim(),player_rank:String(f.get('player_rank')).trim(),player_code:String(f.get('player_code')).trim(),warning_level:f.get('warning_level'),
@@ -557,10 +587,12 @@ async function renderCourt(){
  };
 }
 function courtWarningCard(w){
- return '<div class="section-card"><div class="row between"><b>'+esc(w.player_name)+' — '+esc(w.player_rank)+'</b>'+badge(w.cancelled_at?'ملغي':'نشط')+'</div>'+
+ const state=window.ASF_WORKFLOW.warningState(w);
+ return '<div class="section-card"><div class="row between"><b>'+esc(w.player_name)+' — '+esc(w.player_rank)+'</b>'+badge(state.label)+'</div>'+
  '<p class="muted">'+esc(w.player_code||'بدون كود')+' · '+date(w.recorded_at)+' · '+esc(w.warning_level)+'</p>'+
  '<p><b>المخالفة:</b> '+esc(w.offense)+'</p><p><b>العقوبة:</b> '+esc(w.punishment)+'</p>'+
- (w.cancelled_at?'<p class="muted">أُلغي بتاريخ '+date(w.cancelled_at)+'؛ السبب: '+esc(w.cancellation_reason)+'</p>':btn('إلغاء الإنذار','cancel-warning',w.id,'warn'))+'</div>';
+ (state.expiresAt?'<p class="muted">نهاية المدة: '+date(state.expiresAt)+'</p>':'')+
+ (w.cancelled_at?'<p class="muted">أُلغي بتاريخ '+date(w.cancelled_at)+'؛ السبب: '+esc(w.cancellation_reason)+'</p>':state.archived?'':btn('إلغاء الإنذار','cancel-warning',w.id,'warn'))+'</div>';
 }
 async function renderMembers(){
  const rows=await query('asf_profiles');rows.sort((a,b)=>a.created_at<b.created_at?1:-1);

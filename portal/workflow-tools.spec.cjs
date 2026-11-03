@@ -1,0 +1,15 @@
+const assert = require('node:assert/strict');
+require('./workflow-tools.js');
+const { warningState, buildInvestigation } = globalThis.ASF_WORKFLOW;
+const start = Date.parse('2026-11-01T10:00:00Z');
+const warning = { recorded_at: new Date(start).toISOString(), duration_days: 2 };
+assert.equal(warningState(warning, start + 2 * 86400000 - 1).key, 'active');
+assert.equal(warningState(warning, start + 2 * 86400000).key, 'expired');
+assert.equal(warningState({ ...warning, cancelled_at: '2026-11-02T10:00:00Z' }, start).key, 'cancelled');
+assert.equal(warningState({ ...warning, duration_days: 0 }, start + 100 * 86400000).key, 'active');
+assert.equal(warningState({ ...warning, duration_days: null }, start).expiresAt, null);
+assert.equal(buildInvestigation({}), '');
+const text = buildInvestigation({ reportNumber: 'INV-1', investigator: 'محقق', accused: 'عسكري <@123456789012345678>', violationText: 'مخالفة', classification: 'الدرجة الأولى', penalty: 'إنذار' });
+assert.ok(text.includes('<@&1305901086158225490>'));
+assert.ok(text.includes('INV-1') && text.includes('إنذار') && text.includes('لم يحضر الاستدعاء'));
+console.log('PASS: warning expiry/cancellation/archive boundaries and legacy investigation format');

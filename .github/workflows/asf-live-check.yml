@@ -12,6 +12,10 @@ jobs:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Verify portal and academy published
         shell: bash
         run: |
@@ -29,3 +33,5 @@ jobs:
           done
           echo "ASF published URLs did not pass smoke test"
           exit 1
+      - name: Read-only Auth and receipt service checks
+        run: node portal/auth-health.spec.cjs && node portal/result-health.spec.cjs

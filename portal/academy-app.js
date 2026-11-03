@@ -137,6 +137,7 @@
       "result-notes",
       "submission-status",
       "submission-status-text",
+      "retry-result-button",
       "copy-result-button",
       "print-result-button",
       "new-session-button",
@@ -176,6 +177,13 @@
 
 
   function bindEvents() {
+    elements.retryResultButton.addEventListener("click", async () => {
+      if (isSubmitting || !state.result) return;
+      isSubmitting = true;
+      elements.retryResultButton.disabled = true;
+      try { await submitResult(); }
+      finally { isSubmitting = false; elements.retryResultButton.disabled = false; }
+    });
     document.querySelectorAll("[data-sector]").forEach((button) => {
       button.addEventListener("click", () => selectSector(button.dataset.sector));
     });
@@ -941,7 +949,7 @@
         ? "أحسنت، تم اجتياز الدورة"
         : "لم تحقق درجة الاجتياز";
       elements.resultMessage.textContent = passed
-        ? "تم حفظ نتيجتك ويمكنك نسخ الملخص ومشاركته"
+        ? "اكتمل التصحيح؛ تابع تأكيد حفظ النتيجة أدناه"
         : `درجة الاجتياز المطلوبة ${formatNumber(getPassingPercentage(course))}٪ راجع المادة وحاول بعد انتهاء فترة الانتظار`;
       elements.resultPercentage.textContent = `${formatNumber(result.percentage)}٪`;
       elements.scoreRing.style.setProperty(
@@ -968,6 +976,7 @@
   }
 
   async function submitResult() {
+    elements.retryResultButton.hidden = true;
     const payload = buildResultPayload();
     const submittedSessionId = state.sessionId;
     const submittedResult = state.result;
@@ -979,6 +988,41 @@
           : "تم إتمام الاطلاع وتعذر حفظه محليا",
         submittedResult.localSaved ? "success" : "error"
       );
+      return;
+    }
+
+    if (CONFIG.submissionMode === "verified-ledger") {
+      setSubmissionStatus("جاري التأكد من حفظ النتيجة في سجل الإدارة", "");
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 22000);
+      try {
+        const response = await fetch(CONFIG.resultsEndpoint, {
+          method: "POST", headers: { "Content-Type": "application/json", apikey: CONFIG.resultsPublicKey },
+          body: JSON.stringify(payload), signal: controller.signal
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(data?.error || "تعذر الاتصال بخادم النتائج");
+        if (data?.saved !== true || !/^ACD-\d{8,}$/.test(data.receipt || "") || !Number.isFinite(Date.parse(data.receivedAt)) ||
+            !Number.isInteger(data.result?.score) || data.result.total !== submittedResult.total ||
+            data.result.score < 0 || data.result.score > data.result.total || typeof data.result.passed !== "boolean") {
+          throw new Error("لم يصل تأكيد موثوق بحفظ النتيجة؛ أعد المحاولة");
+        }
+        if (state.sessionId !== submittedSessionId || state.result !== submittedResult) return;
+        Object.assign(submittedResult, data.result, { receipt: data.receipt, serverSaved: true,
+          serverReceivedAt: data.receivedAt, legacyStatus: data.legacyStatus });
+        persistLastResult();
+        const history = storageGet(STORAGE.history, []);
+        storageSet(STORAGE.history, history.map(item => item.sessionId === submittedSessionId ? buildResultPayload() : item));
+        renderResult();
+        setSubmissionStatus("تم تأكيد حفظ النتيجة في سجل البوابة برقم " + data.receipt +
+          (data.legacyStatus === "confirmed" ? "، وتأكيد نسختها في جدول النتائج" : "؛ نسخة جدول النتائج لم يُؤكّد استلامها"), "success");
+      } catch (error) {
+        if (state.sessionId === submittedSessionId) {
+          elements.retryResultButton.hidden = false;
+          setSubmissionStatus((submittedResult.localSaved ? "نسختك محفوظة على هذا الجهاز. " : "احتفظ بملخص النتيجة. ") +
+            (error.name === "AbortError" ? "تأخر رد الخادم؛ يمكنك إعادة الحفظ بأمان." : error.message), "error");
+        }
+      } finally { window.clearTimeout(timeout); }
       return;
     }
 
@@ -1302,7 +1346,12 @@
 
     if (state.stage === "result") {
       renderResult();
-      setSubmissionStatus("تم استعادة النتيجة المحفوظة على هذا الجهاز", "success");
+      if (CONFIG.submissionMode === "verified-ledger" && !state.result.isReference) {
+        elements.retryResultButton.hidden = Boolean(state.result.serverSaved);
+        setSubmissionStatus(state.result.serverSaved
+          ? "سبق تأكيد حفظ هذه النتيجة في سجل البوابة برقم " + state.result.receipt
+          : "تم استعادة النسخة المحلية؛ اضغط إعادة محاولة الحفظ لتأكيد وصولها إلى الإدارة", state.result.serverSaved ? "success" : "");
+      } else setSubmissionStatus("تم استعادة النتيجة المحفوظة على هذا الجهاز", "success");
     } else if (state.stage === "quiz") {
       if (Date.now() >= state.quizEndsAt) {
         state.stage = "quiz";
