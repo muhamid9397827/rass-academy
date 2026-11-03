@@ -2,11 +2,13 @@
 
 ## إعداد إشعارات البريد — 3 نوفمبر 2026
 
+- ✅ migration 16 تضيف دالة خادم مقيدة لـ`service_role` تقرأ بريد القائد المؤكد من `auth.users`. تحققنا من منع `anon` و`authenticated` من استدعائها.
+
 - ✅ تم ربط قاعدتي التسجيل والتقارير بوظيفة `asf-notify` عبر triggers خاصة (ملف `15-email-webhook-bridge.sql`).
 - ✅ مفتاح التحقق من Webhook يُولَّد ويُحفظ في `app_private.asf_email_bridge_key` داخل قاعدة البيانات، ولا يظهر في GitHub أو المتصفح.
 - ✅ تم اختبار الوظيفة المباشرة: طلب مصرح `HTTP 202` (البريد غير مهيأ بعد)، وطلب غير مصرح `HTTP 401`.
 - ✅ البيانات المرسلة من قاعدة البيانات إلى وظيفة البريد لا تتضمن عنوان التقرير ولا نصه ولا ملف PDF؛ فقط نوع الإشعار وتصنيف التقرير.
-- ⚠️ لإرسال بريد فعلي يلزم **حساب Resend مع نطاق مُوثَّق** وثلاثة أسرار فقط على Supabase Edge Functions: `RESEND_API_KEY` و `RESEND_FROM` و `ASF_COMMANDER_EMAIL`. لا تضع أي سر في `config.js` أو GitHub.
+- ⚠️ لتجربة إرسال إشعار إلى بريد القائد المؤكَّد، يكفي **مفتاح `RESEND_API_KEY`** في Supabase Edge Functions، وإنشاء حساب Resend بنفس بريد القائد. يستخدم الاختبار مرسل `onboarding@resend.dev` تلقائيًا، وهو محدود بمراسلة بريد صاحب حساب Resend فقط. للإرسال الإنتاجي من هويتك الخاصة وثّق نطاقًا وأضف `RESEND_FROM`. لا تضع المفتاح في GitHub أو المتصفح.
 - لا يلزم إعداد `ASF_WEBHOOK_SECRET` يدويًا أو إنشاء Webhooks من لوحة التحكم بعد تركيب migration 15.
 - إشعارات لوحة القائد الفورية لا تعتمد على Resend وتبقى فعالة.
 
@@ -94,7 +96,7 @@
    supabase functions deploy asf-notify --project-ref PROJECT_REF --no-verify-jwt
    supabase functions deploy asf-purge --project-ref PROJECT_REF --no-verify-jwt
    ```
-   اضبط Supabase Functions Secrets: `RESEND_API_KEY`, `ASF_COMMANDER_EMAIL`, `RESEND_FROM`, `ASF_CRON_TOKEN`. وأضف رابط Supabase URL وservice role للـ purge كأسرار خادم (قد توفرها المنصة تلقائيًا).
+   اضبط `RESEND_API_KEY` في Supabase Edge Functions؛ بريد القائد يُستخرج آليًا من حسابه المؤكد عبر RPC مقيدة بالخادم. اضبط `RESEND_FROM` عند توثيق نطاق الإرسال، ولا حاجة لـ`ASF_COMMANDER_EMAIL`. مفاتيح التنظيف والـservice role تبقى محصورة بالخادم.
 9. بعد تركيب migration 15، لا حاجة لإضافة Webhooks يدويًا؛ اختبر رسالة فعلية بعد إعداد أسرار Resend.
 10. جدولة `asf-purge`: عبر Supabase Cron/pg_cron + pg_net أو Scheduler مؤمّن، يوميًا، مع `Authorization: Bearer ASF_CRON_TOKEN`. لا تعتبر 30 يومًا تلقائية حتى ينجح اختبار المهمة.
 
