@@ -58,7 +58,7 @@ function create({db,getContext,notify,go,mountResults}){
   const box=$('#departmentRolesPanel');if(!box)return;
   if(!commanderAdmin&&!isHead(dept)){box.innerHTML='';return}
   const [profiles,roles]=await Promise.all([
-   db.from('asf_profiles').select('user_id,game_name,rank,military_code').eq('status','approved').order('game_name').limit(300),
+   db.rpc('asf_department_candidates',{p_department:dept}),
    db.from('asf_department_roles').select('user_id,department,role,granted_at').eq('department',dept).limit(600)
   ]);
   if(profiles.error||roles.error){box.textContent='تعذر عرض إدارة الأدوار.';return}
