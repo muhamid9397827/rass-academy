@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#081321"><meta name="description" content="بوابة أمن المنشآت — الدورات الإلكترونية والتأهيل، والتدريب المتخصص لأمن المنشآت">
-<title>بوابة أمن المنشآت</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="landing.css?v=20261103-2"></head>
+<title>بوابة أمن المنشآت</title><link rel="stylesheet" href="styles.css?v=20261103-4"><link rel="stylesheet" href="landing.css?v=20261103-4"></head>
 <body>
 <header class="topbar"><div class="brand"><span class="brand-icon">◆</span><span>بوابة أمن المنشآت<small>المنصة الإدارية الموحدة · رول بلاي</small></span></div>
 <div class="top-actions"><span id="sessionLabel"></span><button class="btn ghost" id="signOut" hidden>تسجيل الخروج</button></div></header>
@@ -17,6 +17,7 @@
         <button class="landing-button landing-button-primary" id="openAcademy" type="button"><span>ابدأ رحلتك التدريبية</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5m7 7-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <button class="landing-button landing-button-outline" id="showLogin" type="button">دخول الأعضاء <span aria-hidden="true">↗</span></button>
       </div>
+      <div class="landing-registration-hint"><span class="landing-registration-icon" aria-hidden="true">✦</span><span>جديد على البوابة؟ <button type="button" class="landing-inline-register" id="registerFromHero">أنشئ حساب عضو</button>، وأدخل سبب طلبك ليتمكن القائد من مراجعته.</span></div>
       <div class="landing-hero-foot"><span class="landing-foot-check" aria-hidden="true">✓</span> الدورات متاحة للزوار بدون حساب <span class="landing-separator" aria-hidden="true">·</span> <span>الأنظمة الداخلية للأعضاء بعد تسجيل الدخول</span></div>
     </div>
     <div class="landing-visual" aria-label="مراحل التأهيل من الدراسة إلى الاختبار">
@@ -59,7 +60,11 @@
  <div id="registerFields" hidden>
  <label>الاسم داخل اللعبة<input id="gameName" maxlength="80" minlength="2" autocomplete="nickname"></label>
  <label>Discord User ID<input id="discordId" type="text" inputmode="numeric" pattern="[0-9]{17,20}" dir="ltr" placeholder="18 أو 19 رقمًا"></label>
- <label>الرتبة<select id="rank"></select></label></div>
+ <label>الرتبة<select id="rank"></select></label>
+ <label class="activation-reason-field" for="activationReason">سبب طلب تفعيل الحساب
+  <textarea id="activationReason" rows="4" minlength="10" maxlength="500" placeholder="مثال: أحتاج الدخول للأنظمة الإدارية لأداء مهامي في أمن المنشآت."></textarea>
+ </label>
+ <p class="activation-reason-notice" id="activationReasonNotice"><span aria-hidden="true">!</span> <strong>تنويه:</strong> في حال عدم ذكر سبب طلب التفعيل، لن يتم تفعيل حسابك من القيادة.</p></div>
  <button class="btn primary full" type="submit" id="authSubmit">دخول</button>
  </form><button class="link-button" id="authToggle">ليس لديك حساب؟ إنشاء حساب</button><button class="link-button" id="forgotPassword" type="button">نسيت كلمة المرور؟</button><button class="link-button" id="authBack">العودة للرئيسية</button>
  <p class="hint">بعد إنشاء الحساب، يراجع القائد البيانات ويوافق على التفعيل يدويًا.</p></div></section>
@@ -87,7 +92,17 @@
   <button class="link-button" id="recoveryBack" type="button">العودة لتسجيل الدخول</button>
  </div>
 </section>
-<section class="shell" id="pendingScreen" hidden><article class="panel center"><span class="big-icon">⏳</span><h2>حسابك بانتظار موافقة القائد</h2><p id="pendingText">لن تتاح الأنظمة الداخلية حتى يتم تفعيل حسابك.</p><button class="btn ghost" id="refreshProfile">تحديث حالة الحساب</button></article></section>
+<section class="shell" id="pendingScreen" hidden><article class="panel center"><span class="big-icon">⏳</span><h2>حسابك بانتظار موافقة القائد</h2><p id="pendingText">لن تتاح الأنظمة الداخلية حتى يتم تفعيل حسابك.</p><div id="pendingReasonSection" class="pending-reason-section" hidden>
+ <h3>استكمال سبب طلب التفعيل</h3>
+ <p class="muted">طلبك ما زال بانتظار المراجعة. يلزم ذكر السبب حتى تتمكن القيادة من اعتماد الحساب.</p>
+ <form id="pendingReasonForm">
+  <label for="pendingReason">سبب طلب التفعيل<textarea id="pendingReason" required rows="4" minlength="10" maxlength="500" placeholder="اشرح لماذا تحتاج تفعيل حسابك في أمن المنشآت."></textarea></label>
+  <p class="activation-reason-notice"><span aria-hidden="true">!</span> في حال عدم ذكر السبب، لن يتم تفعيل حسابك.</p>
+  <button class="btn primary" type="submit" id="submitPendingReason">إرسال السبب إلى القيادة</button>
+ </form>
+ </div>
+ <div id="pendingReasonRecorded" class="pending-reason-recorded" hidden><span aria-hidden="true">✓</span> تم تسجيل سبب التفعيل. طلبك بانتظار قرار القائد.</div>
+ <button class="btn ghost" id="refreshProfile">تحديث حالة الحساب</button></article></section>
 <div class="workspace" id="workspace" hidden>
 <aside class="sidebar"><div class="side-label">لوحة التحكم</div>
 <button class="nav active" data-page="dashboard">▦ <span>الرئيسية</span></button>
@@ -113,5 +128,5 @@
 <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
 <script src="../js/courses.js"></script>
 <script src="mp-data.js"></script>
-<script src="app.js?v=20261103-auth-v2" defer></script>
+<script src="app.js?v=20261103-confirm-v1" defer></script>
 </body></html>
