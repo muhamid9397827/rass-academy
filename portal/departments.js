@@ -117,9 +117,9 @@ function create({db,getContext,notify,go,mountResults}){
   const active=canOperate(dept),head=isHead(dept);
   const summary=dept==='training'?'متابعة الدورات، تأكيد تسليم رولات الناجحين، ومراجعة مكافآت المدربين.':'متابعة طلبات المتقدمين وتفعيل المقبولين، مع تسجيل المدرب ومكافأته.';
   $('#page').innerHTML=hero(dept,summary)+
-    '<div class="dept-shortcuts"><button class="dept-shortcut" type="button" id="deptMyRole"><b>الرول الحالي</b><strong>'+esc(roleSummary(dept))+'</strong></button>'+
+    '<div class="dept-shortcuts"><div class="dept-shortcut" id="deptMyRole"><b>الرول الحالي</b><strong>'+esc(roleSummary(dept))+'</strong></div>'+
     (dept==='training'?'<button class="dept-shortcut" id="deptPublicCourses" type="button"><b>الدورات العامة</b><strong>افتح الأكاديمية ↗</strong></button>':
-    '<button class="dept-shortcut" id="deptMemberGuide" type="button"><b>القبول والتجنيد</b><strong>أرشيف قبول الأعضاء</strong></button>')+
+    '<div class="dept-shortcut"><b>القبول والتجنيد</b><strong>الأدوار وسجل القسم</strong></div>')+
     (head?'<button class="dept-shortcut" id="deptManageTrainers" type="button"><b>صلاحيات الرئاسة</b><strong>إدارة المدربين ↓</strong></button>':'')+'</div>'+
     (active?'<section class="section-card dept-section" id="departmentWork"></section>':'<section class="section-card dept-section"><h3>عضوية '+esc(DEPTS[dept])+'</h3><p class="dept-hint">أنت عضو في هذا القسم. إدارة المتدربين والمكافآت تمنح فقط للمدربين والرئاسة.</p></section>')+
     (active?'<section class="section-card dept-section" id="departmentRewards"></section>':'')+
@@ -141,19 +141,6 @@ function create({db,getContext,notify,go,mountResults}){
  }
  async function renderAdmin(){
   if(!context().commander){$('#page').textContent='إدارة رئاسة الأقسام خاصة بالقائد فقط.';return}
-  $('#page').innerHTML='<header class="dept-hero"><div><span class="dept-eyebrow">قيادة أمن المنشآت</span><h2>توزيع الأدوار والرئاسات</h2><p>أدوار كلية التدريب منفصلة عن أدوار القبول والتجنيد، ولا تمنح صلاحيات القيادة العامة أو التقارير السرية.</p></div></header>'+
-   '<div class="dept-grid"><section class="section-card dept-section" id="departmentTrainingAdmin"></section><section class="section-card dept-section" id="departmentRecruitmentAdmin"></section></div>';
-  // Reuse the exact secured assignment form per department.
-  async function renderOne(dept,id){
-   const original=$('#departmentRolesPanel');
-   const target=$('#'+id);
-   if(!target)return;
-   target.innerHTML='<div id="departmentRolesPanel"></div>';
-   await rolesPanel(dept,true);
-   target.innerHTML=target.innerHTML.replace('id="departmentRolesPanel"','id="'+id+'Content"');
-   // Events are lost during HTML replacement, so keep a single active form in the admin screen:
-   if(original)original.remove();
-  }
   // Show one department per selection so event listeners remain attached.
   $('#page').innerHTML='<header class="dept-hero"><div><span class="dept-eyebrow">توزيع أدوار القيادة</span><h2>إدارة رئاسات الأقسام</h2><p>القائد يمنح رئاسة، مدرب، أو عضو لكل جهة على حدة. ولا يمكن لرئيس جهة أن يمنح أدوار الجهة الأخرى.</p></div></header>'+
    '<section class="section-card dept-section"><label>اختر القسم<select id="departmentAdminSelect"><option value="training">كلية التدريب</option><option value="recruitment">القبول والتجنيد</option></select></label><div id="departmentRolesPanel"></div></section>';
