@@ -9,6 +9,7 @@ const {portalMock,academyState}=require('./completion-fixtures.cjs');
  await page.goto('http://127.0.0.1:8000/portal/');
  await page.locator('#workspace').waitFor({state:'visible'});
  await page.locator('[data-page="police"]').click();
+ await page.locator('#mpInvestigationDetails summary').click();
  await page.locator('#investigationForm input[name="accused"]').fill('عسكري تجريبي');
  await page.locator('#investigationForm input[name="discord"]').fill('99999999999999999999');
  await page.locator('#investigationForm button').click();
