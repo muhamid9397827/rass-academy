@@ -37,3 +37,36 @@ input,textarea,select{background:#091827;border-color:#31516b}.sidebar{backgroun
 #recoveryForm label{display:grid;gap:7px}
 #recoveryForm input:focus-visible{outline:2px solid #79d4cc;outline-offset:2px}
 #recoverySubmit:disabled{opacity:.65;cursor:wait}
+
+
+/* Commander-reviewed access requests — scoped to the member workspace. */
+.access-modal-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:19px}
+.access-modal-actions>.btn{flex:1 1 165px}
+.access-shortcut{margin-top:20px;border:1px solid rgba(121,212,204,.25);border-radius:17px;background:linear-gradient(120deg,rgba(30,74,83,.55),rgba(15,37,55,.85));padding:23px 26px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.access-shortcut strong{display:block;font-size:16px;color:#e8fbfa}.access-shortcut p{font-size:12px;color:#b2ced4;margin:4px 0 0;line-height:1.8}
+.access-workflow{display:grid;gap:19px}
+.access-workflow .section-card{min-width:0}
+.access-heading{margin-bottom:18px}.access-heading h3{font-size:22px;margin:3px 0 5px;color:#f1fbfa}.access-heading p{margin:0;color:#adc3cf;font-size:12px;line-height:1.8}
+.access-request-form{display:grid;grid-template-columns:1fr;gap:15px;max-width:800px}
+.access-request-form label,.access-decision-form label{display:grid;gap:8px;color:#e1f3f5;font-weight:700;font-size:12px}
+.access-request-form select,.access-request-form textarea,.access-decision-form input{width:100%;background:#102638;border:1px solid rgba(135,187,207,.3);border-radius:11px;color:#effbfc;padding:12px;outline:none}
+.access-request-form select:focus-visible,.access-request-form textarea:focus-visible,.access-decision-form input:focus-visible{border-color:#7ee2d7;box-shadow:0 0 0 3px rgba(126,226,215,.15)}
+.access-request-form textarea{resize:vertical;min-height:110px;line-height:1.8}
+#accessPermissionHint{border-right:2px solid #64c8c6;padding-right:12px;line-height:1.75;margin:-8px 0 0;font-size:12px}
+.access-actions{gap:12px}.access-actions small{max-width:530px;font-size:11px;line-height:1.8}
+.access-request-list{display:grid;gap:12px}
+.access-request-item{padding:18px 20px;border-radius:13px;border:1px solid rgba(143,194,205,.2);background:rgba(12,33,46,.55);min-width:0}
+.access-request-item>.row{align-items:flex-start;gap:10px}
+.access-request-item strong{font-size:13px;color:#f1fbfa}
+.access-request-item>p{margin:10px 0;font-size:12px;color:#c1d5df;overflow-wrap:anywhere;white-space:pre-wrap}
+.access-request-item small{font-size:10px}
+.access-reason{background:rgba(129,201,200,.055);border-radius:8px;padding:12px;line-height:1.8}
+.access-state{display:inline-flex;align-items:center;white-space:nowrap;font-size:10px;font-weight:800;padding:3px 10px;border:1px solid rgba(139,187,202,.36);border-radius:100px;color:#bfcfd9;background:rgba(139,187,202,.06)}
+.access-state-approved{color:#99e7bb;border-color:rgba(113,212,164,.35);background:rgba(87,171,134,.1)}
+.access-state-rejected{color:#ffc6b1;border-color:rgba(255,153,119,.37);background:rgba(255,127,93,.08)}
+.access-state-pending{color:#f0dba0;border-color:rgba(221,188,101,.4);background:rgba(221,188,101,.07)}
+.access-review-note{margin-top:12px;border-top:1px solid rgba(143,194,205,.15);padding-top:9px;color:#9dc1c5;font-size:11px;line-height:1.8;overflow-wrap:anywhere}
+.access-decision-form{display:grid;gap:13px;margin-top:15px;border-top:1px solid rgba(143,194,205,.15);padding-top:15px}
+.access-decision-form>.row{flex-wrap:wrap;gap:10px}
+.access-decision-form .btn:disabled,.access-request-form .btn:disabled{opacity:.56;cursor:wait}
+@media(max-width:620px){.access-shortcut{padding:18px;align-items:stretch;flex-direction:column}.access-shortcut .btn{width:100%}.access-request-item{padding:15px}.access-request-item .row.between{align-items:flex-start;flex-wrap:wrap}.access-modal-actions{flex-direction:column}.access-actions{align-items:stretch;flex-direction:column}.access-actions .btn{width:100%}.access-decision-form>.row .btn{flex:1 1 100%}}
