@@ -404,29 +404,52 @@ function renderAcademyResults(){
 }
 function mountAcademyResults(){
  const panel=$('#academyResultPanel');if(!panel)return;
- panel.innerHTML='<section class="section-card" style="margin-top:20px"><h3>نتائج الدورات والتسليم</h3><p class="muted">نفس نتيجة الاختبار تنتقل من النجاح إلى تأكيد تسليم الدورة. التأكيد يسجّل اسمك ووقت الإجراء، ولا يمنح رتبة أو صلاحية تلقائيًا.</p><details class="notice course-notice-flow"><summary>إشعارات النتائج والربط مع جدول Google</summary><p>عند حفظ اختبار ناجح في البوابة، يصل إشعار داخل الموقع إلى القائد ومسؤولي الدورات المفوّضين، ثم تُرسل نسخة النتيجة إلى جدول Google المرتبط. الإشعار لا يعني تأكيد وصول نسخة Google؛ حالة النسخة تظهر في عمودها أدناه.</p><p>تأكيد التسليم واسم المسؤول ووقته محفوظة في هذا السجل داخل الموقع. الإضافة اليدوية إلى Google لا تولّد إشعارًا في البوابة.</p><a class="btn ghost small" id="courseGoogleSheet" href="https://docs.google.com/spreadsheets/d/1PC5iXwHWyFT4kd7qa6oa_JL1-r3F_anv3fPniF8rfdM/edit" target="_blank" rel="noopener noreferrer">فتح جدول Google المرتبط</a></details><form id="academyResultsFilter" class="grid two"><label>الاسم أو Discord أو الإيصال<input name="search" maxlength="60"></label><label>حالة المتابعة<select name="state"><option value="pending">ناجحون بانتظار التسليم</option><option value="delivered">تم تسليم الدورة</option><option value="all" selected>جميع النتائج</option></select></label><button class="btn ghost" type="submit">بحث وتحديث</button></form><div id="academyResultsRows" aria-live="polite"></div></section>';
- let offset=0,term='',filter='all',generation=0;
+ panel.innerHTML='<section class="section-card" style="margin-top:20px"><h3>نتائج الدورات والتسليم</h3><p class="muted">نفس نتيجة الاختبار تنتقل من النجاح إلى تأكيد تسليم الدورة. التأكيد يسجّل اسمك ووقت الإجراء، ولا يمنح رتبة أو صلاحية تلقائيًا.</p><details class="notice course-notice-flow"><summary>إشعارات النتائج والربط مع جدول Google</summary><p>عند حفظ اختبار ناجح في البوابة، يصل إشعار داخل الموقع إلى القائد ومسؤولي الدورات المفوّضين، ثم تُرسل نسخة النتيجة إلى جدول Google المرتبط. الإشعار لا يعني تأكيد وصول نسخة Google؛ حالة النسخة تظهر في عمودها أدناه.</p><p>تأكيد التسليم واسم المسؤول ووقته محفوظة في هذا السجل داخل الموقع. الإضافة اليدوية إلى Google لا تولّد إشعارًا في البوابة.</p><a class="btn ghost small" id="courseGoogleSheet" href="https://docs.google.com/spreadsheets/d/1PC5iXwHWyFT4kd7qa6oa_JL1-r3F_anv3fPniF8rfdM/edit" target="_blank" rel="noopener noreferrer">فتح جدول Google المرتبط</a></details><form id="academyResultsFilter" class="grid two"><label>الاسم أو Discord أو الإيصال<input name="search" maxlength="60"></label><label>حالة المتابعة<select name="state"><option value="pending">ناجحون بانتظار التسليم</option><option value="delivered">تم تسليم الدورة</option><option value="all" selected>جميع النتائج</option></select></label><label>مسار التأهيل<select name="track"><option value="all">كل الاختبارات</option><option value="qualification">تأهيل المتقدمين الجدد</option><option value="courses">دورات الأفراد</option></select></label><button class="btn ghost" type="submit">بحث وتحديث</button></form><div id="academyResultsRows" aria-live="polite"></div></section>';
+ let offset=0,term='',filter='all',track='all',generation=0;
  const load=async()=>{
   const rows=$('#academyResultsRows');if(!rows)return;const request=++generation;rows.textContent='جاري تحميل النتائج…';
-  let q=db.from('asf_academy_results').select('id,receipt,trainee_name,trainee_rank,discord_id,course_title,score,total,percentage,passed,received_at,legacy_status,delivered_at,delivered_by_name,delivered_by_code',{count:'exact'}).eq('is_test',false).order('received_at',{ascending:false});
+  let q=db.from('asf_academy_results').select('id,receipt,course_id,trainee_name,trainee_rank,discord_id,course_title,score,total,percentage,passed,received_at,legacy_status,delivered_at,delivered_by_name,delivered_by_code',{count:'exact'}).eq('is_test',false).order('received_at',{ascending:false});
+  if(track==='qualification')q=q.eq('course_id','individual-qualification');
+  if(track==='courses')q=q.neq('course_id','individual-qualification');
   if(filter==='pending')q=q.eq('passed',true).is('delivered_at',null);
   if(filter==='delivered')q=q.not('delivered_at','is',null);
   if(term)q=/^\d{15,20}$/.test(term)?q.eq('discord_id',term):/^ACD-\d+$/.test(term)?q.eq('receipt',term):q.ilike('trainee_name','%'+term.replace(/[%_\\]/g,'')+'%');
   const {data,error,count}=await q.range(offset,offset+49);
   if(!rows.isConnected||request!==generation)return;
   if(error){rows.textContent='تعذر تحميل سجل النتائج. أعد المحاولة.';return;}
+  const rewardResponse=await db.from('asf_department_rewards')
+   .select('id,subject_id,actor_id,actor_name,amount,paid_at').eq('department','training')
+   .order('earned_at',{ascending:false}).limit(200);
+  const rewardByResult=new Map((rewardResponse.data||[]).map(reward=>[reward.subject_id,reward]));
+  const canReviewReward=commander||hasDeptRole('training','head');
+  const rewardCell=r=>{
+   const reward=rewardByResult.get(r.id);
+   if(!r.delivered_at)return 'لم يسلم الرول بعد';
+   if(!reward)return 'لا يوجد استحقاق ظاهر';
+   if(reward.paid_at)return '<span class="dept-state-paid">✓ تم إعطاء المكافأة</span>';
+   return '<span class="dept-state-unpaid">150,000 بانتظار الصرف</span>'+
+    (canReviewReward&&reward.actor_id!==user.id?'<button class="btn primary small" data-course-reward="'+esc(reward.id)+'">✓ تم إعطاء المكافأة</button>':'');
+  };
   const sync={pending:'قيد المتابعة',confirmed:'مؤكد',unconfirmed:'غير مؤكد',failed:'تعذر الإرسال'};
-  rows.innerHTML='<p class="muted">'+esc(count??data?.length??0)+' نتيجة</p>'+(data?.length?'<div class="table-scroll"><table><thead><tr><th>الإيصال والتاريخ</th><th>المتدرّب</th><th>الدورة</th><th>النتيجة</th><th>تسليم الدورة</th><th>المسؤول والوقت</th><th>نسخة الجدول القديم</th></tr></thead><tbody>'+data.map(r=>'<tr><td>'+esc(r.receipt)+'<br>'+date(r.received_at)+'</td><td>'+esc(r.trainee_name)+'<br>'+esc(r.trainee_rank)+'<br>'+esc(r.discord_id)+'</td><td>'+esc(r.course_title)+'</td><td>'+esc(r.score)+' / '+esc(r.total)+' · '+esc(r.percentage)+'%<br>'+badge(r.passed?'اجتياز':'رسوب')+'</td><td>'+(r.delivered_at?'<span class="course-delivered">✓ تم تسليم الدورة</span>':r.passed?'<button class="btn primary small" data-deliver-result="'+esc(r.id)+'">تأكيد تسليم الدورة</button>':badge('غير مجتاز'))+'</td><td>'+esc(r.delivered_by_name||'—')+(r.delivered_by_code?'<br>'+esc(r.delivered_by_code):'')+(r.delivered_at?'<br>'+date(r.delivered_at):'')+'</td><td>'+esc(sync[r.legacy_status]||'غير مؤكد')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+'<div class="row"><button class="btn ghost small" id="academyResultsPrev" '+(offset===0?'disabled':'')+'>السابق</button><button class="btn ghost small" id="academyResultsNext" '+(offset+50>=(count??data?.length??0)?'disabled':'')+'>التالي</button></div>';
+  rows.innerHTML='<p class="muted">'+esc(count??data?.length??0)+' نتيجة</p>'+(data?.length?'<div class="table-scroll"><table><thead><tr><th>الإيصال والتاريخ</th><th>المتدرّب</th><th>الدورة</th><th>النتيجة</th><th>تسليم الرول للمتدرب</th><th>المدرب ووقت الإجراء</th><th>مكافأة المدرب</th><th>نسخة الجدول القديم</th></tr></thead><tbody>'+data.map(r=>'<tr><td>'+esc(r.receipt)+'<br>'+date(r.received_at)+'</td><td>'+esc(r.trainee_name)+'<br>'+esc(r.trainee_rank)+'<br>'+esc(r.discord_id)+'</td><td>'+esc(r.course_title)+'</td><td>'+esc(r.score)+' / '+esc(r.total)+' · '+esc(r.percentage)+'%<br>'+badge(r.passed?'اجتياز':'رسوب')+'</td><td>'+(r.delivered_at?'<span class="course-delivered">✓ تم تسليم الرول (توثيق يدوي)</span>':r.passed?'<button class="btn primary small" data-deliver-result="'+esc(r.id)+'">✓ تم إعطاء رول الدورة</button>':badge('غير مجتاز'))+'</td><td>'+esc(r.delivered_by_name||'—')+(r.delivered_by_code?'<br>'+esc(r.delivered_by_code):'')+(r.delivered_at?'<br>'+date(r.delivered_at):'')+'</td><td class="dept-reward-cell">'+rewardCell(r)+'</td><td>'+esc(sync[r.legacy_status]||'غير مؤكد')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+'<div class="row"><button class="btn ghost small" id="academyResultsPrev" '+(offset===0?'disabled':'')+'>السابق</button><button class="btn ghost small" id="academyResultsNext" '+(offset+50>=(count??data?.length??0)?'disabled':'')+'>التالي</button></div>';
   $('#academyResultsPrev').onclick=()=>{offset=Math.max(0,offset-50);load()};$('#academyResultsNext').onclick=()=>{offset+=50;load()};
+  rows.querySelectorAll('[data-course-reward]').forEach(button=>button.onclick=async()=>{
+   if(!confirm('تأكيد صرف مكافأة 150,000 للمدرب بالفعل؟ لا يمكن تكرار التأشير.'))return;
+   button.disabled=true;
+   const {error:err}=await db.rpc('asf_department_mark_paid',{p_reward:button.dataset.courseReward});
+   if(err){toast(err.message||'تعذر تأكيد المكافأة',true);button.disabled=false;return}
+   toast('تم تسجيل صرف مكافأة المدرب.');await load();
+   if($('#departmentRewards'))await deptUI.rewardPanel('training');
+  });
   rows.querySelectorAll('[data-deliver-result]').forEach(button=>button.onclick=async()=>{
-   if(!confirm('تأكيد أنك راجعت النتيجة وأتممت تسليم الدورة؟ سيُحفظ اسمك ووقت الإجراء.'))return;
+   if(!confirm('هل أعطيت المتدرب رول الدورة فعليًا؟ سيُحفظ اسمك ووقت الإجراء في السجل، وقد ينشأ استحقاق 150,000 للمدرب. لا يعد هذا منحًا تلقائيًا لرول Discord.'))return;
    button.disabled=true;
    try{const {data:result,error}=await db.rpc('asf_confirm_academy_delivery',{p_result:button.dataset.deliverResult});if(error)throw error;
     toast((result.already_delivered?'سبق تأكيد التسليم بواسطة ':'تم تأكيد التسليم باسم ')+result.delivered_by_name);await load();
    }catch(err){toast(err.message||'تعذر تأكيد التسليم',true);button.disabled=false;}
   });
  };
- $('#academyResultsFilter').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);term=String(f.get('search')||'').trim();filter=String(f.get('state'));offset=0;load()};load();
+ $('#academyResultsFilter').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);term=String(f.get('search')||'').trim();filter=String(f.get('state'));track=String(f.get('track')||'all');offset=0;load()};load();
 }
 function cardReport(r,mode){
  const secret=r.kind==='secret',revealed=mode==='inbox'||mode==='trash'||!secret;
