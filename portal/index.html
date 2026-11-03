@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#081321"><meta name="description" content="بوابة أمن المنشآت — الدورات الإلكترونية والتأهيل، والتدريب المتخصص لأمن المنشآت">
-<title>بوابة أمن المنشآت</title><link rel="stylesheet" href="styles.css?v=20261103-auth-fix-1"><link rel="stylesheet" href="landing.css?v=20261103-4"><link rel="stylesheet" href="mobile.css?v=20261103-mobile-1"></head>
+<title>بوابة أمن المنشآت</title><link rel="stylesheet" href="styles.css?v=20261103-auth-fix-1"><link rel="stylesheet" href="landing.css?v=20261103-4"><link rel="stylesheet" href="mobile.css?v=20261103-mobile-1"><link rel="stylesheet" href="departments.css?v=20261103-depts-1"></head>
 <body>
 <header class="topbar"><div class="brand"><span class="brand-icon">◆</span><span>بوابة أمن المنشآت<small>المنصة الإدارية الموحدة · رول بلاي</small></span></div>
 <div class="top-actions"><span id="sessionLabel"></span><button class="btn ghost" id="signOut" hidden>تسجيل الخروج</button><button class="mobile-menu-button" id="mobileMenuToggle" type="button" aria-label="فتح قائمة الأقسام" aria-controls="portalSidebar" aria-expanded="false" hidden>☰</button></div></header>
@@ -109,6 +109,12 @@
 <button class="nav active" data-page="dashboard">▦ <span>الرئيسية</span></button>
 <button class="nav" data-page="academy">🎓 <span>الدورات العامة</span></button>
 <button class="nav" data-page="academy-results" id="academyReviewNav" hidden>✓ <span>نتائج الدورات والتسليم</span></button>
+<div id="departmentNav" hidden>
+<div class="side-label">الأقسام التخصصية</div>
+<button class="nav department-nav" data-page="training-center" id="trainingCenterNav" hidden>🎓 <span>كلية التدريب</span><span class="nav-role-marker">رول القسم</span></button>
+<button class="nav department-nav" data-page="recruitment-center" id="recruitmentCenterNav" hidden>🪪 <span>القبول والتجنيد</span><span class="nav-role-marker">رول القسم</span></button>
+<button class="nav department-nav" data-page="department-admin" id="departmentAdminNav" hidden>⚙ <span>توزيع رئاسة الأقسام</span></button>
+</div>
 <button class="nav" data-page="reports">▤ <span>تقاريري</span></button>
 <button class="nav" data-page="compose">＋ <span>تقرير جديد</span></button>
 <button class="nav" data-page="police">🛡 <span>الشرطة العسكرية</span></button>
@@ -135,5 +141,6 @@
 <script src="workflow-tools.js?v=20261103-5"></script>
 <script src="mobile.js?v=20261103-mobile-1"></script>
 <script src="auth-client.js?v=20261103-auth-fix-1"></script>
-<script src="app.js?v=20261103-auth-fix-1" defer></script>
+<script src="departments.js?v=20261103-depts-1"></script>
+<script src="app.js?v=20261103-depts-1" defer></script>
 </body></html>
