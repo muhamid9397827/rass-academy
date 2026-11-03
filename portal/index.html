@@ -1,10 +1,10 @@
 <!doctype html>
 <html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#081321"><meta name="description" content="بوابة أمن المنشآت — الدورات الإلكترونية والتأهيل، والتدريب المتخصص لأمن المنشآت">
-<title>بوابة أمن المنشآت</title><link rel="stylesheet" href="styles.css?v=20261103-auth-fix-1"><link rel="stylesheet" href="landing.css?v=20261103-4"><link rel="stylesheet" href="mobile.css?v=20261103-mobile-1"><link rel="stylesheet" href="departments.css?v=20261103-depts-1"></head>
+<title>بوابة أمن المنشآت</title><link rel="stylesheet" href="styles.css?v=20261103-auth-fix-1"><link rel="stylesheet" href="landing.css?v=20261103-4"><link rel="stylesheet" href="mobile.css?v=20261103-mobile-1"><link rel="stylesheet" href="departments.css?v=20261103-depts-1"><link rel="stylesheet" href="notice-center.css?v=20261103-1"></head>
 <body>
 <header class="topbar"><div class="brand"><span class="brand-icon">◆</span><span>بوابة أمن المنشآت<small>المنصة الإدارية الموحدة · رول بلاي</small></span></div>
-<div class="top-actions"><span id="sessionLabel"></span><button class="btn ghost" id="signOut" hidden>تسجيل الخروج</button><button class="mobile-menu-button" id="mobileMenuToggle" type="button" aria-label="فتح قائمة الأقسام" aria-controls="portalSidebar" aria-expanded="false" hidden>☰</button></div></header>
+<div class="top-actions"><span id="sessionLabel"></span><button type="button" class="notification-top-button" id="notificationTrigger" aria-label="مركز الإشعارات" hidden><span aria-hidden="true">🔔</span><span class="notification-top-count" id="notificationCount" hidden></span></button><button class="btn ghost" id="signOut" hidden>تسجيل الخروج</button><button class="mobile-menu-button" id="mobileMenuToggle" type="button" aria-label="فتح قائمة الأقسام" aria-controls="portalSidebar" aria-expanded="false" hidden>☰</button></div></header>
 <div id="toast" role="status" aria-live="polite"></div>
 <section id="welcome" class="welcome landing shell" aria-labelledby="landing-title">
   <div class="landing-topline"><span class="landing-live-dot" aria-hidden="true"></span><span>المنصة التدريبية الرسمية</span><span class="landing-topline-divider" aria-hidden="true"></span><span>أمن المنشآت · رول بلاي</span></div>
@@ -127,7 +127,7 @@
 <button class="nav" data-page="access-queue" hidden>✉ <span>مراجعة طلبات التصاريح</span></button>
 <button class="nav" data-page="trash">▣ <span>سلة المحذوفات</span></button>
 <button class="nav" data-page="audit">☷ <span>سجل العمليات</span></button></div>
-<div class="side-label">المساعدة والحساب</div><button class="nav" data-page="access">🔐 <span>طلب وصول للأقسام</span></button>
+<div class="side-label">المساعدة والحساب</div><button class="nav" data-page="notifications">🔔 <span>مركز الإشعارات</span></button><button class="nav" data-page="access">🔐 <span>طلب وصول للأقسام</span></button>
 <button class="nav" data-page="account">◉ <span>ملفي الشخصي</span></button></aside>
 <main class="content"><div id="pageTitle" class="page-title"></div><div id="page"></div></main></div>
 <button class="mobile-menu-backdrop" id="mobileMenuBackdrop" type="button" aria-label="إغلاق القائمة" hidden></button>
@@ -143,5 +143,6 @@
 <script src="auth-client.js?v=20261103-auth-fix-1"></script>
 <script src="departments.js?v=20261103-depts-1"></script>
 <script src="police-workspace.js?v=20261103-police-1"></script>
-<script src="app.js?v=20261103-police-1" defer></script>
+<script src="notice-center.js?v=20261103-1"></script>
+<script src="app.js?v=20261103-security-notices-1" defer></script>
 </body></html>

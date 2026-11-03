@@ -58,6 +58,7 @@ async function section(page,name){
   assert.ok(hit,'quick navigation has finger-sized controls');
   await page.setViewportSize({width:1280,height:900});
   assert.equal(await page.locator('#portalSidebar').isVisible(),true,'desktop sidebar restored');
+  await page.waitForFunction(()=>!document.querySelector('#portalSidebar').inert);
   assert.equal(await page.locator('#portalSidebar').evaluate(el=>el.inert),false);
   assert.equal(await page.locator('#mobileBottomNav').isVisible(),false,'phone chrome absent on desktop');
   await context.close();

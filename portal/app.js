@@ -53,6 +53,8 @@ const has=(permission,kind=null)=>commander||grants.some(g=>g.permission===permi
 const hasDeptRole=(department,role)=>commander||departmentRoles.some(r=>r.department===department&&r.role===role);
 const hasDept=(department)=>commander||departmentRoles.some(r=>r.department===department);
 const policeUI=window.ASF_POLICE_UI.create({db,getContext:()=>({user,commander,hasPolice:has('police.manage'),isPoliceHead:policeHead,gameName:profile?.game_name}),notify:toast});
+const noticeUI=window.ASF_NOTICE_CENTER.create({db,getUser:()=>user,go:navigate,notify:toast});
+$('#notificationTrigger').onclick=()=>navigate('notifications');
 const deptUI=window.ASF_DEPARTMENTS.create({
  db,
  getContext:()=>({user,commander,roles:departmentRoles,legacyAcademyManage:has('academy.manage')}),
@@ -61,7 +63,7 @@ const deptUI=window.ASF_DEPARTMENTS.create({
  mountResults:mountAcademyResults
 });
 
-function showScreen(which){['welcome','authScreen','verifyEmailScreen','recoveryScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which);window.ASF_MOBILE?.setWorkspace(which==='workspace')}
+function showScreen(which){['welcome','authScreen','verifyEmailScreen','recoveryScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which);$('#notificationTrigger').hidden=which!=='workspace';window.ASF_MOBILE?.setWorkspace(which==='workspace')}
 function openAcademy(){window.open('academy.html','_blank','noopener')}
 $('#openAcademy').onclick=openAcademy;
 const restrictedModal=$('#restrictedModal');
@@ -177,7 +179,7 @@ async function init(){
   if(event==='SIGNED_OUT'){
    authEpoch++;user=null;commander=false;policeHead=false;profile=null;grants=[];departmentRoles=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');
    if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
-   if(!recoveryMode)showScreen('welcome');
+   noticeUI.reset();if(!recoveryMode)showScreen('welcome');
   }
  });
  try{
@@ -270,6 +272,8 @@ async function loadIdentity(silent=false,fromAuth=false){
       payload=>{
        const notice=payload.new||{};
        toast(notice.message||'وصل إشعار جديد');
+       noticeUI.refreshBadge().catch(()=>{});
+       if(pageName==='notifications')noticeUI.render().catch(()=>{});
        if(notice.category==='access_decision'){
         loadIdentity(true).catch(err=>toast(err.message,true));
         return;
@@ -287,7 +291,7 @@ async function loadIdentity(silent=false,fromAuth=false){
        }
       }).subscribe();
   }
-  $('#sessionLabel').textContent=p?.game_name||user.email;$('#signOut').hidden=false;
+  $('#sessionLabel').textContent=p?.game_name||user.email;$('#signOut').hidden=false;noticeUI.refreshBadge().catch(()=>{});
   if(commander||p?.status==='approved'){
    showScreen('workspace');$('#courtNav').hidden=!(commander||p?.court_enabled||has('court.manage'));
     $('#policeNav').hidden=!(commander||policeHead||has('police.manage'));
@@ -332,10 +336,11 @@ async function navigate(name){
  if(!user||!(commander||profile?.status==='approved'))return;
  window.ASF_MOBILE?.closeMenu();window.ASF_MOBILE?.setPage(name);
  pageName=name;document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page===name));
- const titles={dashboard:'لوحة التحكم',academy:'الأكاديمية والدورات','academy-results':'نتائج الدورات والتسليم','training-center':'كلية التدريب','recruitment-center':'القبول والتجنيد','department-admin':'رئاسات الأقسام',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',access:'طلب تصريح ومتابعته','access-queue':'طلبات التصاريح الواردة',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
+ const titles={notifications:'مركز الإشعارات',dashboard:'لوحة التحكم',academy:'الأكاديمية والدورات','academy-results':'نتائج الدورات والتسليم','training-center':'كلية التدريب','recruitment-center':'القبول والتجنيد','department-admin':'رئاسات الأقسام',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',access:'طلب تصريح ومتابعته','access-queue':'طلبات التصاريح الواردة',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
  set('#pageTitle','<div><h1>'+esc(titles[name]||'بوابة أمن المنشآت')+'</h1><p>المنصة الموحدة · إعدادات الصلاحيات حسب حسابك</p></div>');
  set('#page','<div class="empty">جارٍ تحميل البيانات...</div>');
  try{
+  if(name==='notifications')return await noticeUI.render();
   if(name==='dashboard')return await renderDashboard();
   if(name==='academy')return await renderAcademy();
   if(name==='academy-results')return await renderAcademyResults();
@@ -388,12 +393,14 @@ async function renderDashboard(){
  $('#accessDashboardShortcut').onclick=()=>navigate(commander?'access-queue':'access');
  const {data:notices,error}=await db.from('asf_notifications').select('*').order('created_at',{ascending:false}).limit(12);
  if(error||!$('#dashboardNotices'))return;
- const pending=(notices||[]).filter(n=>!n.read_at).length;
- $('#dashboardNotices').innerHTML='<details class="mp-notices-panel"><summary>الإشعارات <span class="badge">'+pending+' غير مقروء</span></summary><div class="mp-notices-body"><button type="button" class="btn ghost small" id="markAllRead">تحديد الكل كمقروء</button>'+
+ const {count:allUnread,error:countErr}=await db.from('asf_notifications').select('id',{count:'exact',head:true}).is('read_at',null);
+ const pending=countErr?(notices||[]).filter(n=>!n.read_at).length:(allUnread||0);
+ $('#dashboardNotices').innerHTML='<details class="mp-notices-panel"><summary>الإشعارات <span class="badge">'+pending+' غير مقروء</span></summary><div class="mp-notices-body"><div class="row"><button type="button" class="btn ghost small" id="openNoticeCenter">فتح مركز الإشعارات</button><button type="button" class="btn ghost small" id="markAllRead">تحديد الكل كمقروء</button></div>'+
  ((notices||[]).map(n=>'<div class="notice-item">'+(n.read_at?'':'● ')+esc(n.message)+'<small class="muted">'+date(n.created_at)+'</small>'+
  (['academy_pass','academy_assigned'].includes(n.event_kind||n.category)&&canDeliver?'<button type="button" class="btn ghost small" data-open-notice="academy-results">فتح نتائج الدورات</button>':n.category==='registration'&&(commander||has('users.approve'))?'<button type="button" class="btn ghost small" data-open-notice="members">طلبات العضوية</button>':'')+'</div>').join('')||empty('لا توجد إشعارات حاليًا'))+'</div></details>';
  $('#dashboardNotices').querySelectorAll('[data-open-notice]').forEach(b=>b.onclick=()=>navigate(b.dataset.openNotice));
- $('#markAllRead').onclick=async()=>{const {error:err}=await db.from('asf_notifications').update({read_at:new Date().toISOString()}).is('read_at',null);if(err)return toast(err.message,true);toast('تم تحديد الإشعارات كمقروءة');renderDashboard();};
+ $('#openNoticeCenter').onclick=()=>navigate('notifications');
+ $('#markAllRead').onclick=async()=>{const {error:err}=await db.from('asf_notifications').update({read_at:new Date().toISOString()}).is('read_at',null);if(err)return toast(err.message,true);toast('تم تحديد الإشعارات كمقروءة');noticeUI.refreshBadge();renderDashboard();};
 }
 
 function renderAcademy(){

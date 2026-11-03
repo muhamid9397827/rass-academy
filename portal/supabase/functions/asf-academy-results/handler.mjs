@@ -30,7 +30,10 @@ export function createHandler({ admin, salt, fetcher = fetch }) {
       for (const part of chunks) { bytes.set(part, offset); offset += part.length; }
       let payload;
       try { payload = JSON.parse(new TextDecoder().decode(bytes)); } catch { throw new SubmissionError('صيغة الطلب غير صحيحة.'); }
-      const result = gradeSubmission(payload);
+      // Only the privileged Edge Function fetches marking keys; never return them.
+      const {data:privateCatalog,error:keyError}=await admin.rpc('asf_private_academy_catalog');
+      if(keyError||!privateCatalog||!Object.keys(privateCatalog).length)return reply({error:'خادم التصحيح غير متاح مؤقتاً؛ احتفظ بالمحاولة وأعد الحفظ.'},503);
+      const result = gradeSubmission(payload,privateCatalog);
       const payloadHash = await hash(JSON.stringify(result));
       // Supabase's gateway supplies X-Forwarded-For; raw addresses are never stored.
       const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('cf-connecting-ip') || 'unknown';

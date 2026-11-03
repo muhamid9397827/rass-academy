@@ -46,6 +46,26 @@ const {portalMock,academyState}=require('./completion-fixtures.cjs');
  assert.match(await academy.locator('#result-percentage').textContent(),/70/,'server grade replaces local grade');
  assert.equal(await academy.locator('#retry-result-button').isVisible(),false);
  assert.match(await academy.locator('#submission-status-text').textContent(),/لم يُؤكّد/,'legacy ambiguity remains explicit');
+ // A server-only exam must never display a guessed pass/fail before the real receipt.
+ const pending=await browser.newPage();
+ pending.on('pageerror',e=>errors.push(e.message));
+ await pending.addInitScript(original=>{
+  const state={...original,result:{...original.result,score:null,percentage:null,passed:null,assignedRank:''}};
+  localStorage.setItem('asf-portal-academy-v1:last-result',JSON.stringify(state));
+ },academyState);
+ await pending.route('**/functions/v1/asf-academy-results',route=>route.fulfill({status:200,contentType:'application/json',
+  body:JSON.stringify({saved:true,receipt:'ACD-00000002',receivedAt:new Date().toISOString(),legacyStatus:'unconfirmed',
+   result:{score:7,total:10,percentage:70,passed:true,passingPercentage:70,assignedRank:''}})}));
+ await pending.goto('http://127.0.0.1:8000/portal/academy.html');
+ await pending.locator('#start-facilities-training').click();
+ await pending.locator('#resume-button').click();
+ assert.match(await pending.locator('#result-title').textContent(),/جاري تصحيح الاختبار/);
+ assert.match(await pending.locator('#result-score').textContent(),/قيد التصحيح/);
+ await pending.locator('#retry-result-button').click();
+ await pending.locator('#submission-status.is-success').waitFor();
+ assert.match(await pending.locator('#result-percentage').textContent(),/70/);
+ assert.match(await pending.locator('#result-title').textContent(),/اجتياز/);
+ await pending.close();
  assert.deepEqual(errors,[]);
  await browser.close();
  console.log('PASS: investigation referral, active/archive warnings, commander ledger, mobile layout and receipt retry UI');

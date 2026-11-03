@@ -826,14 +826,15 @@
 
     const course = getCurrentCourse();
     const questions = getSelectedQuestions();
-    const score = questions.reduce((total, question) => {
-      return total + (Number(state.answers[question.id]) === question.answerIndex ? 1 : 0);
-    }, 0);
-    const rawPercentage = questions.length ? (score / questions.length) * 100 : 0;
-    const percentage = Math.round(rawPercentage);
+    // Only the private server catalog knows the correct answers for ASF examinations.
+    const serverGraded = CONFIG.submissionMode === "verified-ledger" && course?.sector === "facilities_security";
+    const score = serverGraded ? null : questions.reduce((total, question) =>
+      total + (Number(state.answers[question.id]) === question.answerIndex ? 1 : 0), 0);
+    const rawPercentage = serverGraded ? null : questions.length ? score / questions.length * 100 : 0;
+    const percentage = serverGraded ? null : Math.round(rawPercentage);
     const passingPercentage = getPassingPercentage(course);
-    const passed = rawPercentage >= passingPercentage;
-    const assignedRank =
+    const passed = serverGraded ? null : rawPercentage >= passingPercentage;
+    const assignedRank = serverGraded ? "" :
       course.applicantCourse && passed ? getApplicantRank(percentage) : "";
     const completedAt = Date.now();
 
@@ -915,15 +916,21 @@
     const isReference = Boolean(result.isReference);
     const passed = result.passed;
     const isApplicantCourse = Boolean(course.applicantCourse);
+    const pendingGrade = !result.isReference && passed === null;
 
-    elements.resultEmblem.classList.toggle("is-failed", !passed);
-    elements.scoreRing.classList.toggle("is-failed", !passed);
+    elements.resultEmblem.classList.toggle("is-failed", !passed && !pendingGrade);
+    elements.scoreRing.classList.toggle("is-failed", !passed && !pendingGrade);
     elements.resultEmblemPath.setAttribute(
       "d",
       passed ? "m14 25 7 7 14-17" : "M16 16l16 16M32 16 16 32"
     );
 
-    if (isReference) {
+    if (pendingGrade) {
+      elements.scoreRing.hidden = true;
+      elements.resultKicker.textContent = "بانتظار التصحيح المعتمد";
+      elements.resultTitle.textContent = "جاري تصحيح الاختبار";
+      elements.resultMessage.textContent = "تم تسليم الإجابات؛ تظهر الدرجة والنجاح بعد رد خادم النتائج فقط.";
+    } else if (isReference) {
       elements.resultKicker.textContent = "اكتمل الاطلاع";
       elements.resultTitle.textContent = "تم إتمام قراءة المرجع";
       elements.resultMessage.textContent = "يمكنك الآن العودة إلى القائمة الرئيسية";
@@ -962,14 +969,11 @@
 
     elements.resultTrainee.textContent = getTraineeDisplay(course);
     elements.resultCourse.textContent = course.title;
-    elements.resultAssignedRankRow.hidden = !isApplicantCourse;
-    elements.resultAssignedRank.textContent = passed
-      ? result.assignedRank
-      : "غير مؤهل";
-    elements.resultScore.textContent = isReference
-      ? "اطلاع مكتمل"
-      : `${formatNumber(result.score)} من ${formatNumber(result.total)}`;
-    elements.resultReceipt.textContent = result.receipt;
+    elements.resultAssignedRankRow.hidden = !isApplicantCourse || pendingGrade;
+    elements.resultAssignedRank.textContent = passed ? result.assignedRank : "غير مؤهل";
+    elements.resultScore.textContent = pendingGrade ? "قيد التصحيح" : isReference
+      ? "اطلاع مكتمل" : `${formatNumber(result.score)} من ${formatNumber(result.total)}`;
+    elements.resultReceipt.textContent = pendingGrade ? "بانتظار الاعتماد" : result.receipt;
     elements.resultDate.textContent = formatDate(result.completedAt);
     elements.resultNotes.textContent = result.visibilityCount
       ? `${formatNumber(result.visibilityCount)} ملاحظة تبديل نافذة`
@@ -1214,10 +1218,10 @@
       `الدورة: ${course.title}`,
       result.isReference
         ? "الحالة: تم إتمام الاطلاع"
+        : result.passed === null ? "النتيجة: بانتظار التصحيح المعتمد"
         : `النتيجة ${result.score} من ${result.total} بنسبة ${result.percentage} بالمئة`,
-      result.isReference
-        ? ""
-        : `الحالة: ${result.passed ? "اجتياز" : "لم يجتز"}${result.timedOut ? " — انتهى الوقت" : ""}`,
+      result.isReference || result.passed === null
+        ? "" : `الحالة: ${result.passed ? "اجتياز" : "لم يجتز"}${result.timedOut ? " — انتهى الوقت" : ""}`,
       course.applicantCourse && result.passed
         ? `الرتبة المبدئية المقترحة: ${result.assignedRank}`
         : "",
