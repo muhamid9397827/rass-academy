@@ -357,44 +357,38 @@ async function navigate(name){
  }catch(err){set('#page',empty('تعذر تحميل القسم: '+err.message));toast(err.message,true)}
 }
 async function renderDashboard(){
- const {data:rs,error}=await db.from('asf_reports').select('id,kind,submitted_at,deleted_at',{count:'exact'}).is('deleted_at',null).limit(100);
- if(error)throw error;
- const own=(rs||[]).filter(r=>r.kind!=='secret').length;
  const courtAllowed=commander||profile?.court_enabled||has('court.manage');
- const info=[
- ['الكود العسكري',profile?.military_code||'القائد'],['تقارير يمكن عرضها',String(rs?.length||0)],['مجلس القضاء',courtAllowed?'مسموح':'غير مفعل'],['الحساب','مفعل']
+ const policeAllowed=commander||policeHead||has('police.manage');
+ const canDeliver=commander||has('academy.manage')||hasDeptRole('training','head')||hasDeptRole('training','trainer');
+ const cards=[
+  ['compose','＋','تقرير جديد','إرسال تقرير إداري'],
+  ['reports','▤','تقاريري','المتابعة والمسودات'],
+  ['academy','🎓','الأكاديمية','الدورات والاختبارات'],
+  ...(policeAllowed?[['police','🛡','الشرطة العسكرية','بحث المخالفات والتحقيق']]:[]),
+  ...(courtAllowed?[['court','⚖','مجلس القضاء','القضايا والإنذارات']]:[]),
+  ...(canDeliver?[['academy-results','✓','نتائج الدورات','التسليم والمتابعة']]:[]),
+  ...(hasDept('training')?[['training-center','🎓','كلية التدريب','عمل القسم']]:[]),
+  ...(hasDept('recruitment')?[['recruitment-center','🪪','القبول والتجنيد','طلبات القسم']]:[]),
+  ...(commander?[['department-admin','⚙','رئاسات الأقسام','إدارة الأدوار']]:[])
  ];
- const sectionCard=(id,icon,title,text,allowed=true,label='دخول القسم')=>'<button class="dashboard-card'+(allowed?'':' is-restricted')+'" data-section="'+id+'" type="button" aria-label="'+esc(title+(allowed?'':' — لا تملك صلاحية الدخول'))+'"><span class="dashboard-card__icon" aria-hidden="true">'+icon+'</span><span class="dashboard-card__body"><span class="dashboard-card__label">قسم البوابة</span><strong>'+esc(title)+'</strong><small>'+esc(text)+'</small></span>'+(allowed?'<span class="dashboard-card__action">'+esc(label)+' <b aria-hidden="true">←</b></span>':'<span class="restricted-overlay"><span class="lock-icon" aria-hidden="true">🔒</span><span class="restricted-badge">مقيّد</span><b>لا تملك صلاحية الدخول</b><small>يتطلب تصريحًا خاصًا</small></span>')+'</button>';
- set('#page','<section class="user-welcome"><div><span class="eyebrow">مرحبًا بعودتك</span><h2>'+esc(profile?.game_name||'قائد أمن المنشآت')+'</h2><p>يمكنك متابعة أعمالك والوصول إلى الأقسام المصرّح بها من لوحة التحكم.</p></div><div class="identity-chips"><span><small>الرتبة</small><b>'+esc(profile?.rank||'القيادة')+'</b></span><span><small>الكود العسكري</small><b dir="ltr">'+esc(profile?.military_code||'—')+'</b></span></div></section>'+
- '<div class="grid four dashboard-metrics">'+info.map(([k,v])=>'<div class="metric"><div class="caption">'+esc(k)+'</div><div class="n">'+esc(v)+'</div></div>').join('')+'</div>'+
- '<div class="dept-quick-access" id="deptQuickAccess"><div class="dept-section-title"><h3>أقسامك التخصصية</h3><span class="dept-chip">حسب الرول المخصص لك</span></div><div class="dept-quick-actions">'+
-  (hasDept('training')?'<button class="btn primary" data-go-dept="training-center">🎓 كلية التدريب — '+esc(commander?'القيادة':departmentRoles.filter(r=>r.department==='training').map(r=>({head:'الرئاسة',trainer:'مدرب',member:'عضو'}[r.role])).join(' / '))+'</button>':'')+
-  (hasDept('recruitment')?'<button class="btn primary" data-go-dept="recruitment-center">🪪 القبول والتجنيد — '+esc(commander?'القيادة':departmentRoles.filter(r=>r.department==='recruitment').map(r=>({head:'الرئاسة',trainer:'مدرب',member:'عضو'}[r.role])).join(' / '))+'</button>':'')+
-  (commander?'<button class="btn ghost" data-go-dept="department-admin">⚙ توزيع رئاسات الأقسام</button>':'')+
- '</div></div>'+'<div class="section-intro"><div><span class="eyebrow">مساحة العمل</span><h2>أقسام البوابة</h2></div><p>اختر القسم المطلوب للمتابعة</p></div><div class="dashboard-sections">'+
- sectionCard('reports','▤','التقارير','إنشاء التقارير ومتابعة المراجعات')+
- sectionCard('court','⚖','مجلس القضاء','القضايا والقرارات والسجل القضائي',courtAllowed)+
- sectionCard('police','🛡','الشرطة العسكرية','اللوائح واحتساب العقوبات',has('police.manage'))+
- sectionCard('academy','🎓','الأكاديمية والتأهيل','الدورات والمسارات التدريبية')+'</div>');
- $('#page').querySelectorAll('[data-go-dept]').forEach(button=>button.onclick=()=>navigate(button.dataset.goDept));
- $('#page').querySelectorAll('.dashboard-card').forEach(card=>card.onclick=()=>{if(card.classList.contains('is-restricted'))showRestricted(card.querySelector('strong')?.textContent||'القسم');else navigate(card.dataset.section)});
- $('#page').insertAdjacentHTML('beforeend','<div class="access-shortcut"><div><strong>التصاريح والصلاحيات</strong><p>'+(commander?'راجع طلبات أعضاء القطاع واتخذ قرارك.':'تحتاج صلاحية إضافية؟ قدّم طلبًا إلى القائد وتابع الرد هنا.')+'</p></div><button type="button" class="btn ghost" id="accessDashboardShortcut">'+(commander?'مراجعة الطلبات':'طلب تصريح')+'</button></div>');
+ const card=([id,icon,title,description])=>'<button type="button" class="dashboard-card mp-simple-card" data-section="'+id+'"><span class="dashboard-card__icon" aria-hidden="true">'+icon+'</span><span class="dashboard-card__body"><strong>'+esc(title)+'</strong><small>'+esc(description)+'</small></span><span class="dashboard-card__action">فتح ←</span></button>';
+ set('#page','<section class="mp-dashboard-welcome"><div><span class="eyebrow">مساحة عملك</span><h2>أهلًا، '+esc(profile?.game_name||'القيادة')+'</h2><p>اختر ما تحتاجه فقط؛ الأقسام التي لا تملك صلاحيتها مخفية.</p></div><span class="mp-dashboard-code">'+esc(profile?.military_code||'قيادة أمن المنشآت')+'</span></section>'+
+ '<section class="mp-dashboard-top"><button class="btn primary" type="button" data-fast="compose">＋ كتابة تقرير</button><button class="btn ghost" type="button" data-fast="reports">متابعة تقاريري</button><button class="btn ghost" type="button" data-fast="academy">الدورات العامة</button></section>'+
+ '<div class="section-intro"><div><h2>الأقسام المتاحة لك</h2><p>لن ترى أي قسم مقفل أو لا يخص مهامك.</p></div></div>'+
+ '<div class="dashboard-sections mp-simple-grid">'+cards.map(card).join('')+'</div>'+
+ '<div class="mp-dashboard-foot"><span>هل تحتاج صلاحية إضافية؟</span><button type="button" class="btn ghost small" id="accessDashboardShortcut">طلب وصول أو متابعة طلباتي</button></div>'+
+ '<section id="dashboardNotices" class="mp-notices"></section>');
+ $('#page').querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>navigate(b.dataset.section));
+ $('#page').querySelectorAll('[data-fast]').forEach(b=>b.onclick=()=>navigate(b.dataset.fast));
  $('#accessDashboardShortcut').onclick=()=>navigate(commander?'access-queue':'access');
- if(commander||has('academy.manage')||hasDeptRole('training','head')||hasDeptRole('training','trainer')){
-  $('#page').insertAdjacentHTML('beforeend','<section class="access-shortcut"><div><strong>متابعة الدورات</strong><p>راجع الناجحين وأكّد تسليم الدورة ضمن جدول واحد.</p></div><button class="btn primary" id="openCourseDeliveries">نتائج الدورات والتسليم</button></section>');
-  $('#openCourseDeliveries').onclick=()=>navigate('academy-results');
- }
- {
-  const {data:notices,error:nerr}=await db.from('asf_notifications').select('*').order('created_at',{ascending:false}).limit(20);
-  if(!nerr){
-   const unread=(notices||[]).filter(n=>!n.read_at);
-   $('#page').insertAdjacentHTML('beforeend','<section class="section-card" style="margin-top:18px"><div class="row between"><h3>الإشعارات '+badge(String(unread.length)+' غير مقروء')+'</h3><button class="btn ghost small" id="markAllRead">تعليم كمقروء</button></div>'+
-   ((notices||[]).map(n=>'<div class="notice-item">'+(n.read_at?'':'● ')+esc(n.message)+'<small class="muted">'+date(n.created_at)+'</small>'+(['academy_pass','academy_assigned'].includes(n.event_kind||n.category)?'<button class="btn ghost small" data-open-notice="academy-results">فتح جدول الدورات</button>':n.category==='registration'&&(commander||has('users.approve'))?'<button class="btn ghost small" data-open-notice="members">مراجعة طلب العضوية</button>':'')+'</div>').join('')||empty('لا توجد إشعارات'))+'</section>');
-   $('#page').querySelectorAll('[data-open-notice]').forEach(b=>b.onclick=()=>navigate(b.dataset.openNotice));
-   $('#markAllRead').onclick=async()=>{const {error}=await db.from('asf_notifications').update({read_at:new Date().toISOString()}).is('read_at',null);if(error)return toast(error.message,true);toast('تم تعليم الإشعارات كمقروءة');renderDashboard();};
-  }
- }
+ const {data:notices,error}=await db.from('asf_notifications').select('*').order('created_at',{ascending:false}).limit(12);
+ if(error||!$('#dashboardNotices'))return;
+ const pending=(notices||[]).filter(n=>!n.read_at).length;
+ $('#dashboardNotices').innerHTML='<details class="mp-notices-panel"><summary>الإشعارات <span class="badge">'+pending+' غير مقروء</span></summary><div class="mp-notices-body"><button type="button" class="btn ghost small" id="markAllRead">تحديد الكل كمقروء</button>'+
+ ((notices||[]).map(n=>'<div class="notice-item">'+(n.read_at?'':'● ')+esc(n.message)+'<small class="muted">'+date(n.created_at)+'</small></div>').join('')||empty('لا توجد إشعارات حاليًا'))+'</div></details>';
+ $('#markAllRead').onclick=async()=>{const {error:err}=await db.from('asf_notifications').update({read_at:new Date().toISOString()}).is('read_at',null);if(err)return toast(err.message,true);toast('تم تحديد الإشعارات كمقروءة');renderDashboard();};
 }
+
 function renderAcademy(){
  const courses=Object.values(window.COURSES||{}).filter(c=>c.sector==='facilities_security');
  set('#page','<div class="notice">الدورات متاحة للجميع بدون تسجيل دخول.</div><div class="grid three">'+courses.map(c=>'<section class="section-card"><h3>'+esc(c.title)+'</h3><p>'+esc(c.requiredRank||'')+'</p><a class="btn ghost" href="academy.html" target="_blank" rel="noopener">فتح دورة الأكاديمية</a></section>').join('')+'</div><button class="btn primary" id="allCourses">دخول الأكاديمية</button>');
