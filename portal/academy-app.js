@@ -75,12 +75,8 @@
       "result-view",
       "global-status",
       "progress-steps",
-      "sector-indicator",
-      "selected-sector-label",
-      "change-sector-button",
       "course-field",
       "entry-submit-button",
-      "theme-button",
       "footer-version",
       "courses-count",
       "questions-count",
@@ -161,15 +157,13 @@
     cacheElements();
     restoreTheme();
     migrateLegacySessions();
-    selectedSector = getStoredSector();
+    // Keep the internal course key for existing training progress; only one academy is offered.
+    selectedSector = FACILITIES_SECURITY;
+    storeSector(FACILITIES_SECURITY);
     bindEvents();
-    if (selectedSector) {
-      applySectorSelection();
-      checkForSavedSession();
-      showView("entry");
-    } else {
-      showView("sector");
-    }
+    applySectorSelection();
+    checkForSavedSession();
+    showView("sector");
     elements.footerVersion.textContent = DEMO_MODE
       ? "الإصدار الثاني وضع العرض"
       : "الإصدار الثاني";
@@ -182,11 +176,9 @@
 
 
   function bindEvents() {
-    elements.themeButton.addEventListener("click", toggleTheme);
     document.querySelectorAll("[data-sector]").forEach((button) => {
       button.addEventListener("click", () => selectSector(button.dataset.sector));
     });
-    elements.changeSectorButton.addEventListener("click", changeSector);
     elements.traineeForm.addEventListener("submit", handleEntrySubmit);
     elements.courseSelect.addEventListener("change", updateCourseHint);
     elements.resumeButton.addEventListener("click", resumeSavedSession);
@@ -218,15 +210,7 @@
 
   function isKnownSector(value) { return value === FACILITIES_SECURITY; }
 
-  function getSectorLabel(sector = selectedSector) {
-    if (sector === SECURITY_REGIMENTS) {
-      return "الأفواج الأمنية";
-    }
-    if (sector === PUBLIC_SECURITY) {
-      return "الأمن العام";
-    }
-    return "أمن المنشآت";
-  }
+  function getSectorLabel() { return "أمن المنشآت"; }
 
   function getStoredSector() {
     try {
@@ -288,10 +272,6 @@
   }
 
   function applySectorSelection() {
-    elements.sectorIndicator.hidden = !selectedSector;
-    elements.selectedSectorLabel.textContent = selectedSector
-      ? `القطاع المختار: ${getSectorLabel()}`
-      : "";
     elements.courseField.hidden = false;
     elements.courseSelect.disabled = false;
     elements.entrySubmitButton.disabled = false;
@@ -300,37 +280,8 @@
     updateCourseHint();
   }
 
-  function changeSector() {
-    clearInterval(studyTicker);
-    clearInterval(quizTicker);
-    storageRemove(STORAGE.session);
-    state = createEmptyState();
-    state.sector = selectedSector;
-    pendingSession = null;
-    isSubmitting = false;
-    elements.traineeForm.reset();
-    clearAllErrors();
-    selectedSector = "";
-    clearStoredSector();
-    elements.sectorIndicator.hidden = true;
-    showView("sector");
-  }
-
   function restoreTheme() {
-    const saved = storageGet(STORAGE.theme, "");
-    const preferred =
-      saved ||
-      (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches
-        ? "light"
-        : "dark");
-    document.documentElement.dataset.theme = preferred;
-  }
-
-  function toggleTheme() {
-    const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
-    document.documentElement.dataset.theme = next;
-    storageSet(STORAGE.theme, next);
-    showToast(next === "light" ? "تم تفعيل النمط الفاتح" : "تم تفعيل النمط الداكن");
+    document.documentElement.dataset.theme = "dark";
   }
 
   function getAvailableCourses() {
@@ -342,7 +293,7 @@
     elements.courseSelect.value = "";
 
     const quizGroup = document.createElement("optgroup");
-    quizGroup.label = "الدورات الميدانية";
+    quizGroup.label = "الدورات الإلكترونية";
     const applicantGroup = document.createElement("optgroup");
     applicantGroup.label = "تأهيل المتقدمين الجدد";
     const referenceGroup = document.createElement("optgroup");
@@ -1061,9 +1012,9 @@
         if (state.sessionId === submittedSessionId) {
           setSubmissionStatus(
             submittedResult.localSaved
-              ? "تم إرسال النتيجة إلى سجل الإدارة وحفظ نسخة محلية"
-              : "تم إرسال النتيجة إلى سجل الإدارة",
-            "success"
+              ? "حُفظت النتيجة على جهازك وأُرسل طلب حفظها للإدارة؛ تأكيد وصولها يحتاج مراجعة السجل"
+              : "أُرسل طلب حفظ النتيجة، لكن لم يمكن التحقق من استلام السجل الإداري؛ احتفظ بنسخة من النتيجة",
+            ""
           );
         }
       } catch (error) {
@@ -1211,7 +1162,7 @@
         : getSectorLabel(state.sector);
     const traineeLabel = course.applicantCourse ? "المتقدم" : "المتدرب";
     const lines = [
-      `نتيجة الأكاديمية التدريبية المشتركة — ${sectorName}`,
+      `نتيجة أكاديمية أمن المنشآت — ${sectorName}`,
       `${traineeLabel}: ${state.trainee.name}`,
       `Discord ID: ${state.trainee.discord}`,
       `الدورة: ${course.title}`,

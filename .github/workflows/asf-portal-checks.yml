@@ -24,6 +24,7 @@ jobs:
           npx playwright install --with-deps chromium
           (python3 -m http.server 8000 >/tmp/asf-http.log 2>&1 &)
           node portal/smoke.spec.cjs
+          node portal/academy-landing.spec.cjs
           node portal/flow.spec.cjs
           node portal/landing.spec.cjs
           node portal/recovery.spec.cjs

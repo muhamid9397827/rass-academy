@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#07111f">
-  <meta name="description" content="منصة تدريب واختبارات موحدة للقطاعات الأمنية داخل سيرفر المحاكاة.">
+  <meta name="description" content="أكاديمية أمن المنشآت: الدورات الإلكترونية والتأهيل والاختبارات ومتابعة النتائج.">
   <title>أكاديمية أمن المنشآت | منصة التدريب الموحدة</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/styles.css?v=20260802-2">
-  <link rel="stylesheet" href="academy-theme.css?v=20261103-1">
+  <link rel="stylesheet" href="academy-theme.css?v=20261103-3">
   <script src="../js/config.js" defer></script>
   <script src="../js/courses.js?v=20260802-3" defer></script>
   <script src="academy-filter.js" defer></script>
@@ -20,8 +20,8 @@
   <script src="../js/banks/air-wing.js" defer></script>
   <script src="../js/banks/zone-officer.js" defer></script>
   <script src="../js/banks/swat.js" defer></script>
-  <script src="academy-app.js" defer></script>
-<style>.sector-card--regiments,.sector-card--public,.sector-stats{display:none!important}.sector-cards{grid-template-columns:minmax(240px,520px)!important;justify-content:center}</style></head>
+  <script src="academy-app.js?v=20261103-3" defer></script>
+</head>
 <body>
   <a class="skip-link" href="#main-content">انتقل إلى المحتوى الرئيسي</a>
   <div class="page-glow page-glow--one" aria-hidden="true"></div>
@@ -39,28 +39,16 @@
         </span>
         <span>
           <strong class="brand__title">أكاديمية أمن المنشآت</strong>
-          <span class="brand__subtitle">منصة التدريب الموحدة للقطاعات الأمنية</span>
+          <span class="brand__subtitle">الدورات الإلكترونية والتأهيل لأمن المنشآت</span>
         </span>
       </a>
 
       <div class="header-meta">
-        <div id="sector-indicator" class="sector-indicator" hidden>
-          <span id="selected-sector-label"></span>
-          <button id="change-sector-button" class="button button--ghost button--small" type="button">تغيير القطاع</button>
-        </div>
         <span class="simulation-badge">
           <span class="simulation-badge__dot" aria-hidden="true"></span>
           رئاسة كلية التدريب
         </span>
-        <button class="icon-button" id="theme-button" type="button" aria-label="تبديل نمط الألوان" title="تبديل نمط الألوان">
-          <svg class="icon-button__moon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M20.5 15.5A8.4 8.4 0 0 1 8.5 3.6 8.5 8.5 0 1 0 20.5 15.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <svg class="icon-button__sun" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="3.8" fill="none" stroke="currentColor" stroke-width="1.8"/>
-            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
-        </button>
+        
       </div>
     </div>
   </header>
@@ -89,97 +77,40 @@
 
     <div id="global-status" class="status-toast" role="status" aria-live="polite" hidden></div>
 
-    <section id="sector-view" class="view sector-view" aria-labelledby="sector-title" hidden>
-      <div class="sector-landing">
-        <section class="landing-hero" aria-describedby="sector-subtitle">
-          <div class="landing-hero__content">
-            <div class="landing-hero__meta">
-              <span class="eyebrow">بوابة التدريب</span>
-              <span class="landing-location">بوابة أمن المنشآت</span>
-            </div>
-            <h1 id="sector-title">أكاديمية أمن المنشآت</h1>
-            <p id="sector-subtitle">منصة التدريب الموحدة للقطاعات الأمنية</p>
-            <div class="landing-hero__actions">
-              <a class="button button--primary" href="#available-sectors">
-                ابدأ التدريب
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M5 12h14m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-              </a>
-              <a class="button button--ghost" href="#available-sectors">عرض القطاعات</a>
-            </div>
-          </div>
-          <div class="landing-hero__emblem" aria-hidden="true">
-            <svg viewBox="0 0 120 120">
-              <path d="M60 9 99 23v30c0 27-15.3 47.7-39 58-23.7-10.3-39-31-39-58V23L60 9Z" fill="currentColor" opacity=".1"/>
-              <path d="M60 15 93 27v26c0 22.3-12.5 40.3-33 50-20.5-9.7-33-27.7-33-50V27l33-12Z" fill="none" stroke="currentColor" stroke-width="2.4"/>
-              <path d="m42 60 11 11 25-28" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-        </section>
-
-        <section id="available-sectors" class="sectors-section" aria-labelledby="available-sectors-title">
-          <div class="sectors-section__heading">
-            <div>
-              <span class="eyebrow">القطاعات المتاحة</span>
-              <h2 id="available-sectors-title">اختر مسار التدريب المناسب</h2>
-            </div>
-            <p>مسارات تدريبية مستقلة، مصممة لتجربة واضحة ومنظمة.</p>
-          </div>
-
-          <div class="sector-grid">
-            <article class="sector-card sector-card--facilities">
-              <div class="sector-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M12 3 20 6v5c0 5.5-3.4 9.5-8 11-4.6-1.5-8-5.5-8-11V6l8-3Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
-                  <path d="m8.5 12 2.1 2.1 4.8-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-              <div class="sector-card__content">
-                <span class="sector-card__eyebrow">قطاع تدريبي</span>
-                <h3>أمن المنشآت</h3>
-                <p>الدورات والمواد التدريبية المتاحة لمنسوبي أمن المنشآت.</p>
-              </div>
-              <button class="button button--primary sector-card__action" type="button" data-sector="facilities_security">دخول القطاع</button>
-            </article>
-
-            <article class="sector-card sector-card--regiments">
-              <div class="sector-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M4 20V9l8-5 8 5v11M8 20v-5h8v5M12 4v11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-              <div class="sector-card__content">
-                <span class="sector-card__eyebrow">قطاع تدريبي</span>
-                <h3>الأفواج الأمنية</h3>
-                <p>دورات ومواد واختبارات ميدانية خاصة بقطاع الأفواج الأمنية.</p>
-              </div>
-              <button class="button button--primary sector-card__action" type="button" data-sector="security_regiments">استعراض الدورات</button>
-            </article>
-
-            <article class="sector-card sector-card--public">
-              <div class="sector-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M12 3v18M5 8l7-5 7 5M6 21h12M8 11h8v7H8z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
-              <div class="sector-card__content">
-                <span class="sector-card__eyebrow">قطاع تدريبي</span>
-                <h3>الأمن العام</h3>
-                <p>دورات واختبارات ميدانية متدرجة حسب الرتب لمنسوبي الأمن العام.</p>
-              </div>
-              <button class="button button--primary sector-card__action" type="button" data-sector="public_security">استعراض الدورات</button>
-            </article>
-          </div>
-        </section>
-
-        <section class="sector-stats" aria-label="إحصائيات القطاعات المتاحة">
-          <div><strong>٣</strong><span>قطاعات في المنصة</span></div>
-          <div><strong>١٩</strong><span>دورة ومرجع تدريبي</span></div>
-          <div><strong>١٧</strong><span>بنوك أسئلة مستقلة</span></div>
-        </section>
+    <section id="sector-view" class="view sector-view asf-academy-landing" aria-labelledby="sector-title" hidden>
+  <div class="asf-training-hero">
+    <div class="asf-training-hero__copy">
+      <span class="asf-training-eyebrow"><span aria-hidden="true">✦</span> رئاسة كلية التدريب · أمن المنشآت</span>
+      <h1 id="sector-title">تعلّم. تأهّل.<br><span>تقدّم بثقة.</span></h1>
+      <p id="sector-subtitle">كل ما تحتاجه لدخول الدورات الإلكترونية، دراسة المواد، وأداء الاختبارات في مكان واحد. ابدأ من دون إنشاء حساب.</p>
+      <div class="asf-training-hero__actions">
+        <button class="button button--primary asf-training-primary" id="start-facilities-training" type="button" data-sector="facilities_security">استعراض الدورات وبدء التأهيل <span aria-hidden="true">←</span></button>
+        <a class="button button--ghost" href="index.html">العودة إلى بوابة أمن المنشآت</a>
       </div>
-    </section>
+      <div class="asf-training-hero__facts">
+        <span><b>70%</b> نسبة النجاح</span><span><b>24 ساعة</b> قبل إعادة المحاولة</span><span><b>مجانية</b> ومفتوحة للجميع</span>
+      </div>
+    </div>
+    <aside class="asf-training-journey" aria-label="مراحل الدورة الإلكترونية">
+      <div class="asf-training-journey__header"><span aria-hidden="true">◇</span><div><small>مسار التأهيل</small><strong>ثلاث خطوات نحو النجاح</strong></div></div>
+      <ol>
+        <li><span class="asf-training-journey__num">01</span><div><strong>اختر الدورة</strong><small>الدورات والمراجع المعتمدة لأمن المنشآت</small></div></li>
+        <li><span class="asf-training-journey__num">02</span><div><strong>اقرأ المادة</strong><small>تعلّم على مهل مع حفظ تقدمك في الجهاز</small></div></li>
+        <li><span class="asf-training-journey__num">03</span><div><strong>أدِّ الاختبار</strong><small>اطّلع على النتيجة بعد تسليم الإجابات</small></div></li>
+      </ol>
+      <div class="asf-training-journey__bottom"><span aria-hidden="true">✓</span> منصة إلكترونية مخصّصة للتأهيل</div>
+    </aside>
+  </div>
+  <section class="asf-training-offerings" aria-labelledby="asf-training-offerings-title">
+    <div class="asf-training-section-heading"><div><span>ما الذي ستجده في الأكاديمية؟</span><h2 id="asf-training-offerings-title">تدريب منظّم لكل مرحلة.</h2></div><p>اختَر دورتك من القائمة المتاحة بعد الضغط على بدء التأهيل.</p></div>
+    <div class="asf-training-feature-grid">
+      <article class="asf-training-feature"><div class="asf-training-feature__symbol" aria-hidden="true">◈</div><span>01 / الدورات الأساسية</span><h3>العمليات والشخصية العسكرية</h3><p>المعارف الأساسية والمهارات المطلوبة للارتقاء بالتأهيل.</p></article>
+      <article class="asf-training-feature"><div class="asf-training-feature__symbol" aria-hidden="true">✧</div><span>02 / المسارات التخصصية</span><h3>الجناح الجوي وضابط المنطقة والسوات</h3><p>مواد إلكترونية أكثر تخصصًا وفق الدورات المتاحة.</p></article>
+      <article class="asf-training-feature"><div class="asf-training-feature__symbol" aria-hidden="true">◎</div><span>03 / التقييم</span><h3>اختبارات ونتائج واضحة</h3><p>عرض التقدم والنتيجة مع الاحتفاظ بالمحاولة على جهازك.</p></article>
+    </div>
+  </section>
+  <div class="asf-training-final-cta"><div><strong>جاهز تبدأ دورتك؟</strong><p>تقدر تبدأ الآن، بدون تسجيل دخول أو المرور بصفحة اختيار القطاعات.</p></div><button class="button button--primary" type="button" data-sector="facilities_security">ابدأ الآن <span aria-hidden="true">←</span></button></div>
+</section>
 
     <section id="entry-view" class="view" aria-labelledby="entry-title">
       <div id="resume-banner" class="resume-banner" hidden>
@@ -199,13 +130,13 @@
           <span class="eyebrow">منصة التدريب الموحدة</span>
           <h1 id="entry-title">ارتق بمعرفتك<br><span>وطور خبرتك</span></h1>
           <p class="hero-panel__lead">
-            الدورات طريقك لزيادة المعرفة وتنمية الخبرة وتعزيز جاهزيتك داخل القطاع
+            الدورات طريقك لزيادة المعرفة وتنمية الخبرة وتعزيز جاهزيتك في أمن المنشآت
           </p>
 
           <div class="hero-stats" aria-label="معلومات المنصة">
             <div class="hero-stat">
               <strong id="courses-count">٥</strong>
-              <span>دورات ميدانية</span>
+              <span>دورات إلكترونية</span>
             </div>
             <div class="hero-stat">
               <strong id="questions-count">٥٠</strong>
