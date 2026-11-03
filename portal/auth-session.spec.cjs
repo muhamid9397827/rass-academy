@@ -1,4 +1,5 @@
 // Real vendored SDK, isolated HTTP fixtures. No production credentials or writes.
+let activePage;
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs');
 const base='http://127.0.0.1:8000/portal/',ref='sxtbgnjbrcsmgsdhkbno',uid='11111111-2222-4333-8444-555555555571';
 const member={id:uid,aud:'authenticated',role:'authenticated',email:'qa@example.invalid',email_confirmed_at:'2026-01-01T00:00:00Z',app_metadata:{provider:'email',providers:['email']},user_metadata:{},identities:[],created_at:'2026-01-01T00:00:00Z'};
@@ -28,12 +29,14 @@ const enc=o=>Buffer.from(JSON.stringify(o)).toString('base64url');const jwt=enc(
  // Control: the previous SDK reproduces the user's permanently disabled button.
  const oldResponse=await fetch('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js',{signal:AbortSignal.timeout(15000)});assert.equal(oldResponse.ok,true);const oldBundle=await oldResponse.text();
  const probe=await ctx.newPage();await probe.route('**/vendor/supabase-2.118.0/supabase.min.js',r=>r.fulfill({status:200,contentType:'application/javascript',body:oldBundle}));
- await probe.goto(base);await probe.locator('#showLogin').click();await probe.locator('#email').fill('qa@example.invalid');await probe.locator('#password').fill('TestPass2026!');await probe.locator('#authSubmit').click();await probe.waitForTimeout(700);assert.equal(await probe.locator('#authSubmit').isDisabled(),true,'previous SDK waits indefinitely behind the held lock');assert.equal(tokens,0,'legacy hang happens before a password request reaches the server');await probe.close();
- const page=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));
+ await probe.goto(base);await probe.locator('#showLogin').click();await probe.locator('#email').fill('qa@example.invalid');await probe.locator('#password').fill('TestPass2026!');await probe.locator('#authSubmit').click();await probe.waitForTimeout(700);assert.equal(await probe.locator('#authSubmit').isDisabled(),true,'previous SDK waits indefinitely behind the held lock');assert.equal(tokens,1,'legacy password request succeeded, but loading the session is still blocked');assert.match(await probe.locator('#authStatus').innerText(),/جارٍ تحميل بيانات الحساب/);await probe.close();
+ await holder.evaluate(ref=>localStorage.removeItem('sb-'+ref+'-auth-token'),ref);tokens=0;
+ const page=activePage=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));
  // A lock held by an old tab must not stall the current SDK's initialization or sign-in.
  await page.goto(base+'?login=1');await page.locator('#authScreen').waitFor({state:'visible'});
  await page.locator('#email').fill('qa@example.invalid');await page.locator('#password').fill('TestPass2026!');await page.locator('#authSubmit').click();
  await page.locator('#workspace').waitFor({state:'visible',timeout:12000});assert.equal(tokens,1);assert.equal(await page.locator('#authSubmit').isDisabled(),false);
+ fs.mkdirSync('/tmp/asf-mobile',{recursive:true});await page.screenshot({path:'/tmp/asf-mobile/login-fixed-390.png',fullPage:true});
  assert.ok(await holder.evaluate(async()=>{const state=await navigator.locks.query();return state.held.some(l=>l.name.includes('auth-token'));}),'old lock remains held, without blocking new SDK');
  // Persisted session survives a mobile reload while the old tab's lock still exists.
  await page.reload();await page.locator('#workspace').waitFor({state:'visible',timeout:12000});assert.equal(tokens,1);
@@ -41,6 +44,7 @@ const enc=o=>Buffer.from(JSON.stringify(o)).toString('base64url');const jwt=enc(
  mode='ok';await page.locator('#signOut').click();await page.locator('#welcome').waitFor({state:'visible'});assert.equal(await page.locator('#page').textContent(),'');
  await page.locator('#showLogin').click();mode='invalid';await page.locator('#email').fill('qa@example.invalid');await page.locator('#password').fill('WrongPass2026!');await page.locator('#authSubmit').click();await page.locator('#authStatus.error').waitFor();assert.match(await page.locator('#authStatus').innerText(),/كلمة المرور غير صحيحة/);assert.equal(await page.locator('#authSubmit').isDisabled(),false);
  mode='offline';await page.locator('#authSubmit').click();await page.locator('#authStatus.error').waitFor();await page.waitForFunction(()=>!document.querySelector('#authSubmit').disabled);assert.equal(await page.locator('#workspace').isVisible(),false);
+ await page.screenshot({path:'/tmp/asf-mobile/login-offline-390.png',fullPage:true});
  await holder.evaluate(()=>window.releaseOldLock());assert.deepEqual(errors,[]);await ctx.close();await browser.close();
  console.log('PASS real SDK: mobile sign-in and session reload under held legacy Web Lock, password errors, network failure, section error boundary and cleared logout data');
-})().catch(e=>{console.error(e);process.exit(1)});
+})().catch(async e=>{if(activePage){console.error('UI state:',await activePage.locator('#authStatus').innerText().catch(()=>''));fs.mkdirSync('/tmp/asf-mobile',{recursive:true});await activePage.screenshot({path:'/tmp/asf-mobile/login-failure-390.png',fullPage:true}).catch(()=>{});}console.error(e);process.exit(1)});
