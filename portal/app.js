@@ -38,7 +38,7 @@ const recoveryTokenHash=recoveryHash.get('token_hash')||recoveryQuery.get('token
 const recoveryLinkOpened=recoveryHash.get('type')==='recovery'||recoveryQuery.get('type')==='recovery';
 let db=ready?window.ASF_AUTH.createClient():null;
 let authEpoch=0,authNeedsReload=false,signingOut=false;
-let user=null, profile=null, commander=false, grants=[], pageName=new URLSearchParams(location.search).get('view')==='academy-results'?'academy-results':'dashboard', draftId=null, latestReports=[], correctionSource=null, notificationChannel=null;
+let user=null, profile=null, commander=false, grants=[], departmentRoles=[], pageName=new URLSearchParams(location.search).get('view')==='academy-results'?'academy-results':'dashboard', draftId=null, latestReports=[], correctionSource=null, notificationChannel=null;
 const toast=(m,error=false)=>{const b=$('#toast');b.textContent=m;b.className='show'+(error?' error':'');clearTimeout(toast.t);toast.t=setTimeout(()=>b.className='',5800)};
 const set=(s,html)=>{$(s).innerHTML=html};
 const date=d=>d?new Date(d).toLocaleString('ar-SA',{dateStyle:'short',timeStyle:'short'}):'—';
@@ -49,6 +49,16 @@ const btn=(label,act,id='',kind='ghost')=>'<button class="btn '+kind+' small" da
 const badge=(s,secret=false)=>'<span class="badge '+(secret?'secret':'')+'">'+esc(s)+'</span>';
 const empty=msg=>'<div class="empty">'+esc(msg)+'</div>';
 const has=(permission,kind=null)=>commander||grants.some(g=>g.permission===permission&&(kind===null||g.report_kind===null||g.report_kind===kind));
+const hasDeptRole=(department,role)=>commander||departmentRoles.some(r=>r.department===department&&r.role===role);
+const hasDept=(department)=>commander||departmentRoles.some(r=>r.department===department);
+const deptUI=window.ASF_DEPARTMENTS.create({
+ db,
+ getContext:()=>({user,commander,roles:departmentRoles,legacyAcademyManage:has('academy.manage')}),
+ notify:toast,
+ go:navigate,
+ mountResults:mountAcademyResults
+});
+
 function showScreen(which){['welcome','authScreen','verifyEmailScreen','recoveryScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which);window.ASF_MOBILE?.setWorkspace(which==='workspace')}
 function openAcademy(){window.open('academy.html','_blank','noopener')}
 $('#openAcademy').onclick=openAcademy;
@@ -80,7 +90,7 @@ $('#verifyEmailBack').onclick=()=>showScreen('welcome');
 $('#rank').innerHTML=opt(RANKS.map(r=>[r,r]));
 $('#signOut').onclick=async()=>{
  if(signingOut)return;signingOut=true;['showLogin','showRegister','registerFromHero','signOut'].forEach(id=>$('#'+id).disabled=true);
- authEpoch++;user=null;profile=null;commander=false;grants=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');showScreen('welcome');$('#signOut').hidden=true;$('#sessionLabel').textContent='';
+ authEpoch++;user=null;profile=null;commander=false;grants=[];departmentRoles=[];departmentRoles=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');showScreen('welcome');$('#signOut').hidden=true;$('#sessionLabel').textContent='';
  if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
  try{const {error}=await window.ASF_AUTH.deadline(()=>db.auth.signOut(),()=>{authNeedsReload=true;window.ASF_AUTH.cancel(db)});if(error)throw error;}catch(err){
   authNeedsReload=true;window.ASF_AUTH.cancel(db);
@@ -239,15 +249,16 @@ async function loadIdentity(silent=false,fromAuth=false){
  try{
   const {data:{user:u},error:ue}=await db.auth.getUser();if(epoch!==authEpoch)return;if(ue)throw ue;
   if(!u){showScreen('welcome');return}user=u;
- const [{data:p,error:pe},{data:cm,error:ce},{data:dg,error:de},{data:responsibilities,error:re}]=await Promise.all([
+ const [{data:p,error:pe},{data:cm,error:ce},{data:dg,error:de},{data:responsibilities,error:re},{data:departmentMemberships,error:dme}]=await Promise.all([
     db.from('asf_profiles').select('*').eq('user_id',user.id).maybeSingle(),
     db.rpc('asf_is_commander'),
     db.from('asf_delegations').select('*').eq('user_id',user.id),
-    db.from('asf_responsibilities').select('*').eq('user_id',user.id)
+    db.from('asf_responsibilities').select('*').eq('user_id',user.id),
+    db.from('asf_department_roles').select('user_id,department,role').eq('user_id',user.id)
   ]);
   if(epoch!==authEpoch)return;
-  if(pe||ce||de||re)throw pe||ce||de||re;
-  profile=p;commander=!!cm;grants=[...(dg||[]),...(responsibilities||[])];
+  if(pe||ce||de||re||dme)throw pe||ce||de||re||dme;
+  profile=p;commander=!!cm;grants=[...(dg||[]),...(responsibilities||[])];departmentRoles=departmentMemberships||[];
   if(!notificationChannel){
     // All signed-in members can receive their own decision notices. RLS stays authoritative.
     notificationChannel=db.channel('asf-notices-'+user.id)
@@ -278,7 +289,11 @@ async function loadIdentity(silent=false,fromAuth=false){
    $('#adminNav').hidden=!(commander||has('reports.read')||has('reports.review')||has('users.review')||has('users.approve'));
    document.querySelector('[data-page="members"]').hidden=!(commander||has('users.review')||has('users.approve'));
    document.querySelector('[data-page="changes"]').hidden=!(commander||has('users.review'));
-   $('#academyReviewNav').hidden=!(commander||has('academy.manage'));
+   $('#academyReviewNav').hidden=!(commander||has('academy.manage')||hasDeptRole('training','head')||hasDeptRole('training','trainer'));
+   $('#departmentNav').hidden=!(hasDept('training')||hasDept('recruitment'));
+   $('#trainingCenterNav').hidden=!hasDept('training');
+   $('#recruitmentCenterNav').hidden=!hasDept('recruitment');
+   $('#departmentAdminNav').hidden=!commander;
    document.querySelectorAll('[data-page="delegations"],[data-page="trash"],[data-page="audit"]').forEach(n=>n.hidden=!commander);
    document.querySelector('[data-page="inbox"]').hidden=!(commander||has('reports.read')||has('reports.review'));
    document.querySelector('[data-page="access-queue"]').hidden=!commander;
@@ -312,13 +327,16 @@ async function navigate(name){
  if(!user||!(commander||profile?.status==='approved'))return;
  window.ASF_MOBILE?.closeMenu();window.ASF_MOBILE?.setPage(name);
  pageName=name;document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page===name));
- const titles={dashboard:'لوحة التحكم',academy:'الأكاديمية والدورات','academy-results':'نتائج الدورات والتسليم',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',access:'طلب تصريح ومتابعته','access-queue':'طلبات التصاريح الواردة',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
+ const titles={dashboard:'لوحة التحكم',academy:'الأكاديمية والدورات','academy-results':'نتائج الدورات والتسليم','training-center':'كلية التدريب','recruitment-center':'القبول والتجنيد','department-admin':'رئاسات الأقسام',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',access:'طلب تصريح ومتابعته','access-queue':'طلبات التصاريح الواردة',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
  set('#pageTitle','<div><h1>'+esc(titles[name]||'بوابة أمن المنشآت')+'</h1><p>المنصة الموحدة · إعدادات الصلاحيات حسب حسابك</p></div>');
  set('#page','<div class="empty">جارٍ تحميل البيانات...</div>');
  try{
   if(name==='dashboard')return await renderDashboard();
   if(name==='academy')return await renderAcademy();
   if(name==='academy-results')return await renderAcademyResults();
+  if(name==='training-center')return await deptUI.render('training');
+  if(name==='recruitment-center')return await deptUI.render('recruitment');
+  if(name==='department-admin'&&commander)return await deptUI.renderAdmin();
   if(name==='reports'||name==='inbox'||name==='trash')return await renderReports(name);
   if(name==='compose')return await renderCompose();
   if(name==='police')return await renderPolice();
@@ -344,15 +362,20 @@ async function renderDashboard(){
  const sectionCard=(id,icon,title,text,allowed=true,label='دخول القسم')=>'<button class="dashboard-card'+(allowed?'':' is-restricted')+'" data-section="'+id+'" type="button" aria-label="'+esc(title+(allowed?'':' — لا تملك صلاحية الدخول'))+'"><span class="dashboard-card__icon" aria-hidden="true">'+icon+'</span><span class="dashboard-card__body"><span class="dashboard-card__label">قسم البوابة</span><strong>'+esc(title)+'</strong><small>'+esc(text)+'</small></span>'+(allowed?'<span class="dashboard-card__action">'+esc(label)+' <b aria-hidden="true">←</b></span>':'<span class="restricted-overlay"><span class="lock-icon" aria-hidden="true">🔒</span><span class="restricted-badge">مقيّد</span><b>لا تملك صلاحية الدخول</b><small>يتطلب تصريحًا خاصًا</small></span>')+'</button>';
  set('#page','<section class="user-welcome"><div><span class="eyebrow">مرحبًا بعودتك</span><h2>'+esc(profile?.game_name||'قائد أمن المنشآت')+'</h2><p>يمكنك متابعة أعمالك والوصول إلى الأقسام المصرّح بها من لوحة التحكم.</p></div><div class="identity-chips"><span><small>الرتبة</small><b>'+esc(profile?.rank||'القيادة')+'</b></span><span><small>الكود العسكري</small><b dir="ltr">'+esc(profile?.military_code||'—')+'</b></span></div></section>'+
  '<div class="grid four dashboard-metrics">'+info.map(([k,v])=>'<div class="metric"><div class="caption">'+esc(k)+'</div><div class="n">'+esc(v)+'</div></div>').join('')+'</div>'+
- '<div class="section-intro"><div><span class="eyebrow">مساحة العمل</span><h2>أقسام البوابة</h2></div><p>اختر القسم المطلوب للمتابعة</p></div><div class="dashboard-sections">'+
+ '<div class="dept-quick-access" id="deptQuickAccess"><div class="dept-section-title"><h3>أقسامك التخصصية</h3><span class="dept-chip">حسب الرول المخصص لك</span></div><div class="dept-quick-actions">'+
+  (hasDept('training')?'<button class="btn primary" data-go-dept="training-center">🎓 كلية التدريب — '+esc(commander?'القيادة':departmentRoles.filter(r=>r.department==='training').map(r=>({head:'الرئاسة',trainer:'مدرب',member:'عضو'}[r.role])).join(' / '))+'</button>':'')+
+  (hasDept('recruitment')?'<button class="btn primary" data-go-dept="recruitment-center">🪪 القبول والتجنيد — '+esc(commander?'القيادة':departmentRoles.filter(r=>r.department==='recruitment').map(r=>({head:'الرئاسة',trainer:'مدرب',member:'عضو'}[r.role])).join(' / '))+'</button>':'')+
+  (commander?'<button class="btn ghost" data-go-dept="department-admin">⚙ توزيع رئاسات الأقسام</button>':'')+
+ '</div></div>'+'<div class="section-intro"><div><span class="eyebrow">مساحة العمل</span><h2>أقسام البوابة</h2></div><p>اختر القسم المطلوب للمتابعة</p></div><div class="dashboard-sections">'+
  sectionCard('reports','▤','التقارير','إنشاء التقارير ومتابعة المراجعات')+
  sectionCard('court','⚖','مجلس القضاء','القضايا والقرارات والسجل القضائي',courtAllowed)+
  sectionCard('police','🛡','الشرطة العسكرية','اللوائح واحتساب العقوبات',has('police.manage'))+
  sectionCard('academy','🎓','الأكاديمية والتأهيل','الدورات والمسارات التدريبية')+'</div>');
+ $('#page').querySelectorAll('[data-go-dept]').forEach(button=>button.onclick=()=>navigate(button.dataset.goDept));
  $('#page').querySelectorAll('.dashboard-card').forEach(card=>card.onclick=()=>{if(card.classList.contains('is-restricted'))showRestricted(card.querySelector('strong')?.textContent||'القسم');else navigate(card.dataset.section)});
  $('#page').insertAdjacentHTML('beforeend','<div class="access-shortcut"><div><strong>التصاريح والصلاحيات</strong><p>'+(commander?'راجع طلبات أعضاء القطاع واتخذ قرارك.':'تحتاج صلاحية إضافية؟ قدّم طلبًا إلى القائد وتابع الرد هنا.')+'</p></div><button type="button" class="btn ghost" id="accessDashboardShortcut">'+(commander?'مراجعة الطلبات':'طلب تصريح')+'</button></div>');
  $('#accessDashboardShortcut').onclick=()=>navigate(commander?'access-queue':'access');
- if(commander||has('academy.manage')){
+ if(commander||has('academy.manage')||hasDeptRole('training','head')||hasDeptRole('training','trainer')){
   $('#page').insertAdjacentHTML('beforeend','<section class="access-shortcut"><div><strong>متابعة الدورات</strong><p>راجع الناجحين وأكّد تسليم الدورة ضمن جدول واحد.</p></div><button class="btn primary" id="openCourseDeliveries">نتائج الدورات والتسليم</button></section>');
   $('#openCourseDeliveries').onclick=()=>navigate('academy-results');
  }
@@ -376,7 +399,7 @@ function renderAcademy(){
  }
 }
 function renderAcademyResults(){
- if(!commander&&!has('academy.manage'))return set('#page',empty('نتائج الدورات والتسليم تتطلب تفويض رئاسة الدورات من القائد.'));
+ if(!commander&&!has('academy.manage')&&!hasDeptRole('training','head')&&!hasDeptRole('training','trainer'))return set('#page',empty('نتائج الدورات متاحة فقط لرئاسة كلية التدريب أو مدربيها المصرّح لهم.'));
  set('#page','<div id="academyResultPanel"></div>');mountAcademyResults();
 }
 function mountAcademyResults(){
