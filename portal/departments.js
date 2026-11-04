@@ -8,7 +8,7 @@ const DEPTS={training:'كلية التدريب',recruitment:'القبول وال
 const ROLES={head:'الرئاسة',trainer:'مدرب',member:'عضو'};
 const amount='150,000';
 
-function create({db,getContext,notify,go,mountResults}){
+function create({db,getContext,notify,go,mountResults,mountQualifications}){
  const context=()=>getContext();
  const isRole=(dept,role)=>{
   const me=context();return !!me.commander||me.roles.some(r=>r.department===dept&&r.role===role);
@@ -132,8 +132,9 @@ function create({db,getContext,notify,go,mountResults}){
      '<p class="dept-hint">المدرب يؤكد يدويًا أن رول الدورة أُعطي للمتدرب الناجح، ويُسجّل اسمه ووقت التسليم. لا يغير هذا الزر رولات Discord تلقائيًا.</p><div id="academyResultPanel"></div>';
     mountResults();
    }else{
-    $('#departmentWork').innerHTML='<div id="departmentApplicants"></div>';
+    $('#departmentWork').innerHTML='<div id="departmentApplicants"></div><div id="qualificationResultPanel"></div>';
     await applicants();
+    if(typeof mountQualifications==='function')mountQualifications();
    }
    await rewardPanel(dept);
   }
