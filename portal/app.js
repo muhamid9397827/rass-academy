@@ -765,7 +765,60 @@ async function buildPdf(report){
  if(typeof window.html2pdf!=='function')throw Error('مكتبة PDF لم تُحمّل');
  return window.html2pdf().set({margin:5,filename:code(report.report_number)+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(renderPaper(report)).outputPdf('blob');
 }
-async function renderPolice(){return policeUI.render();}
+
+async function renderServiceRewards(department,cachedCases=null,cachedDecisions=null){
+ const panel=$('#serviceRewardsPanel');if(!panel)return;
+ const [casesResult,decisionsResult,rewardsResult]=await Promise.all([
+  cachedCases?Promise.resolve({data:cachedCases,error:null}):db.from('asf_court_cases').select('id,subject,submitted_by,created_at').order('created_at',{ascending:false}).limit(150),
+  cachedDecisions?Promise.resolve({data:cachedDecisions,error:null}):db.from('asf_court_decisions').select('case_id,decided_by,decided_at').limit(200),
+  db.from('asf_service_rewards').select('id,department,case_id,actor_id,actor_name,subject_label,amount,earned_at,paid_at,paid_by_name').eq('department',department).order('earned_at',{ascending:false}).limit(150)
+ ]);
+ if(!panel.isConnected)return;
+ const err=casesResult.error||decisionsResult.error||rewardsResult.error;
+ if(err){panel.innerHTML='<h3>مكافآت القسم</h3><p class="muted">تعذر تحميل الاستحقاقات: '+esc(err.message)+'</p>';return;}
+ const cases=casesResult.data||[],decisions=decisionsResult.data||[],rewards=rewardsResult.data||[];
+ const existing=new Set(rewards.map(r=>r.case_id)),decisionMap=new Map(decisions.map(d=>[d.case_id,d]));
+ const value=department==='police'?100000:150000,unit=department==='police'?'الشرطة العسكرية':'مجلس القضاء';
+ const eligible=cases.filter(c=>{
+  const d=decisionMap.get(c.id);
+  return d&&!existing.has(c.id)&&(department==='police'?c.submitted_by===user.id:d.decided_by===user.id);
+ });
+ const canPay=commander||(department==='police'&&policeHead);
+ panel.innerHTML='<div class="row between"><h3>مكافآت جهود '+unit+'</h3>'+badge('توثيق إداري')+'</div>'+
+ '<p class="muted">تُحتسب الاستحقاقات عن القضايا التي صدر فيها قرار قضائي: '+value.toLocaleString('en-US')+' عن القضية المستحقة. تسجيل الاستحقاق لا يعني صرفه؛ يؤكد القائد أو رئاسة الشرطة المخولة الصرف الفعلي، ولا يستطيع الشخص اعتماد مكافأته بنفسه.</p>'+
+ (eligible.length?'<h4>أعمال مؤهلة لتسجيل الاستحقاق</h4><div class="dept-record-list">'+eligible.map(c=>
+  '<div class="dept-record"><strong>'+esc(c.subject)+'</strong><br><small>قرار قضائي بتاريخ '+date(decisionMap.get(c.id).decided_at)+'</small><div style="margin-top:10px"><button type="button" class="btn primary small" data-service-claim="'+esc(c.id)+'">تسجيل استحقاق '+value.toLocaleString('en-US')+'</button></div></div>').join('')+'</div>':'')+
+ '<h4>سجل المكافآت</h4>'+
+ (rewards.length?'<div class="dept-record-list">'+rewards.map(r=>
+  '<div class="dept-record"><div class="row between"><strong>'+esc(r.subject_label)+'</strong>'+badge(r.paid_at?'تم تسجيل الصرف':'بانتظار الصرف')+'</div>'+
+  '<p class="muted">المستحق: '+esc(r.actor_name)+' · المبلغ: '+Number(r.amount).toLocaleString('en-US')+' · '+date(r.earned_at)+'</p>'+
+  (r.paid_at?'<small>صرف بواسطة '+esc(r.paid_by_name||'القيادة')+' — '+date(r.paid_at)+'</small>':
+   canPay&&r.actor_id!==user.id?'<button type="button" class="btn primary small" data-service-paid="'+esc(r.id)+'">✓ تأكيد صرف المكافأة</button>':'<small>بانتظار اعتماد جهة الصرف</small>')+
+  '</div>').join('')+'</div>':empty('لا توجد مكافآت مسجلة حتى الآن.'))+
+ '<div class="row" style="margin-top:10px"><button type="button" class="btn ghost small" id="refreshServiceRewards">تحديث المكافآت</button></div>';
+ const refresh=()=>renderServiceRewards(department,cachedCases,cachedDecisions).catch(err=>toast(err.message,true));
+ $('#refreshServiceRewards').onclick=refresh;
+ panel.querySelectorAll('[data-service-claim]').forEach(button=>button.onclick=async()=>{
+  if(!confirm('تسجيل استحقاق عن القضية المكتملة باسمك؟ لا يُصرف المبلغ تلقائيًا.'))return;
+  button.disabled=true;
+  const {error}=await db.rpc('asf_service_reward_claim',{p_case:button.dataset.serviceClaim,p_department:department});
+  if(error){toast(error.message,true);button.disabled=false;return;}
+  toast('تم تسجيل استحقاق مكافأتك؛ بانتظار الصرف.');await refresh();
+ });
+ panel.querySelectorAll('[data-service-paid]').forEach(button=>button.onclick=async()=>{
+  if(!confirm('هل تم إعطاء هذه المكافأة فعلًا؟ سيُحفظ اسمك ووقت الصرف نهائيًا.'))return;
+  button.disabled=true;
+  const {error}=await db.rpc('asf_service_reward_mark_paid',{p_reward:button.dataset.servicePaid});
+  if(error){toast(error.message,true);button.disabled=false;return;}
+  toast('تم توثيق الصرف باسم المسؤول.');await refresh();
+ });
+}
+
+async function renderPolice(){
+ await policeUI.render();
+ $('#page').insertAdjacentHTML('beforeend','<section class="section-card" id="serviceRewardsPanel"><h3>مكافآت الشرطة العسكرية</h3><p class="muted">جاري تحميل الاستحقاقات…</p></section>');
+ await renderServiceRewards('police');
+}
 async function renderCourt(){
  if(!(commander||profile?.court_enabled||has('court.manage')))return set('#page',empty('مجلس القضاء يتطلب تفعيلًا خاصًا من القائد.'));
  const [cases,decisions,warnings]=await Promise.all([query('asf_court_cases'),query('asf_court_decisions'),query('asf_court_warnings')]);
@@ -786,6 +839,8 @@ async function renderCourt(){
  '<div class="section-card"><div class="row between"><h3>السجل القضائي والإنذارات</h3>'+badge(String(warnings.length)+' سجل')+'</div>'+
  '<div class="mp-court-lookup"><h4>استعلام سريع عن إنذارات عسكري</h4><p class="muted">أدخل الاسم الكامل ومعرّف Discord معًا لعرض الإنذارات النشطة. السجلات القديمة دون معرّف لا تظهر في الاستعلام المزدوج.</p><form id="warningLookupForm" class="grid two"><label>اسم العسكري الكامل<input name="player" required maxlength="80" placeholder="الاسم والكنية"></label><label>Discord ID<input name="discord" required inputmode="numeric" pattern="[0-9]{15,22}" maxlength="22"></label><button class="btn primary" type="submit">بحث عن الإنذارات النشطة</button></form><div id="warningLookupResult" aria-live="polite"></div></div><input id="warningSearch" placeholder="ابحث بالاسم أو الكود أو Discord أو الرتبة أو المخالفة">'+
  '<div class="row"><label>السجل<select id="warningScope"><option value="active">الإنذارات النشطة</option><option value="archive">الأرشيف: المنتهية والملغاة</option><option value="all">جميع السجلات</option></select></label></div><div id="warningRows"></div></div>');
+ $('#page').insertAdjacentHTML('beforeend','<section class="section-card" id="serviceRewardsPanel"><h3>مكافآت مجلس القضاء</h3><p class="muted">جاري تحميل الاستحقاقات…</p></section>');
+ renderServiceRewards('court',cases,decisions).catch(err=>toast(err.message,true));
  $('#page').onclick=async e=>{
   const b=e.target.closest('[data-action]');if(!b)return;
   if(b.dataset.action.startsWith('decide')){
