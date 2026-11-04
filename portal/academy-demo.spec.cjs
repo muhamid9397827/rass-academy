@@ -5,7 +5,7 @@ const {portalMock}=require('./completion-fixtures.cjs');
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  try{
   const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];
-  page.on('pageerror',e=>errors.push(e.message);
+  page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/supabase.min.js',r=>r.fulfill({status:200,contentType:'application/javascript',body:portalMock}));
   await page.goto('http://127.0.0.1:8000/portal/?view=academy-results&demo=1');
   await page.locator('#academyDemoPanel [data-demo-row]').first().waitFor({state:'visible'});
