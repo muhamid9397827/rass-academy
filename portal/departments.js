@@ -85,6 +85,49 @@ function create({db,getContext,notify,go,mountResults}){
    await rolesPanel(dept,commanderAdmin);
   };
  }
+ async function qualificationResults(){
+  const box=$('#departmentQualifications');if(!box)return;
+  box.textContent='جارٍ تحميل نتائج اختبار تأهيل الأفراد…';
+  const {data,error}=await db.from('asf_academy_results')
+   .select('id,receipt,trainee_name,trainee_rank,discord_id,score,total,percentage,passed,received_at,qualification_reviewed_at,qualification_reviewed_by_name,qualification_hired_at,qualification_hired_by_name')
+   .eq('course_id','individual-qualification').eq('is_test',false)
+   .order('received_at',{ascending:false}).limit(100);
+  if(!box.isConnected)return;
+  if(error){box.textContent='تعذر جلب نتائج التأهيل: '+error.message;return;}
+  const rows=data||[];
+  box.innerHTML='<div class="dept-section-title"><h3>اختبار تأهيل الأفراد — مراجعة النتيجة والتوظيف</h3>'+badge(String(rows.length)+' نتيجة')+'</div>'+
+   '<p class="dept-hint">نتيجة النجاح أو الرسوب تظهر للمتقدم فور التصحيح الآلي، ولا تنتظر الموافقة. هنا نوثّق مراجعة المسؤول ثم تأكيد التوظيف الفعلي يدوياً. هوية Discord مصرح بها من المتقدم ولم يتم إثبات ملكيتها تلقائياً؛ التأكيد لا يمنح رول Discord أو صلاحية دخول آلياً.</p>'+
+   '<label>بحث باسم المتقدم أو Discord أو الإيصال<input id="qualificationSearch" type="search" maxlength="70" placeholder="بحث في أحدث 100 نتيجة"></label>'+
+   '<div id="qualificationList"></div>';
+  const list=$('#qualificationList');
+  const draw=()=>{
+   const term=String($('#qualificationSearch')?.value||'').toLowerCase().trim();
+   const visible=rows.filter(r=>[r.trainee_name,r.discord_id,r.receipt].some(v=>String(v||'').toLowerCase().includes(term)));
+   list.innerHTML=(visible.length?visible.map(r=>
+    '<article class="dept-record" data-qualification="'+esc(r.id)+'"><div class="dept-record-head"><strong>'+esc(r.trainee_name)+'</strong>'+
+    '<span class="'+(r.passed?'dept-state-paid':'dept-state-unpaid')+'">'+(r.passed?'✓ ناجح':'✕ راسب')+' · '+esc(r.percentage)+'%</span></div>'+
+    '<small>'+esc(r.receipt)+' · Discord: <b dir="ltr">'+esc(r.discord_id)+'</b> · '+when(r.received_at)+'</small>'+
+    '<p class="dept-record-description">الإجابات الصحيحة: '+esc(r.score)+' من '+esc(r.total)+'. الرتبة المذكورة: '+esc(r.trainee_rank)+'</p>'+
+    (r.qualification_reviewed_at?'<p class="dept-hint">✓ تمت مراجعة النتيجة من قبل <strong>'+esc(r.qualification_reviewed_by_name)+'</strong> — '+when(r.qualification_reviewed_at)+'</p>':
+     '<button class="btn primary small" type="button" data-qualification-action="review" data-result="'+esc(r.id)+'">✓ تمّت مراجعة النتيجة</button>')+
+    (r.qualification_hired_at?'<p class="dept-hint">✓ تم توظيف المتقدم من قبل <strong>'+esc(r.qualification_hired_by_name)+'</strong> — '+when(r.qualification_hired_at)+'</p>':
+      r.passed&&r.qualification_reviewed_at?
+      '<button class="btn primary small" type="button" data-qualification-action="hire" data-result="'+esc(r.id)+'">✓ تم توظيفه</button>':
+      r.passed?'<p class="dept-hint">يجب مراجعة النتيجة قبل تأكيد التوظيف.</p>':
+      '<p class="dept-hint">غير مجتاز؛ لا يتاح تأكيد التوظيف لهذه النتيجة.</p>')+
+    '</article>').join(''):'<div class="dept-empty">لا توجد نتائج مطابقة.</div>');
+   list.querySelectorAll('[data-qualification-action]').forEach(button=>button.onclick=async()=>{
+    const kind=button.dataset.qualificationAction,id=button.dataset.result;
+    if(!confirm(kind==='hire'?'هل تم توظيف هذا المتقدم فعلياً؟ سيحفظ النظام اسمك ووقت التأكيد؛ لا يمنح رول Discord.':'هل راجعت نتيجة الاختبار فعلياً؟ سيُسجل اسمك ووقت المراجعة.'))return;
+    button.disabled=true;
+    const {data:response,error:err}=await db.rpc('asf_recruitment_qualification_action',{p_result:id,p_action:kind});
+    if(err){alertError(err);button.disabled=false;return;}
+    notify(kind==='hire'?'تم توثيق التوظيف باسم المسؤول.':'تم توثيق مراجعة النتيجة باسم المسؤول.');
+    await qualificationResults();
+   });
+  };
+  $('#qualificationSearch').oninput=draw;draw();
+ }
  async function applicants(){
   const box=$('#departmentApplicants');if(!box)return;
   box.textContent='جاري تحميل طلبات القبول…';
@@ -132,7 +175,8 @@ function create({db,getContext,notify,go,mountResults}){
      '<p class="dept-hint">المدرب يؤكد يدويًا أن رول الدورة أُعطي للمتدرب الناجح، ويُسجّل اسمه ووقت التسليم. لا يغير هذا الزر رولات Discord تلقائيًا.</p><div id="academyResultPanel"></div>';
     mountResults();
    }else{
-    $('#departmentWork').innerHTML='<div id="departmentApplicants"></div>';
+    $('#departmentWork').innerHTML='<div id="departmentQualifications"></div><div id="departmentApplicants" style="margin-top:24px"></div>';
+    await qualificationResults();
     await applicants();
    }
    await rewardPanel(dept);

@@ -38,6 +38,7 @@ const recoveryTokenHash=recoveryHash.get('token_hash')||recoveryQuery.get('token
 const recoveryLinkOpened=recoveryHash.get('type')==='recovery'||recoveryQuery.get('type')==='recovery';
 let db=ready?window.ASF_AUTH.createClient():null;
 let authEpoch=0,authNeedsReload=false,signingOut=false;
+let reportReceiptById=new Map();
 let user=null, profile=null, commander=false, policeHead=false, grants=[], departmentRoles=[], pageName=new URLSearchParams(location.search).get('view')==='academy-results'?'academy-results':'dashboard', draftId=null, latestReports=[], correctionSource=null, notificationChannel=null;
 const toast=(m,error=false)=>{const b=$('#toast');b.textContent=m;b.className='show'+(error?' error':'');clearTimeout(toast.t);toast.t=setTimeout(()=>b.className='',5800)};
 const set=(s,html)=>{$(s).innerHTML=html};
@@ -62,6 +63,12 @@ const deptUI=window.ASF_DEPARTMENTS.create({
  notify:toast,
  go:navigate,
  mountResults:mountAcademyResults
+});
+
+const serviceUI=window.ASF_SERVICE_REWARDS.create({
+ db,
+ getContext:()=>({user,commander,policeHead}),
+ notify:toast
 });
 
 function showScreen(which){['welcome','authScreen','mfaScreen','verifyEmailScreen','recoveryScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which);$('#notificationTrigger').hidden=which!=='workspace';window.ASF_MOBILE?.setWorkspace(which==='workspace')}
@@ -419,8 +426,8 @@ async function navigate(name){
    }
   if(name==='reports'||name==='inbox'||name==='trash')return await renderReports(name);
   if(name==='compose')return await renderCompose();
-  if(name==='police')return await renderPolice();
-  if(name==='court')return await renderCourt();
+  if(name==='police'){await renderPolice();await serviceUI.mount('police');return;}
+  if(name==='court'){await renderCourt();await serviceUI.mount('court');return;}
   if(name==='members'&&(commander||has('users.review')||has('users.approve')))return await renderMembers();
   if(name==='changes'&&(commander||has('users.review')))return await renderChanges();
   if(name==='delegations'&&commander)return await renderDelegations();
@@ -431,6 +438,32 @@ async function navigate(name){
   set('#page',empty('لا تملك صلاحية الوصول إلى هذا القسم.'));
  }catch(err){set('#page',empty('تعذر تحميل القسم: '+err.message));toast(err.message,true)}
 }
+async function renderOperationsCenter(){
+ const root=$('#operationsCenter');if(!root||!commander)return;
+ const tasks=[
+  ['طلبات العضوية','members',()=>db.from('asf_profiles').select('user_id',{count:'exact',head:true}).eq('status','pending')],
+  ['تصاريح بانتظار القرار','access-queue',()=>db.from('asf_access_requests').select('id',{count:'exact',head:true}).eq('status','pending')],
+  ['دورات تنتظر التسليم','academy-results',()=>db.from('asf_academy_results').select('id',{count:'exact',head:true}).eq('is_test',false).eq('passed',true).neq('course_id','individual-qualification').is('delivered_at',null)],
+  ['تأهيل بانتظار المراجعة','recruitment-center',()=>db.from('asf_academy_results').select('id',{count:'exact',head:true}).eq('course_id','individual-qualification').eq('is_test',false).is('qualification_reviewed_at',null)],
+  ['التقارير الحالية','inbox',()=>db.from('asf_reports').select('id',{count:'exact',head:true}).is('deleted_at',null)]
+ ];
+ const results=await Promise.all(tasks.map(async ([label,section,run])=>{
+  try{const q=await run();return {label,section,count:q.count??(q.data?.length||0),ok:!q.error};}
+  catch{return {label,section,count:null,ok:false};}
+ }));
+ if(!root.isConnected||!commander||pageName!=='dashboard')return;
+ root.innerHTML='<div class="row between"><div><span class="eyebrow">متابعة الإجراءات</span><h2>مركز عمليات القيادة</h2><p class="muted">المعاملات المطلوبة ومهام اليوم في مكان واحد.</p></div>'+
+ '<small class="muted">'+(results.some(r=>!r.ok)?'بعض المؤشرات غير متاحة':'✓ قاعدة البيانات تستجيب')+'</small></div>'+
+ '<div class="dashboard-sections mp-simple-grid">'+results.map(r=>
+ '<button type="button" class="dashboard-card mp-simple-card" data-ops-go="'+esc(r.section)+'"><span class="dashboard-card__body"><strong>'+esc(r.label)+
+ '</strong><small>'+(!r.ok?'تعذر تحديث العدد':r.count+' إجراء')+'</small></span><span class="dashboard-card__action">متابعة ←</span></button>'
+ ).join('')+'</div><div class="row"><button class="btn ghost small" id="opsTasks">مركز مهامي والإشعارات</button>'+
+ '<button class="btn ghost small" id="opsRefresh">تحديث المؤشرات</button></div>';
+ root.querySelectorAll('[data-ops-go]').forEach(b=>b.onclick=()=>navigate(b.dataset.opsGo));
+ root.querySelector('#opsTasks').onclick=()=>navigate('notifications');
+ root.querySelector('#opsRefresh').onclick=()=>{root.textContent='جارٍ التحديث…';renderOperationsCenter().catch(()=>{if(root.isConnected)root.textContent='تعذر التحديث.';});};
+}
+
 async function renderDashboard(){
  const courtAllowed=commander||profile?.court_enabled||has('court.manage');
  const policeAllowed=commander||policeHead||has('police.manage');
@@ -449,6 +482,7 @@ async function renderDashboard(){
  const card=([id,icon,title,description])=>'<button type="button" class="dashboard-card mp-simple-card" data-section="'+id+'"><span class="dashboard-card__icon" aria-hidden="true">'+icon+'</span><span class="dashboard-card__body"><strong>'+esc(title)+'</strong><small>'+esc(description)+'</small></span><span class="dashboard-card__action">فتح ←</span></button>';
  set('#page','<section class="mp-dashboard-welcome"><div><span class="eyebrow">مساحة عملك</span><h2>أهلًا، '+esc(profile?.game_name||'القيادة')+'</h2><p>اختر ما تحتاجه فقط؛ الأقسام التي لا تملك صلاحيتها مخفية.</p></div><span class="mp-dashboard-code">'+esc(profile?.military_code||'قيادة أمن المنشآت')+'</span></section>'+
  '<section class="mp-dashboard-top"><button class="btn primary" type="button" data-fast="compose">＋ كتابة تقرير</button><button class="btn ghost" type="button" data-fast="reports">متابعة تقاريري</button><button class="btn ghost" type="button" data-fast="academy">الدورات العامة</button></section>'+
+ (commander?'<section class="section-card" id="operationsCenter">جارٍ تحميل أولويات القيادة…</section>':'')+
  '<div class="section-intro"><div><h2>أدواتك</h2><p>الأعمال اليومية بالأعلى، وبقية الأقسام تجدها هنا عند الحاجة.</p></div></div>'+
  (cards.length>3?'<details class="mp-notices-panel mp-workspaces-fold"><summary>الأقسام التخصصية المتاحة <span class="badge">'+(cards.length-3)+'</span></summary><div class="dashboard-sections mp-simple-grid mp-fold-grid">'+cards.slice(3).map(card).join('')+'</div></details>':'')+
  '<div class="mp-dashboard-foot"><span>هل تحتاج صلاحية إضافية؟</span><button type="button" class="btn ghost small" id="accessDashboardShortcut">طلب وصول أو متابعة طلباتي</button></div>'+
@@ -456,6 +490,7 @@ async function renderDashboard(){
  $('#page').querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>navigate(b.dataset.section));
  $('#page').querySelectorAll('[data-fast]').forEach(b=>b.onclick=()=>navigate(b.dataset.fast));
  $('#accessDashboardShortcut').onclick=()=>navigate(commander?'access-queue':'access');
+ if(commander)renderOperationsCenter().catch(()=>{if($('#operationsCenter'))$('#operationsCenter').textContent='تعذر تحميل مؤشرات القيادة.';});
  const {data:notices,error}=await db.from('asf_notifications').select('*').order('created_at',{ascending:false}).limit(12);
  if(error||!$('#dashboardNotices'))return;
  const {count:allUnread,error:countErr}=await db.from('asf_notifications').select('id',{count:'exact',head:true}).is('read_at',null);
@@ -483,12 +518,6 @@ function renderAcademyResults(){
 function mountAcademyResults(){
  const panel=$('#academyResultPanel');if(!panel)return;
  panel.innerHTML='<section class="section-card" style="margin-top:20px"><h3>نتائج الدورات والتسليم</h3><p class="muted">نفس نتيجة الاختبار تنتقل من النجاح إلى تأكيد تسليم الدورة. التأكيد يسجّل اسمك ووقت الإجراء، ولا يمنح رتبة أو صلاحية تلقائيًا.</p><details class="notice course-notice-flow"><summary>إشعارات النتائج والربط مع جدول Google</summary><p>عند حفظ اختبار ناجح في البوابة، يصل إشعار داخل الموقع إلى القائد ومسؤولي الدورات المفوّضين، ثم تُرسل نسخة النتيجة إلى جدول Google المرتبط. الإشعار لا يعني تأكيد وصول نسخة Google؛ حالة النسخة تظهر في عمودها أدناه.</p><p>تأكيد التسليم واسم المسؤول ووقته محفوظة في هذا السجل داخل الموقع. الإضافة اليدوية إلى Google لا تولّد إشعارًا في البوابة.</p><a class="btn ghost small" id="courseGoogleSheet" href="https://docs.google.com/spreadsheets/d/1PC5iXwHWyFT4kd7qa6oa_JL1-r3F_anv3fPniF8rfdM/edit" target="_blank" rel="noopener noreferrer">فتح جدول Google المرتبط</a></details><form id="academyResultsFilter" class="grid two"><label>الاسم أو Discord أو الإيصال<input name="search" maxlength="60"></label><label>حالة المتابعة<select name="state"><option value="pending">ناجحون بانتظار التسليم</option><option value="delivered">تم تسليم الدورة</option><option value="all" selected>جميع النتائج</option></select></label><label>مسار التأهيل<select name="track"><option value="all">كل الاختبارات</option><option value="qualification">تأهيل المتقدمين الجدد</option><option value="courses">دورات الأفراد</option></select></label><button class="btn ghost" type="submit">بحث وتحديث</button></form><div id="academyResultsRows" aria-live="polite"></div></section>';
- const demoHost=document.createElement('section');
- demoHost.id='academyDemoPanel';
- demoHost.className='section-card';
- demoHost.style.marginTop='16px';
- panel.prepend(demoHost);
- window.ASF_ACADEMY_DEMO?.mount(demoHost);
  let offset=0,term='',filter='all',track='all',generation=0;
  const load=async()=>{
   const rows=$('#academyResultsRows');if(!rows)return;const request=++generation;rows.textContent='جاري تحميل النتائج…';
@@ -508,6 +537,7 @@ function mountAcademyResults(){
   const canReviewReward=commander||hasDeptRole('training','head');
   const rewardCell=r=>{
    const reward=rewardByResult.get(r.id);
+   if(r.course_id==='individual-qualification')return 'نتائج التأهيل يتابعها قسم القبول والتجنيد';
    if(!r.delivered_at)return 'لم يسلم الرول بعد';
    if(!reward)return 'لا يوجد استحقاق ظاهر';
    if(reward.paid_at)return '<span class="dept-state-paid">✓ تم إعطاء المكافأة</span><small>بواسطة '+esc(reward.paid_by_name||'الرئاسة')+'</small>';
@@ -515,7 +545,7 @@ function mountAcademyResults(){
     (canReviewReward&&reward.actor_id!==user.id?'<button class="btn primary small" data-course-reward="'+esc(reward.id)+'">✓ تم إعطاء المكافأة</button>':'');
   };
   const sync={pending:'قيد المتابعة',confirmed:'مؤكد',unconfirmed:'غير مؤكد',failed:'تعذر الإرسال'};
-  rows.innerHTML='<p class="muted">'+esc(count??data?.length??0)+' نتيجة</p>'+(data?.length?'<div class="table-scroll"><table><thead><tr><th>الإيصال والتاريخ</th><th>المتدرّب</th><th>الدورة</th><th>النتيجة</th><th>تسليم الرول للمتدرب</th><th>المدرب ووقت الإجراء</th><th>مكافأة المدرب</th><th>نسخة الجدول القديم</th></tr></thead><tbody>'+data.map(r=>'<tr><td>'+esc(r.receipt)+'<br>'+date(r.received_at)+'</td><td>'+esc(r.trainee_name)+'<br>'+esc(r.trainee_rank)+'<br>'+esc(r.discord_id)+'</td><td>'+esc(r.course_title)+'</td><td>'+esc(r.score)+' / '+esc(r.total)+' · '+esc(r.percentage)+'%<br>'+badge(r.passed?'اجتياز':'رسوب')+'</td><td>'+(r.delivered_at?'<span class="course-delivered">✓ تم تسليم الرول (توثيق يدوي)</span>':r.passed?'<button class="btn primary small" data-deliver-result="'+esc(r.id)+'">✓ تم إعطاء رول الدورة</button>':badge('غير مجتاز'))+'</td><td>'+esc(r.delivered_by_name||'—')+(r.delivered_by_code?'<br>'+esc(r.delivered_by_code):'')+(r.delivered_at?'<br>'+date(r.delivered_at):'')+'</td><td class="dept-reward-cell">'+rewardCell(r)+'</td><td>'+esc(sync[r.legacy_status]||'غير مؤكد')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+'<div class="row"><button class="btn ghost small" id="academyResultsPrev" '+(offset===0?'disabled':'')+'>السابق</button><button class="btn ghost small" id="academyResultsNext" '+(offset+50>=(count??data?.length??0)?'disabled':'')+'>التالي</button></div>';
+  rows.innerHTML='<p class="muted">'+esc(count??data?.length??0)+' نتيجة</p>'+(data?.length?'<div class="table-scroll"><table><thead><tr><th>الإيصال والتاريخ</th><th>المتدرّب</th><th>الدورة</th><th>النتيجة</th><th>تسليم الرول للمتدرب</th><th>المدرب ووقت الإجراء</th><th>مكافأة المدرب</th><th>نسخة الجدول القديم</th></tr></thead><tbody>'+data.map(r=>'<tr><td>'+esc(r.receipt)+'<br>'+date(r.received_at)+'</td><td>'+esc(r.trainee_name)+'<br>'+esc(r.trainee_rank)+'<br>'+esc(r.discord_id)+'</td><td>'+esc(r.course_title)+'</td><td>'+esc(r.score)+' / '+esc(r.total)+' · '+esc(r.percentage)+'%<br>'+badge(r.passed?'اجتياز':'رسوب')+'</td><td>'+(r.course_id==='individual-qualification'?badge('قيد مراجعة القبول والتجنيد'):r.delivered_at?'<span class="course-delivered">✓ تم تسليم الرول (توثيق يدوي)</span>':r.passed?'<button class="btn primary small" data-deliver-result="'+esc(r.id)+'">✓ تم إعطاء رول الدورة</button>':badge('غير مجتاز'))+'</td><td>'+esc(r.delivered_by_name||'—')+(r.delivered_by_code?'<br>'+esc(r.delivered_by_code):'')+(r.delivered_at?'<br>'+date(r.delivered_at):'')+'</td><td class="dept-reward-cell">'+rewardCell(r)+'</td><td>'+esc(sync[r.legacy_status]||'غير مؤكد')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+'<div class="row"><button class="btn ghost small" id="academyResultsPrev" '+(offset===0?'disabled':'')+'>السابق</button><button class="btn ghost small" id="academyResultsNext" '+(offset+50>=(count??data?.length??0)?'disabled':'')+'>التالي</button></div>';
   $('#academyResultsPrev').onclick=()=>{offset=Math.max(0,offset-50);load()};$('#academyResultsNext').onclick=()=>{offset+=50;load()};
   rows.querySelectorAll('[data-course-reward]').forEach(button=>button.onclick=async()=>{
    if(!confirm('تأكيد صرف مكافأة 150,000 للمدرب بالفعل؟ لا يمكن تكرار التأشير.'))return;
@@ -538,7 +568,9 @@ function mountAcademyResults(){
 }
 function cardReport(r,mode){
  const secret=r.kind==='secret',revealed=mode==='inbox'||mode==='trash'||!secret;
- return '<article class="section-card"><div class="row between"><div><h3>'+esc(r.title)+'</h3><span class="muted">'+esc(code(r.report_number))+' · '+date(r.submitted_at)+' · '+esc(r.sender_name)+'</span></div>'+badge(KINDS[r.kind],secret)+(r.pdf_ready_at?'':badge('PDF قيد الإكمال'))+'</div>'+
+ const receipt=reportReceiptById.get(r.id);
+ const accessInfo=receipt?'<div class="muted" style="margin-top:8px">👁 آخر فتح: '+esc(receipt.viewer_name)+' — '+esc(receipt.viewer_unit)+' · '+date(receipt.last_opened_at)+(receipt.received_at?' · ✓ تم استلام التقرير':' · لم يؤكد الاستلام')+'</div>':'';
+ return '<article class="section-card"><div class="row between"><div><h3>'+esc(r.title)+'</h3><span class="muted">'+esc(code(r.report_number))+' · '+date(r.submitted_at)+' · '+esc(r.sender_name)+'</span></div>'+badge(KINDS[r.kind],secret)+(r.pdf_ready_at?'':badge('PDF قيد الإكمال'))+'</div>'+accessInfo+
  '<div class="row" style="margin-top:12px">'+btn('عرض التفاصيل','detail',r.id)+btn('تنزيل PDF','pdf',r.id)+(commander?btn(mode==='trash'?'استعادة':'حذف','trash',r.id,mode==='trash'?'light':'warn'):'')+'</div></article>';
 }
 async function renderReports(mode){
@@ -549,6 +581,14 @@ async function renderReports(mode){
  else if(mode==='trash')q=q.not('deleted_at','is',null);
  else q=q.is('deleted_at',null);
  const {data,error}=await q;if(error)throw error;latestReports=data||[];
+ reportReceiptById=new Map();
+ if(latestReports.length){
+  const {data:readings,error:receiptError}=await db.from('asf_report_receipts')
+   .select('report_id,viewer_name,viewer_unit,last_opened_at,received_at')
+   .in('report_id',latestReports.map(r=>r.id))
+   .order('last_opened_at',{ascending:false}).limit(700);
+  if(!receiptError)for(const reading of readings||[])if(!reportReceiptById.has(reading.report_id))reportReceiptById.set(reading.report_id,reading);
+ }
  const filters='<div class="row" style="margin-bottom:15px"><input id="searchReports" placeholder="بحث بالاسم أو العنوان أو رقم التقرير" style="max-width:420px"><select id="kindReports" style="max-width:250px">'+opt([['','جميع الأنواع'],...Object.entries(KINDS)])+'</select></div>';
  set('#page',(mode==='trash'?'<div class="notice danger-note">سلة المحذوفات: يمكن استعادة التقرير خلال 30 يومًا. الحذف النهائي للملف يتطلب مهمة خادم مجدولة.</div>':'')+filters+'<div id="reportCards">'+(latestReports.map(r=>cardReport(r,mode)).join('')||empty('لا توجد تقارير بعد'))+'</div>');
  const update=()=>{
@@ -570,6 +610,12 @@ async function renderReports(mode){
  };
 }
 async function downloadPdf(r){
+ // A document download is also an open by an authorized report reviewer.
+ const reviewer=commander||has('reports.read',r.kind)||has('reports.review',r.kind);
+ if(reviewer&&r.author_id!==user?.id&&r.deleted_at===null){
+  const {error:receiptError}=await db.rpc('asf_report_receipt',{p_report:r.id,p_received:false});
+  if(receiptError)return toast('تعذر توثيق فتح التقرير: '+receiptError.message,true);
+ }
  let {data,error}=await db.storage.from('asf-reports').download(r.pdf_path);
  const mayRepair=commander||(profile?.status==='approved'&&r.author_id===user?.id&&r.kind!=='secret');
  if(error && mayRepair && r.deleted_at===null){
@@ -594,19 +640,43 @@ async function downloadPdf(r){
  setTimeout(()=>URL.revokeObjectURL(blobUrl),120000);
 }
 async function detailReport(r,mode){
- const [currentReview,historyResult]=await Promise.all([
+ const reviewer=commander||has('reports.read',r.kind)||has('reports.review',r.kind);
+ const isRecipient=reviewer&&r.author_id!==user?.id&&r.deleted_at===null&&mode!=='trash';
+ // Record the very first view BEFORE rendering report content, even when
+ // the reader does not press the explicit receipt button.
+ if(isRecipient){
+  const {error:openError}=await db.rpc('asf_report_receipt',{p_report:r.id,p_received:false});
+  if(openError)return toast('تعذر توثيق فتح التقرير: '+openError.message,true);
+ }
+ const [currentReview,historyResult,accessResult]=await Promise.all([
   db.from('asf_reviews').select('*').eq('report_id',r.id).maybeSingle(),
-  db.from('asf_review_history').select('*').eq('report_id',r.id).order('created_at',{ascending:false}).limit(100)
+  db.from('asf_review_history').select('*').eq('report_id',r.id).order('created_at',{ascending:false}).limit(100),
+  db.from('asf_report_receipts').select('viewer_id,viewer_name,viewer_unit,first_opened_at,last_opened_at,open_count,received_at').eq('report_id',r.id).order('last_opened_at',{ascending:false}).limit(50)
  ]);
  if(currentReview.error||historyResult.error)return toast((currentReview.error||historyResult.error).message,true);
- const rev=currentReview.data,history=historyResult.data||[];
+ const rev=currentReview.data,history=historyResult.data||[],readings=accessResult.error?[]:accessResult.data||[];
+ const ownReceipt=readings.find(row=>row.viewer_id===user?.id);
+ const receiptBlock='<section class="section-card"><div class="row between"><h3>سجل فتح واستلام التقرير</h3>'+
+  (isRecipient&&!ownReceipt?.received_at?'<button class="btn primary small" id="receiveReport" type="button">✓ استلام التقرير</button>':'')+'</div>'+
+  '<p class="muted">يسجل النظام فتح التقرير تلقائياً باسم المسؤول والجهة، حتى بدون الضغط على زر الاستلام. الاستلام تأكيد مستقل.</p>'+
+  (readings.map(row=>'<div style="padding:9px;border-bottom:1px solid var(--line)"><b>'+esc(row.viewer_name)+'</b> — '+esc(row.viewer_unit)+
+    '<p class="muted">آخر فتح: '+date(row.last_opened_at)+' · عدد مرات الفتح: '+esc(row.open_count)+(row.received_at?' · ✓ استلم التقرير بتاريخ '+date(row.received_at):' · لم يؤكد الاستلام')+'</p></div>').join('')||
+   '<p class="muted">لم يُفتح التقرير من أي جهة مراجعة بعد.</p>')+'</section>';
  const historyBlock='<section class="section-card"><h3>سجل مراجعات التقرير</h3>'+
    (history.map(h=>'<div style="padding:12px;border-bottom:1px solid var(--line)"><div class="row between"><b>'+esc(STATES[h.state]||h.state)+'</b><span class="muted">'+date(h.created_at)+'</span></div>'+
     '<p style="white-space:pre-wrap;margin:6px 0">'+esc(h.note||'بدون ملاحظات')+'</p></div>').join('')||empty('لم تُسجل مراجعات حتى الآن'))+'</section>';
  const content=r.mode==='free'?'<p class="muted">نص التقرير</p><div style="white-space:pre-wrap">'+esc(r.body?.text||'')+'</div>':
  ['achievements','progress','needs','notes'].map((x,i)=>'<h4>'+['الإنجازات','التقدم','الاحتياجات','الملاحظات'][i]+'</h4><p style="white-space:pre-wrap">'+esc(r.body?.[x]||'—')+'</p>').join('');
  set('#page','<div class="section-card"><div class="row between"><h3>'+esc(r.title)+'</h3>'+badge(KINDS[r.kind],r.kind==='secret')+'</div><p class="muted">'+code(r.report_number)+' · '+date(r.submitted_at)+'</p><p>'+esc(r.sender_rank)+' / '+esc(r.sender_name)+' / '+esc(r.sender_code)+'</p><hr>'+content+'<hr><b>مراجعة القائد:</b> '+esc(STATES[rev?.state]||'جديد')+'<p>'+esc(rev?.note||'لا توجد ملاحظات')+'</p><div class="row">'+btn('عرض PDF','pdf',r.id)+(mode==='reports'&&r.kind!=='secret'?btn('تقديم تصحيح','correct',r.id):'')+btn('رجوع','back')+'</div></div>'+
- historyBlock+((commander||has('reports.review',r.kind))?'<section class="section-card"><h3>مراجعة التقرير</h3><form id="reviewForm"><label>حالة التقرير<select name="state">'+opt(Object.entries(STATES),rev?.state||'new')+'</select></label><label>الملاحظات والتوجيهات<textarea name="note" maxlength="4000">'+esc(rev?.note||'')+'</textarea></label><button class="btn primary">حفظ المراجعة</button></form></section>':''));
+ historyBlock+receiptBlock+((commander||has('reports.review',r.kind))?'<section class="section-card"><h3>مراجعة التقرير</h3><form id="reviewForm"><label>حالة التقرير<select name="state">'+opt(Object.entries(STATES),rev?.state||'new')+'</select></label><label>الملاحظات والتوجيهات<textarea name="note" maxlength="4000">'+esc(rev?.note||'')+'</textarea></label><button class="btn primary">حفظ المراجعة</button></form></section>':''));
+ const receiveButton=$('#receiveReport');
+ if(receiveButton)receiveButton.onclick=async()=>{
+  if(!confirm('تأكيد استلام التقرير باسمك والجهة المعتمدة؟'))return;
+  receiveButton.disabled=true;
+  const {error}=await db.rpc('asf_report_receipt',{p_report:r.id,p_received:true});
+  if(error){toast('تعذر استلام التقرير: '+error.message,true);receiveButton.disabled=false;return;}
+  toast('تم توثيق استلام التقرير باسمك.');await detailReport(r,mode);
+ };
  $('#page').querySelector('[data-action="pdf"]').onclick=()=>downloadPdf(r);
  $('#page').querySelector('[data-action="back"]').onclick=()=>renderReports(mode);
  const fix=$('#page').querySelector('[data-action="correct"]');if(fix)fix.onclick=()=>{correctionSource=r;draftId=null;navigate('compose')};
@@ -823,7 +893,7 @@ async function renderAccessRequests(){
  set('#page','<div class="access-workflow"><section class="section-card"><div class="access-heading"><span class="eyebrow">طلبات الصلاحيات</span><h3>طلب تصريح جديد</h3><p>تقدر تطلب الصلاحيات الإدارية المطلوبة، والقرار للقائد فقط. «سري للغاية» لا يمكن تفويضه لأي شخص.</p></div>'+form+'</section>'+
  '<section class="section-card"><h3>سجل طلباتي</h3><div class="access-request-list">'+
  ((rows||[]).map(r=>'<article class="access-request-item"><div class="row between"><strong>'+esc(ACCESS_PERMISSIONS[r.permission]||r.permission)+'</strong><span class="access-state access-state-'+esc(r.status)+'">'+esc(ACCESS_STATES[r.status]||r.status)+'</span></div>'+
- '<p>'+esc(r.reason)+'</p><small class="muted">تاريخ الطلب: '+date(r.created_at)+'</small>'+
+ '<p>'+esc(r.reason)+'</p><small class="muted">رقم المتابعة: '+esc('REQ-'+String(r.id||'').slice(0,12).toUpperCase())+' · تاريخ الطلب: '+date(r.created_at)+'</small>'+
  (r.reviewed_at?'<div class="access-review-note">القرار بتاريخ '+date(r.reviewed_at)+(r.decision_note?' — '+esc(r.decision_note):'')+'</div>':'')+'</article>').join('')||empty('ما أرسلت أي طلب تصريح بعد.'))+'</div></section></div>');
  if(commander){$('#openAccessQueue').onclick=()=>navigate('access-queue');return}
  const select=$('#accessPermission'),hint=$('#accessPermissionHint'),formElement=$('#accessRequestForm');
@@ -866,7 +936,7 @@ async function renderAccessQueue(){
  (requests.map(r=>{
   const p=people.get(r.user_id);
   return '<article class="section-card access-request-item"><div class="row between"><div><strong>'+esc(p?.game_name||'عضو')+' <small class="muted">'+esc(p?.military_code||'')+'</small></strong><p>'+esc(ACCESS_PERMISSIONS[r.permission]||r.permission)+'</p></div><span class="access-state access-state-'+esc(r.status)+'">'+esc(ACCESS_STATES[r.status]||r.status)+'</span></div>'+
-   '<p class="access-reason">'+esc(r.reason)+'</p><small class="muted">تاريخ الطلب: '+date(r.created_at)+'</small>'+
+   '<p class="access-reason">'+esc(r.reason)+'</p><small class="muted">رقم المتابعة: '+esc('REQ-'+String(r.id||'').slice(0,12).toUpperCase())+' · تاريخ الطلب: '+date(r.created_at)+'</small>'+
    (r.status==='pending'?'<form class="access-decision-form" data-access-request="'+esc(r.id)+'"><label>ملاحظة القرار (اختياري)<input type="text" name="note" maxlength="400" placeholder="توضيح يُرسل لصاحب الطلب"></label><div class="row"><button class="btn primary" type="submit" name="decision" value="approve">الموافقة ومنح التصريح</button><button class="btn warn" type="submit" name="decision" value="reject">رفض الطلب</button></div></form>':
    '<div class="access-review-note">تمت المراجعة '+date(r.reviewed_at)+(r.decision_note?' — '+esc(r.decision_note):'')+'</div>')+'</article>';
  }).join('')||empty('لا توجد طلبات تصاريح.'))+'</section></div>');
