@@ -11,6 +11,7 @@
   async function mount(department){
    if(!['police','court'].includes(department))return;
    const main=$('#page');if(!main)return;
+   const prior=$('#serviceRewardsPanel');if(prior)prior.remove();
    const host=document.createElement('section');
    host.id='serviceRewardsPanel';host.className='section-card';host.style.marginTop='20px';
    main.append(host);
