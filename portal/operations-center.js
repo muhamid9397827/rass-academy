@@ -111,6 +111,36 @@ function create({db,getContext,notify}){
   host.innerHTML=out.map(([label,ok,detail])=>'<p><strong>'+(ok?'✓ ':'⚠ ')+esc(label)+'</strong> — '+esc(ok?'متصل':'تعذر الاتصال')+'<small class="muted"> · '+esc(detail)+'</small></p>').join('')+
    '<small class="muted">هذا فحص اتصال أساسي، ولا يثبت جاهزية إرسال البريد أو تحمل أعداد كبيرة من المستخدمين.</small>';
  }
+ async function showCommanderStats(){
+  const host=$('#operationsLeadershipStats');if(!host||!ctx().commander)return;
+  const specs=[
+   ['أعضاء معتمدون','asf_profiles','user_id','status','approved'],
+   ['نتائج الاختبارات','asf_academy_results','id'],
+   ['نتائج ناجحة','asf_academy_results','id','passed',true],
+   ['تقارير حاليّة','asf_reports','id','deleted_at',null],
+   ['المهام المكتملة','asf_operations_tasks','id','status','done'],
+   ['مكافآت قيد الصرف','asf_service_rewards','id','paid_at',null]
+  ];
+  const values=await Promise.all(specs.map(async ([label,table,key,col,value])=>{
+   try{
+    let query=db.from(table).select(key,{count:'exact',head:true});
+    if(col)query=value===null?query.is(col,null):query.eq(col,value);
+    const {count,error}=await query;
+    return [label,error?'غير متاح':String(count??'غير متاح')];
+   }catch{return [label,'غير متاح'];}
+  }));
+  if(!host.isConnected)return;
+  host.innerHTML=values.map(([label,n])=>'<div class="section-card"><strong style="font-size:25px">'+esc(n)+'</strong><p class="muted">'+esc(label)+'</p></div>').join('');
+ }
+ function showPeopleDirectory(people){
+  const host=$('#operationsPeopleResults');if(!host)return;
+  const search=String($('#operationsPeopleSearch')?.value||'').trim().toLowerCase();
+  const matches=people.filter(p=>[p.game_name,p.rank,p.military_code].some(x=>String(x||'').toLowerCase().includes(search)));
+  host.innerHTML='<p class="muted">'+matches.length+' نتيجة ضمن '+people.length+' حسابًا محمّلًا</p>'+
+   '<div class="table-scroll"><table><thead><tr><th>الاسم</th><th>الرتبة</th><th>الكود</th></tr></thead><tbody>'+
+   matches.slice(0,30).map(p=>'<tr><td>'+esc(p.game_name)+'</td><td>'+esc(p.rank||'—')+'</td><td>'+esc(p.military_code||'—')+'</td></tr>').join('')+
+   '</tbody></table></div>';
+ }
  async function render(){
   const c=ctx();
   if(!c.user||(!c.commander&&c.profile?.status!=='approved'))throw Error('حساب معتمد مطلوب');
@@ -120,15 +150,17 @@ function create({db,getContext,notify}){
   const canCreate=!!c.commander;
   let people=[];
   if(canCreate){
-   const res=await db.from('asf_profiles').select('user_id,game_name,military_code').eq('status','approved').order('game_name').limit(350);
+   const res=await db.from('asf_profiles').select('user_id,game_name,military_code,rank').eq('status','approved').order('game_name').limit(350);
    people=res.data||[];
   }
-  page.innerHTML='<section class="section-card"><h3>مركز العمليات — متابعة المعاملات</h3><p class="muted">تُعرض فقط المهام والتقارير المسموح لحسابك بالاطلاع عليها. تظهر حالة التقرير تلقائيًا بعد تسجيل فتحه أو استلامه، وتبقى الموافقة الرسمية إجراءً مستقلًا.</p><div id="operationsReports"></div></section>'+
+  page.innerHTML=(canCreate?'<section class="section-card"><h3>إحصائيات القيادة</h3><div class="grid three" id="operationsLeadershipStats">جاري تحميل المؤشرات…</div><p class="muted">الأرقام من البيانات المسموح للقائد بالاطلاع عليها، ولا تثبت وصول نسخ Google.</p></section>':'')+
+    '<section class="section-card"><h3>مركز العمليات — متابعة المعاملات</h3><p class="muted">تُعرض فقط المهام والتقارير المسموح لحسابك بالاطلاع عليها. تظهر حالة التقرير تلقائيًا بعد تسجيل فتحه أو استلامه، وتبقى الموافقة الرسمية إجراءً مستقلًا.</p><div id="operationsReports"></div></section>'+
    '<section class="section-card"><div class="row between"><h3>مركز المهام</h3><span class="badge">'+allTasks.length+' مهمة ظاهرة</span></div>'+
     '<p class="muted">كل تحديث يُسجّل باسم صاحبه وتوقيته، ولا يمكن للموظف إعادة فتح مهمة مكتملة دون القائد.</p>'+
     '<div class="row"><input id="operationsSearch" type="search" placeholder="بحث بالاسم أو الموضوع أو مرجع المعاملة" style="max-width:400px"><select id="operationsStatus">'+
     '<option value="all">جميع الحالات</option>'+Object.entries(labels).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select></div>'+
     '<div id="operationsTasks"></div></section>'+
+   (canCreate?'<section class="section-card"><h3>دليل العسكريين</h3><p class="muted">بحث ضمن أول 350 حسابًا معتمدًا؛ النتائج محدودة بما يستطيع القائد قراءته.</p><input type="search" id="operationsPeopleSearch" placeholder="البحث بالاسم أو الرتبة أو الكود"><div id="operationsPeopleResults"></div></section>':'')+
    (canCreate?'<section class="section-card"><h3>تكليف مهمة جديدة</h3><form id="operationsCreate"><label>عنوان المهمة<input name="title" required minlength="4" maxlength="180"></label>'+
     '<label>وصف وتوجيهات<textarea name="description" maxlength="4000" rows="3"></textarea></label><div class="grid two">'+
     '<label>المكلف<select name="assignee" required>'+people.map(p=>'<option value="'+esc(p.user_id)+'">'+esc(p.game_name)+' — '+esc(p.military_code||'')+'</option>').join('')+'</select></label>'+
@@ -140,6 +172,8 @@ function create({db,getContext,notify}){
   paintReports();paintTasks();$('#operationsSearch').oninput=paintTasks;$('#operationsStatus').onchange=paintTasks;
   $('#operationsHealthRefresh').onclick=diagnostics;diagnostics();
   if(canCreate){
+   showCommanderStats();showPeopleDirectory(people);
+   $('#operationsPeopleSearch').oninput=()=>showPeopleDirectory(people);
    $('#operationsCreate').onsubmit=async e=>{
     e.preventDefault();const form=new FormData(e.target),button=e.target.querySelector('[type="submit"]');
     button.disabled=true;
