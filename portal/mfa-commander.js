@@ -1,43 +1,52 @@
-// Mandatory commander-only MFA screen. Authorization remains enforced by the server.
+// Mandatory commander-only MFA screen. Authorization always stays server-enforced.
 (() => {
  'use strict';
  function create({db,onVerified,onCancel}){
   const $=id=>document.getElementById(id);
-  let factorId='',stage='',busy=false,active=true;
+  let factorId='',stage='',busy=false,active=false,generation=0;
   const status=(message,bad=false)=>{const el=$('mfaStatus');el.textContent=message;el.classList.toggle('error',bad);};
+  const bounded=(task)=>window.ASF_AUTH.deadline(task,()=>{},12000);
+  const valid=step=>active&&generation===step;
+  function failure(message){
+   status(message,true);
+   $('mfaRetry').hidden=false;
+  }
   function reset(){
-   active=false;factorId='';stage='';busy=false;
+   generation++;active=false;factorId='';stage='';busy=false;
    $('mfaCode').value='';$('mfaQr').hidden=true;$('mfaQr').removeAttribute('src');
    $('mfaSecret').textContent='';$('mfaSecretRow').hidden=true;
    $('mfaSetup').hidden=true;$('mfaVerify').hidden=true;$('mfaStart').hidden=false;
-   status('');
+   $('mfaVerifySubmit').disabled=false;$('mfaStart').disabled=false;
+   $('mfaRetry').hidden=true;status('');
   }
   async function enter(){
-   reset();active=true;
+   reset();active=true;const step=generation;
    $('mfaTitle').textContent='حماية حساب القائد';
    status('جارٍ فحص وسائل المصادقة...');
-   const {data,error}=await db.auth.mfa.listFactors();
-   if(!active)return;
-   if(error){status('تعذر تحميل عوامل التحقق: '+error.message,true);return;}
-   const verified=(data?.totp||[]).filter(f=>f.status==='verified');
-   if(verified.length){
-    stage='challenge';factorId=verified[0].id;
-    $('mfaTitle').textContent='التحقق بخطوتين';
-    $('mfaVerify').hidden=false;
-    status('افتح تطبيق المصادقة الخاص بحساب البوابة وأدخل الرمز الحالي.');
-   }else{
-    stage='enroll';$('mfaSetup').hidden=false;
-    status('هذه أول مرة تحمي فيها حساب القائد داخل البوابة. أضف تطبيق مصادقة مستقلًا قبل فتح لوحة القيادة.');
-   }
+   try{
+    const {data,error}=await bounded(()=>db.auth.mfa.listFactors());
+    if(!valid(step))return;
+    if(error)throw error;
+    const verified=(data?.totp||[]).filter(f=>f.status==='verified');
+    if(verified.length){
+     stage='challenge';factorId=verified[0].id;
+     $('mfaTitle').textContent='التحقق بخطوتين';
+     $('mfaVerify').hidden=false;
+     status('افتح تطبيق المصادقة الخاص بحساب البوابة وأدخل الرمز الحالي.');
+    }else{
+     stage='enroll';$('mfaSetup').hidden=false;
+     status('هذه أول مرة تحمي فيها حساب القائد داخل البوابة. أضف تطبيق مصادقة مستقلًا قبل فتح لوحة القيادة.');
+    }
+   }catch(e){if(valid(step))failure('تعذر فحص وسائل الحماية: '+(e.message||'أعد فتح الصفحة بأمان.'));}
   }
   async function beginEnrollment(){
    if(busy||stage!=='enroll')return;
-   busy=true;const button=$('mfaStart');button.disabled=true;
+   busy=true;const step=generation,button=$('mfaStart');button.disabled=true;
    try{
     status('جارٍ إنشاء رمز التفعيل...');
-    const {data,error}=await db.auth.mfa.enroll({factorType:'totp',friendlyName:'ASF Commander Portal'});
+    const {data,error}=await bounded(()=>db.auth.mfa.enroll({factorType:'totp',friendlyName:'ASF Commander Portal'}));
+    if(!valid(step))return;
     if(error)throw error;
-    if(!active)return;
     factorId=data?.id;
     const qr=String(data?.totp?.qr_code||'');
     if(!factorId||!qr)throw Error('لم يصل رمز التفعيل من Supabase.');
@@ -47,30 +56,41 @@
     $('mfaSecret').textContent=String(data?.totp?.secret||'');$('mfaSecretRow').hidden=!data?.totp?.secret;
     $('mfaVerify').hidden=false;button.hidden=true;
     status('امسح رمز QR، ثم أدخل رمز المصادقة المؤقت لتفعيل الحماية.');
-   }catch(e){status(e.message||'تعذر إعداد المصادقة.',true)}
-   finally{busy=false;button.disabled=false}
+   }catch(e){if(valid(step))failure('تعذر إعداد تطبيق المصادقة: '+(e.message||'أعد فتح الصفحة.'));}
+   finally{if(valid(step)){busy=false;button.disabled=false;}}
   }
   async function verify(event){
    event.preventDefault();if(busy||!factorId)return;
    const code=$('mfaCode').value.trim();
    if(!/^\d{6}$/.test(code)){status('أدخل رمز المصادقة المكوّن من ستة أرقام.',true);return;}
-   busy=true;$('mfaVerifySubmit').disabled=true;
+   busy=true;const step=generation;let serverVerified=false;$('mfaVerifySubmit').disabled=true;
    try{
-    const c=await db.auth.mfa.challenge({factorId});
+    status('جارٍ التحقق من الرمز...');
+    const c=await bounded(()=>db.auth.mfa.challenge({factorId}));
+    if(!valid(step))return;
     if(c.error||!c.data?.id)throw c.error||Error('تعذر إنشاء طلب التحقق.');
-    const v=await db.auth.mfa.verify({factorId,challengeId:c.data.id,code});
+    const v=await bounded(()=>db.auth.mfa.verify({factorId,challengeId:c.data.id,code}));
+    if(!valid(step))return;
     if(v.error)throw v.error;
-    if(!active)return;
-    const level=await db.auth.mfa.getAuthenticatorAssuranceLevel();
-    if(level.error||level.data?.currentLevel!=='aal2')throw level.error||Error('لم يصل تأكيد مستوى الحماية. حاول مجددًا.');
+    serverVerified=true;
+    const level=await bounded(()=>db.auth.mfa.getAuthenticatorAssuranceLevel());
+    if(!valid(step))return;
+    if(level.error||level.data?.currentLevel!=='aal2')throw level.error||Error('لم يصل تأكيد مستوى الحماية.');
     status('تم تأكيد الرمز، جارٍ فتح حساب القائد...');
     $('mfaCode').value='';
-    await onVerified();
-   }catch(e){status('رمز غير صحيح أو منتهي الصلاحية: '+(e.message||'أعد المحاولة.'),true);$('mfaCode').focus();}
-   finally{busy=false;$('mfaVerifySubmit').disabled=false}
+    await window.ASF_AUTH.deadline(()=>onVerified(),()=>{},16000);
+   }catch(e){
+    if(valid(step)){
+     if(serverVerified)failure('تم تأكيد الرمز، لكن تحميل حساب القائد تأخر. أعد فتح الصفحة لاستكمال الدخول بأمان.');
+     else if(e?.name==='AuthTimeoutError')failure('تأخر الاتصال بخدمة المصادقة. أعد فتح الصفحة لاستكمال الدخول بأمان.');
+     else status('تعذر التحقق من الرمز: '+(e.message||'أعد المحاولة.'),true);
+     if(!serverVerified)$('mfaCode').focus();
+    }
+   }finally{if(valid(step)){busy=false;$('mfaVerifySubmit').disabled=false;}}
   }
   $('mfaStart').onclick=beginEnrollment;
   $('mfaVerify').onsubmit=verify;
+  $('mfaRetry').onclick=()=>window.location.reload();
   $('mfaSignOut').onclick=()=>{reset();onCancel()};
   return {enter,reset};
  }
