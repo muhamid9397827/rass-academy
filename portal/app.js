@@ -915,7 +915,7 @@ async function renderAudit(){
  const actors=new Map((users||[]).map(p=>[p.user_id,p]));
  const names={approve:'تفعيل عضو',suspend:'إيقاف عضو',reject:'رفض عضو',rank:'تعديل رتبة',court_on:'منح القضاء',court_off:'سحب القضاء',
  delegation:'تعديل صلاحية',review:'مراجعة تقرير',restore:'استعادة تقرير',trash:'حذف إلى السلة',
- access_requested:'طلب تصريح',access_reviewed:'قرار تصريح',police_rule_override:'تعديل عقوبة',court_warning_cancel:'إلغاء إنذار',pdf_finalized:'تأكيد ملف PDF',permanent_delete:'حذف نهائي تلقائي',profile_change:'تعديل بيانات',academy_delivered:'تأكيد تسليم دورة',activation_reason_submitted:'استكمال سبب التفعيل',commander_profile_init:'ملف القائد'};
+ access_requested:'طلب تصريح',access_reviewed:'قرار تصريح',police_rule_override:'تعديل عقوبة',court_warning_cancel:'إلغاء إنذار',pdf_finalized:'تأكيد ملف PDF',permanent_delete:'حذف نهائي تلقائي',profile_change:'تعديل بيانات',academy_delivered:'تأكيد تسليم دورة',qualification_reviewed:'مراجعة نتيجة التأهيل',qualification_hired:'توثيق توظيف متقدم',report_opened:'فتح تقرير من مسؤول',report_received:'استلام تقرير',service_reward_claimed:'تسجيل استحقاق مكافأة',service_reward_paid:'توثيق صرف مكافأة',operation_task_created:'إسناد مهمة جديدة',operation_task_status:'تحديث حالة مهمة',activation_reason_submitted:'استكمال سبب التفعيل',commander_profile_init:'ملف القائد'};
  set('#page','<section class="section-card"><h3>سجل الإجراءات الإدارية</h3>'+
  '<p>يُعرض للقائد فقط، ويحتفظ بتاريخ التعديلات دون منح صلاحية حذف السجل.</p>'+
  '<input id="auditSearch" placeholder="بحث بالعملية أو المستخدم أو السجل" style="margin-bottom:15px">'+
