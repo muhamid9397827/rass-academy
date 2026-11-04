@@ -140,6 +140,7 @@
       "retry-result-button",
       "copy-result-button",
       "print-result-button",
+      "print-certificate-button",
       "new-session-button",
       "confirm-dialog",
       "confirm-message"
@@ -205,6 +206,7 @@
     });
     elements.copyResultButton.addEventListener("click", copyResultSummary);
     elements.printResultButton.addEventListener("click", () => window.print());
+    elements.printCertificateButton.addEventListener("click", printCertificate);
     elements.newSessionButton.addEventListener("click", startNewSession);
 
     elements.traineeForm.querySelectorAll("input, select").forEach((control) => {
@@ -917,6 +919,7 @@
     const passed = result.passed;
     const isApplicantCourse = Boolean(course.applicantCourse);
     const pendingGrade = !result.isReference && passed === null;
+    elements.printCertificateButton.hidden = !(result.serverSaved === true && passed === true && !isReference && /^ACD-\d{8,}$/.test(result.receipt || ""));
 
     elements.resultEmblem.classList.toggle("is-failed", !passed && !pendingGrade);
     elements.scoreRing.classList.toggle("is-failed", !passed && !pendingGrade);
@@ -1197,6 +1200,32 @@
       elements.submissionStatus.classList.add(`is-${type}`);
     }
     elements.submissionStatusText.textContent = message;
+  }
+
+
+  function printCertificate() {
+    const result = state.result, course = getCurrentCourse();
+    if (!course || !result || result.serverSaved !== true || result.passed !== true ||
+        result.isReference || !/^ACD-\d{8,}$/.test(result.receipt || "")) {
+      showToast("الشهادة متاحة فقط بعد نجاح الاختبار وتأكيد حفظه في سجل البوابة", "error");
+      return;
+    }
+    const escText = value => String(value ?? "").replace(/[&<>"']/g, char =>
+      ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+    const issuedAt = result.serverReceivedAt || result.completedAt;
+    const stamp = issuedAt && Number.isFinite(new Date(issuedAt).getTime()) ? formatDate(issuedAt) : "راجع إيصال النتيجة";
+    const page = window.open("", "_blank");
+    if (!page) { showToast("اسمح بفتح نافذة طباعة الشهادة من المتصفح", "error"); return; }
+    const html = '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>شهادة اجتياز - '+escText(result.receipt)+'</title>'+
+      '<style>body{font-family:Tahoma,Arial,sans-serif;background:#f5f8fc;margin:0;color:#152435}main{margin:36px auto;background:#fff;border:12px double #20384c;max-width:920px;padding:65px 45px;text-align:center;box-sizing:border-box}h1{font-size:38px;margin:25px 0;color:#164b64}.stamp{letter-spacing:2px;font-size:14px;color:#44566a}.name{font-size:29px;font-weight:700;color:#1b6576;margin:22px 0}p{font-size:18px;line-height:2}.meta{border-top:1px solid #cad6dd;margin-top:35px;padding-top:24px;text-align:right;font-size:16px;line-height:2.2}.disclaimer{font-size:13px;color:#657681;margin-top:24px}.print{display:block;margin:20px auto;padding:12px 25px;background:#164b64;color:white;border:0;border-radius:6px;cursor:pointer}@media print{body{background:#fff}main{margin:0;max-width:none;min-height:95vh;padding-top:80px;page-break-inside:avoid}.print{display:none}}@page{size:A4 landscape;margin:8mm}</style></head>'+
+      '<body><button class="print" onclick="window.print()">طباعة / حفظ PDF</button><main><div class="stamp">بوابة أمن المنشآت • رئاسة كلية التدريب</div><h1>شهادة اجتياز إلكترونية</h1>'+
+      '<p>تشهد منصة الأكاديمية بإتمام الاختبار الإلكتروني واجتيازه بنجاح من قِبل</p><div class="name">'+escText(state.trainee.name)+'</div>'+
+      '<p>الدورة: <strong>'+escText(course.title)+'</strong></p><p>النتيجة: <strong>'+escText(result.score)+' من '+escText(result.total)+' — '+escText(result.percentage)+'٪</strong></p>'+
+      '<div class="meta">رقم الإيصال: <strong dir="ltr">'+escText(result.receipt)+'</strong><br>معرّف Discord الذي أدخله المتدرب: <span dir="ltr">'+escText(state.trainee.discord)+'</span><br>تاريخ حفظ النتيجة: '+escText(stamp)+'</div>'+
+      '<p class="disclaimer">وثيقة نتيجة اختبار إلكتروني لأغراض الرول بلاي؛ المرجع الرسمي هو سجل النتائج داخل البوابة. لا تُثبت ملكية حساب Discord، ولا تعني توظيفاً أو اعتماد رتبة أو تسليم رول تلقائياً.</p></main></body></html>';
+    page.document.open();
+    page.document.write(html);
+    page.document.close();
   }
 
   async function copyResultSummary() {
