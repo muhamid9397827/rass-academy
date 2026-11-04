@@ -53,6 +53,7 @@ const has=(permission,kind=null)=>commander||grants.some(g=>g.permission===permi
 const hasDeptRole=(department,role)=>commander||departmentRoles.some(r=>r.department===department&&r.role===role);
 const hasDept=(department)=>commander||departmentRoles.some(r=>r.department===department);
 const policeUI=window.ASF_POLICE_UI.create({db,getContext:()=>({user,commander,hasPolice:has('police.manage'),isPoliceHead:policeHead,gameName:profile?.game_name}),notify:toast});
+const operationsUI=window.ASF_OPERATIONS.create({db,getContext:()=>({user,profile,commander}),notify:toast});
 const noticeUI=window.ASF_NOTICE_CENTER.create({db,getUser:()=>user,go:navigate,notify:toast});
 $('#notificationTrigger').onclick=()=>navigate('notifications');
 const commanderMfaUI=window.ASF_COMMANDER_MFA.create({db,onVerified:()=>loadIdentity(true,true),onCancel:()=>$('#signOut').click()});
@@ -369,6 +370,7 @@ async function loadIdentity(silent=false,fromAuth=false){
    $('#trainingCenterNav').hidden=!hasDept('training');
    $('#recruitmentCenterNav').hidden=!hasDept('recruitment');
    $('#departmentAdminNav').hidden=!commander;
+   $('#operationsNav').hidden=false;
    document.querySelectorAll('[data-page="delegations"],[data-page="trash"],[data-page="audit"]').forEach(n=>n.hidden=!commander);
    document.querySelector('[data-page="inbox"]').hidden=!(commander||has('reports.read')||has('reports.review'));
    document.querySelector('[data-page="access-queue"]').hidden=!commander;
@@ -402,12 +404,13 @@ async function navigate(name){
  if(!user||!(commander||profile?.status==='approved'))return;
  window.ASF_MOBILE?.closeMenu();window.ASF_MOBILE?.setPage(name);
  pageName=name;document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page===name));
- const titles={notifications:'مركز الإشعارات',dashboard:'لوحة التحكم',academy:'الأكاديمية والدورات','academy-results':'نتائج الاختبارات والمراجعة والتسليم','training-center':'كلية التدريب','recruitment-center':'القبول والتجنيد','department-admin':'رئاسات الأقسام',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',access:'طلب تصريح ومتابعته','access-queue':'طلبات التصاريح الواردة',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
+ const titles={notifications:'مركز الإشعارات',dashboard:'لوحة التحكم',operations:'مركز العمليات والمهام',academy:'الأكاديمية والدورات','academy-results':'نتائج الاختبارات والمراجعة والتسليم','training-center':'كلية التدريب','recruitment-center':'القبول والتجنيد','department-admin':'رئاسات الأقسام',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',access:'طلب تصريح ومتابعته','access-queue':'طلبات التصاريح الواردة',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
  set('#pageTitle','<div><h1>'+esc(titles[name]||'بوابة أمن المنشآت')+'</h1><p>المنصة الموحدة · إعدادات الصلاحيات حسب حسابك</p></div>');
  set('#page','<div class="empty">جارٍ تحميل البيانات...</div>');
  try{
   if(name==='notifications')return await noticeUI.render();
   if(name==='dashboard')return await renderDashboard();
+  if(name==='operations')return await operationsUI.render();
   if(name==='academy')return await renderAcademy();
   if(name==='academy-results')return await renderAcademyResults();
   if(name==='training-center')return await deptUI.render('training');
