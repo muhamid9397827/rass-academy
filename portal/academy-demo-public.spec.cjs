@@ -17,9 +17,14 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
    assert.ok((await page.locator('main').innerText()).includes(course));
   }
   assert.equal(remote.length,0,'simulation does not connect to production Supabase');
+  await page.locator('#academyDemoActor').fill('المدرب خالد التجريبي');
+  await page.locator('#academyDemoAuthority').fill('رئاسة كلية التدريب التجريبية');
   await page.locator('[data-demo-deliver="01"]').click();
   await page.locator('[data-demo-pay="01"]').click();
-  assert.match(await page.locator('[data-demo-row="01"]').innerText(),/تم التأشير بالمحاكاة/);
+  const resultText=await page.locator('[data-demo-row="01"]').innerText();
+  assert.match(resultText,/تم تسليم الرول من قبل: المدرب خالد التجريبي/);
+  assert.match(resultText,/تم إعطاء مكافأة 150,000 من قبل: رئاسة كلية التدريب التجريبية/);
+  assert.match(resultText,/تم إعطاء المكافأة بالمحاكاة/);
   await page.reload();
   await page.locator('[data-demo-row]').first().waitFor({state:'visible',timeout:9000});
   assert.match(await page.locator('[data-demo-row="01"]').innerText(),/محاكاة تسليم الرول/);
