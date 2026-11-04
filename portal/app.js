@@ -38,6 +38,7 @@ const recoveryTokenHash=recoveryHash.get('token_hash')||recoveryQuery.get('token
 const recoveryLinkOpened=recoveryHash.get('type')==='recovery'||recoveryQuery.get('type')==='recovery';
 let db=ready?window.ASF_AUTH.createClient():null;
 let authEpoch=0,authNeedsReload=false,signingOut=false;
+let reportReceiptById=new Map();
 let user=null, profile=null, commander=false, policeHead=false, grants=[], departmentRoles=[], pageName=new URLSearchParams(location.search).get('view')==='academy-results'?'academy-results':'dashboard', draftId=null, latestReports=[], correctionSource=null, notificationChannel=null;
 const toast=(m,error=false)=>{const b=$('#toast');b.textContent=m;b.className='show'+(error?' error':'');clearTimeout(toast.t);toast.t=setTimeout(()=>b.className='',5800)};
 const set=(s,html)=>{$(s).innerHTML=html};
@@ -532,7 +533,9 @@ function mountAcademyResults(){
 }
 function cardReport(r,mode){
  const secret=r.kind==='secret',revealed=mode==='inbox'||mode==='trash'||!secret;
- return '<article class="section-card"><div class="row between"><div><h3>'+esc(r.title)+'</h3><span class="muted">'+esc(code(r.report_number))+' · '+date(r.submitted_at)+' · '+esc(r.sender_name)+'</span></div>'+badge(KINDS[r.kind],secret)+(r.pdf_ready_at?'':badge('PDF قيد الإكمال'))+'</div>'+
+ const receipt=reportReceiptById.get(r.id);
+ const accessInfo=receipt?'<div class="muted" style="margin-top:8px">👁 آخر فتح: '+esc(receipt.viewer_name)+' — '+esc(receipt.viewer_unit)+' · '+date(receipt.last_opened_at)+(receipt.received_at?' · ✓ تم استلام التقرير':' · لم يؤكد الاستلام')+'</div>':'';
+ return '<article class="section-card"><div class="row between"><div><h3>'+esc(r.title)+'</h3><span class="muted">'+esc(code(r.report_number))+' · '+date(r.submitted_at)+' · '+esc(r.sender_name)+'</span></div>'+badge(KINDS[r.kind],secret)+(r.pdf_ready_at?'':badge('PDF قيد الإكمال'))+'</div>'+accessInfo+
  '<div class="row" style="margin-top:12px">'+btn('عرض التفاصيل','detail',r.id)+btn('تنزيل PDF','pdf',r.id)+(commander?btn(mode==='trash'?'استعادة':'حذف','trash',r.id,mode==='trash'?'light':'warn'):'')+'</div></article>';
 }
 async function renderReports(mode){
@@ -543,6 +546,14 @@ async function renderReports(mode){
  else if(mode==='trash')q=q.not('deleted_at','is',null);
  else q=q.is('deleted_at',null);
  const {data,error}=await q;if(error)throw error;latestReports=data||[];
+ reportReceiptById=new Map();
+ if(latestReports.length){
+  const {data:readings,error:receiptError}=await db.from('asf_report_receipts')
+   .select('report_id,viewer_name,viewer_unit,last_opened_at,received_at')
+   .in('report_id',latestReports.map(r=>r.id))
+   .order('last_opened_at',{ascending:false}).limit(700);
+  if(!receiptError)for(const reading of readings||[])if(!reportReceiptById.has(reading.report_id))reportReceiptById.set(reading.report_id,reading);
+ }
  const filters='<div class="row" style="margin-bottom:15px"><input id="searchReports" placeholder="بحث بالاسم أو العنوان أو رقم التقرير" style="max-width:420px"><select id="kindReports" style="max-width:250px">'+opt([['','جميع الأنواع'],...Object.entries(KINDS)])+'</select></div>';
  set('#page',(mode==='trash'?'<div class="notice danger-note">سلة المحذوفات: يمكن استعادة التقرير خلال 30 يومًا. الحذف النهائي للملف يتطلب مهمة خادم مجدولة.</div>':'')+filters+'<div id="reportCards">'+(latestReports.map(r=>cardReport(r,mode)).join('')||empty('لا توجد تقارير بعد'))+'</div>');
  const update=()=>{
@@ -564,6 +575,12 @@ async function renderReports(mode){
  };
 }
 async function downloadPdf(r){
+ // A document download is also an open by an authorized report reviewer.
+ const reviewer=commander||has('reports.read',r.kind)||has('reports.review',r.kind);
+ if(reviewer&&r.author_id!==user?.id){
+  const {error:receiptError}=await db.rpc('asf_report_receipt',{p_report:r.id,p_received:false});
+  if(receiptError)return toast('تعذر توثيق فتح التقرير: '+receiptError.message,true);
+ }
  let {data,error}=await db.storage.from('asf-reports').download(r.pdf_path);
  const mayRepair=commander||(profile?.status==='approved'&&r.author_id===user?.id&&r.kind!=='secret');
  if(error && mayRepair && r.deleted_at===null){
@@ -588,19 +605,43 @@ async function downloadPdf(r){
  setTimeout(()=>URL.revokeObjectURL(blobUrl),120000);
 }
 async function detailReport(r,mode){
- const [currentReview,historyResult]=await Promise.all([
+ const reviewer=commander||has('reports.read',r.kind)||has('reports.review',r.kind);
+ const isRecipient=reviewer&&r.author_id!==user?.id;
+ // Record the very first view BEFORE rendering report content, even when
+ // the reader does not press the explicit receipt button.
+ if(isRecipient){
+  const {error:openError}=await db.rpc('asf_report_receipt',{p_report:r.id,p_received:false});
+  if(openError)return toast('تعذر توثيق فتح التقرير: '+openError.message,true);
+ }
+ const [currentReview,historyResult,accessResult]=await Promise.all([
   db.from('asf_reviews').select('*').eq('report_id',r.id).maybeSingle(),
-  db.from('asf_review_history').select('*').eq('report_id',r.id).order('created_at',{ascending:false}).limit(100)
+  db.from('asf_review_history').select('*').eq('report_id',r.id).order('created_at',{ascending:false}).limit(100),
+  db.from('asf_report_receipts').select('viewer_id,viewer_name,viewer_unit,first_opened_at,last_opened_at,open_count,received_at').eq('report_id',r.id).order('last_opened_at',{ascending:false}).limit(50)
  ]);
  if(currentReview.error||historyResult.error)return toast((currentReview.error||historyResult.error).message,true);
- const rev=currentReview.data,history=historyResult.data||[];
+ const rev=currentReview.data,history=historyResult.data||[],readings=accessResult.error?[]:accessResult.data||[];
+ const ownReceipt=readings.find(row=>row.viewer_id===user?.id);
+ const receiptBlock='<section class="section-card"><div class="row between"><h3>سجل فتح واستلام التقرير</h3>'+
+  (isRecipient&&!ownReceipt?.received_at?'<button class="btn primary small" id="receiveReport" type="button">✓ استلام التقرير</button>':'')+'</div>'+
+  '<p class="muted">يسجل النظام فتح التقرير تلقائياً باسم المسؤول والجهة، حتى بدون الضغط على زر الاستلام. الاستلام تأكيد مستقل.</p>'+
+  (readings.map(row=>'<div style="padding:9px;border-bottom:1px solid var(--line)"><b>'+esc(row.viewer_name)+'</b> — '+esc(row.viewer_unit)+
+    '<p class="muted">آخر فتح: '+date(row.last_opened_at)+' · عدد مرات الفتح: '+esc(row.open_count)+(row.received_at?' · ✓ استلم التقرير بتاريخ '+date(row.received_at):' · لم يؤكد الاستلام')+'</p></div>').join('')||
+   '<p class="muted">لم يُفتح التقرير من أي جهة مراجعة بعد.</p>')+'</section>';
  const historyBlock='<section class="section-card"><h3>سجل مراجعات التقرير</h3>'+
    (history.map(h=>'<div style="padding:12px;border-bottom:1px solid var(--line)"><div class="row between"><b>'+esc(STATES[h.state]||h.state)+'</b><span class="muted">'+date(h.created_at)+'</span></div>'+
     '<p style="white-space:pre-wrap;margin:6px 0">'+esc(h.note||'بدون ملاحظات')+'</p></div>').join('')||empty('لم تُسجل مراجعات حتى الآن'))+'</section>';
  const content=r.mode==='free'?'<p class="muted">نص التقرير</p><div style="white-space:pre-wrap">'+esc(r.body?.text||'')+'</div>':
  ['achievements','progress','needs','notes'].map((x,i)=>'<h4>'+['الإنجازات','التقدم','الاحتياجات','الملاحظات'][i]+'</h4><p style="white-space:pre-wrap">'+esc(r.body?.[x]||'—')+'</p>').join('');
  set('#page','<div class="section-card"><div class="row between"><h3>'+esc(r.title)+'</h3>'+badge(KINDS[r.kind],r.kind==='secret')+'</div><p class="muted">'+code(r.report_number)+' · '+date(r.submitted_at)+'</p><p>'+esc(r.sender_rank)+' / '+esc(r.sender_name)+' / '+esc(r.sender_code)+'</p><hr>'+content+'<hr><b>مراجعة القائد:</b> '+esc(STATES[rev?.state]||'جديد')+'<p>'+esc(rev?.note||'لا توجد ملاحظات')+'</p><div class="row">'+btn('عرض PDF','pdf',r.id)+(mode==='reports'&&r.kind!=='secret'?btn('تقديم تصحيح','correct',r.id):'')+btn('رجوع','back')+'</div></div>'+
- historyBlock+((commander||has('reports.review',r.kind))?'<section class="section-card"><h3>مراجعة التقرير</h3><form id="reviewForm"><label>حالة التقرير<select name="state">'+opt(Object.entries(STATES),rev?.state||'new')+'</select></label><label>الملاحظات والتوجيهات<textarea name="note" maxlength="4000">'+esc(rev?.note||'')+'</textarea></label><button class="btn primary">حفظ المراجعة</button></form></section>':''));
+ historyBlock+receiptBlock+((commander||has('reports.review',r.kind))?'<section class="section-card"><h3>مراجعة التقرير</h3><form id="reviewForm"><label>حالة التقرير<select name="state">'+opt(Object.entries(STATES),rev?.state||'new')+'</select></label><label>الملاحظات والتوجيهات<textarea name="note" maxlength="4000">'+esc(rev?.note||'')+'</textarea></label><button class="btn primary">حفظ المراجعة</button></form></section>':''));
+ const receiveButton=$('#receiveReport');
+ if(receiveButton)receiveButton.onclick=async()=>{
+  if(!confirm('تأكيد استلام التقرير باسمك والجهة المعتمدة؟'))return;
+  receiveButton.disabled=true;
+  const {error}=await db.rpc('asf_report_receipt',{p_report:r.id,p_received:true});
+  if(error){toast('تعذر استلام التقرير: '+error.message,true);receiveButton.disabled=false;return;}
+  toast('تم توثيق استلام التقرير باسمك.');await detailReport(r,mode);
+ };
  $('#page').querySelector('[data-action="pdf"]').onclick=()=>downloadPdf(r);
  $('#page').querySelector('[data-action="back"]').onclick=()=>renderReports(mode);
  const fix=$('#page').querySelector('[data-action="correct"]');if(fix)fix.onclick=()=>{correctionSource=r;draftId=null;navigate('compose')};
