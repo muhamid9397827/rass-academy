@@ -438,6 +438,32 @@ async function navigate(name){
   set('#page',empty('لا تملك صلاحية الوصول إلى هذا القسم.'));
  }catch(err){set('#page',empty('تعذر تحميل القسم: '+err.message));toast(err.message,true)}
 }
+async function renderOperationsCenter(){
+ const root=$('#operationsCenter');if(!root||!commander)return;
+ const tasks=[
+  ['طلبات العضوية','members',()=>db.from('asf_profiles').select('user_id',{count:'exact',head:true}).eq('status','pending')],
+  ['تصاريح بانتظار القرار','access-queue',()=>db.from('asf_access_requests').select('id',{count:'exact',head:true}).eq('status','pending')],
+  ['دورات تنتظر التسليم','academy-results',()=>db.from('asf_academy_results').select('id',{count:'exact',head:true}).eq('is_test',false).eq('passed',true).neq('course_id','individual-qualification').is('delivered_at',null)],
+  ['تأهيل بانتظار المراجعة','recruitment-center',()=>db.from('asf_academy_results').select('id',{count:'exact',head:true}).eq('course_id','individual-qualification').eq('is_test',false).is('qualification_reviewed_at',null)],
+  ['التقارير الحالية','inbox',()=>db.from('asf_reports').select('id',{count:'exact',head:true}).is('deleted_at',null)]
+ ];
+ const results=await Promise.all(tasks.map(async ([label,section,run])=>{
+  try{const q=await run();return {label,section,count:q.count??(q.data?.length||0),ok:!q.error};}
+  catch{return {label,section,count:null,ok:false};}
+ }));
+ if(!root.isConnected||!commander||pageName!=='dashboard')return;
+ root.innerHTML='<div class="row between"><div><span class="eyebrow">متابعة الإجراءات</span><h2>مركز عمليات القيادة</h2><p class="muted">المعاملات المطلوبة ومهام اليوم في مكان واحد.</p></div>'+
+ '<small class="muted">'+(results.some(r=>!r.ok)?'بعض المؤشرات غير متاحة':'✓ قاعدة البيانات تستجيب')+'</small></div>'+
+ '<div class="dashboard-sections mp-simple-grid">'+results.map(r=>
+ '<button type="button" class="dashboard-card mp-simple-card" data-ops-go="'+esc(r.section)+'"><span class="dashboard-card__body"><strong>'+esc(r.label)+
+ '</strong><small>'+(!r.ok?'تعذر تحديث العدد':r.count+' إجراء')+'</small></span><span class="dashboard-card__action">متابعة ←</span></button>'
+ ).join('')+'</div><div class="row"><button class="btn ghost small" id="opsTasks">مركز مهامي والإشعارات</button>'+
+ '<button class="btn ghost small" id="opsRefresh">تحديث المؤشرات</button></div>';
+ root.querySelectorAll('[data-ops-go]').forEach(b=>b.onclick=()=>navigate(b.dataset.opsGo));
+ root.querySelector('#opsTasks').onclick=()=>navigate('notifications');
+ root.querySelector('#opsRefresh').onclick=()=>{root.textContent='جارٍ التحديث…';renderOperationsCenter().catch(()=>{if(root.isConnected)root.textContent='تعذر التحديث.';});};
+}
+
 async function renderDashboard(){
  const courtAllowed=commander||profile?.court_enabled||has('court.manage');
  const policeAllowed=commander||policeHead||has('police.manage');
@@ -456,6 +482,7 @@ async function renderDashboard(){
  const card=([id,icon,title,description])=>'<button type="button" class="dashboard-card mp-simple-card" data-section="'+id+'"><span class="dashboard-card__icon" aria-hidden="true">'+icon+'</span><span class="dashboard-card__body"><strong>'+esc(title)+'</strong><small>'+esc(description)+'</small></span><span class="dashboard-card__action">فتح ←</span></button>';
  set('#page','<section class="mp-dashboard-welcome"><div><span class="eyebrow">مساحة عملك</span><h2>أهلًا، '+esc(profile?.game_name||'القيادة')+'</h2><p>اختر ما تحتاجه فقط؛ الأقسام التي لا تملك صلاحيتها مخفية.</p></div><span class="mp-dashboard-code">'+esc(profile?.military_code||'قيادة أمن المنشآت')+'</span></section>'+
  '<section class="mp-dashboard-top"><button class="btn primary" type="button" data-fast="compose">＋ كتابة تقرير</button><button class="btn ghost" type="button" data-fast="reports">متابعة تقاريري</button><button class="btn ghost" type="button" data-fast="academy">الدورات العامة</button></section>'+
+ (commander?'<section class="section-card" id="operationsCenter">جارٍ تحميل أولويات القيادة…</section>':'')+
  '<div class="section-intro"><div><h2>أدواتك</h2><p>الأعمال اليومية بالأعلى، وبقية الأقسام تجدها هنا عند الحاجة.</p></div></div>'+
  (cards.length>3?'<details class="mp-notices-panel mp-workspaces-fold"><summary>الأقسام التخصصية المتاحة <span class="badge">'+(cards.length-3)+'</span></summary><div class="dashboard-sections mp-simple-grid mp-fold-grid">'+cards.slice(3).map(card).join('')+'</div></details>':'')+
  '<div class="mp-dashboard-foot"><span>هل تحتاج صلاحية إضافية؟</span><button type="button" class="btn ghost small" id="accessDashboardShortcut">طلب وصول أو متابعة طلباتي</button></div>'+
@@ -463,6 +490,7 @@ async function renderDashboard(){
  $('#page').querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>navigate(b.dataset.section));
  $('#page').querySelectorAll('[data-fast]').forEach(b=>b.onclick=()=>navigate(b.dataset.fast));
  $('#accessDashboardShortcut').onclick=()=>navigate(commander?'access-queue':'access');
+ if(commander)renderOperationsCenter().catch(()=>{if($('#operationsCenter'))$('#operationsCenter').textContent='تعذر تحميل مؤشرات القيادة.';});
  const {data:notices,error}=await db.from('asf_notifications').select('*').order('created_at',{ascending:false}).limit(12);
  if(error||!$('#dashboardNotices'))return;
  const {count:allUnread,error:countErr}=await db.from('asf_notifications').select('id',{count:'exact',head:true}).is('read_at',null);
@@ -509,6 +537,7 @@ function mountAcademyResults(){
   const canReviewReward=commander||hasDeptRole('training','head');
   const rewardCell=r=>{
    const reward=rewardByResult.get(r.id);
+   if(r.course_id==='individual-qualification')return 'نتائج التأهيل يتابعها قسم القبول والتجنيد';
    if(!r.delivered_at)return 'لم يسلم الرول بعد';
    if(!reward)return 'لا يوجد استحقاق ظاهر';
    if(reward.paid_at)return '<span class="dept-state-paid">✓ تم إعطاء المكافأة</span><small>بواسطة '+esc(reward.paid_by_name||'الرئاسة')+'</small>';
@@ -516,7 +545,7 @@ function mountAcademyResults(){
     (canReviewReward&&reward.actor_id!==user.id?'<button class="btn primary small" data-course-reward="'+esc(reward.id)+'">✓ تم إعطاء المكافأة</button>':'');
   };
   const sync={pending:'قيد المتابعة',confirmed:'مؤكد',unconfirmed:'غير مؤكد',failed:'تعذر الإرسال'};
-  rows.innerHTML='<p class="muted">'+esc(count??data?.length??0)+' نتيجة</p>'+(data?.length?'<div class="table-scroll"><table><thead><tr><th>الإيصال والتاريخ</th><th>المتدرّب</th><th>الدورة</th><th>النتيجة</th><th>تسليم الرول للمتدرب</th><th>المدرب ووقت الإجراء</th><th>مكافأة المدرب</th><th>نسخة الجدول القديم</th></tr></thead><tbody>'+data.map(r=>'<tr><td>'+esc(r.receipt)+'<br>'+date(r.received_at)+'</td><td>'+esc(r.trainee_name)+'<br>'+esc(r.trainee_rank)+'<br>'+esc(r.discord_id)+'</td><td>'+esc(r.course_title)+'</td><td>'+esc(r.score)+' / '+esc(r.total)+' · '+esc(r.percentage)+'%<br>'+badge(r.passed?'اجتياز':'رسوب')+'</td><td>'+(r.delivered_at?'<span class="course-delivered">✓ تم تسليم الرول (توثيق يدوي)</span>':r.passed?'<button class="btn primary small" data-deliver-result="'+esc(r.id)+'">✓ تم إعطاء رول الدورة</button>':badge('غير مجتاز'))+'</td><td>'+esc(r.delivered_by_name||'—')+(r.delivered_by_code?'<br>'+esc(r.delivered_by_code):'')+(r.delivered_at?'<br>'+date(r.delivered_at):'')+'</td><td class="dept-reward-cell">'+rewardCell(r)+'</td><td>'+esc(sync[r.legacy_status]||'غير مؤكد')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+'<div class="row"><button class="btn ghost small" id="academyResultsPrev" '+(offset===0?'disabled':'')+'>السابق</button><button class="btn ghost small" id="academyResultsNext" '+(offset+50>=(count??data?.length??0)?'disabled':'')+'>التالي</button></div>';
+  rows.innerHTML='<p class="muted">'+esc(count??data?.length??0)+' نتيجة</p>'+(data?.length?'<div class="table-scroll"><table><thead><tr><th>الإيصال والتاريخ</th><th>المتدرّب</th><th>الدورة</th><th>النتيجة</th><th>تسليم الرول للمتدرب</th><th>المدرب ووقت الإجراء</th><th>مكافأة المدرب</th><th>نسخة الجدول القديم</th></tr></thead><tbody>'+data.map(r=>'<tr><td>'+esc(r.receipt)+'<br>'+date(r.received_at)+'</td><td>'+esc(r.trainee_name)+'<br>'+esc(r.trainee_rank)+'<br>'+esc(r.discord_id)+'</td><td>'+esc(r.course_title)+'</td><td>'+esc(r.score)+' / '+esc(r.total)+' · '+esc(r.percentage)+'%<br>'+badge(r.passed?'اجتياز':'رسوب')+'</td><td>'+(r.course_id==='individual-qualification'?badge('قيد مراجعة القبول والتجنيد'):r.delivered_at?'<span class="course-delivered">✓ تم تسليم الرول (توثيق يدوي)</span>':r.passed?'<button class="btn primary small" data-deliver-result="'+esc(r.id)+'">✓ تم إعطاء رول الدورة</button>':badge('غير مجتاز'))+'</td><td>'+esc(r.delivered_by_name||'—')+(r.delivered_by_code?'<br>'+esc(r.delivered_by_code):'')+(r.delivered_at?'<br>'+date(r.delivered_at):'')+'</td><td class="dept-reward-cell">'+rewardCell(r)+'</td><td>'+esc(sync[r.legacy_status]||'غير مؤكد')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+'<div class="row"><button class="btn ghost small" id="academyResultsPrev" '+(offset===0?'disabled':'')+'>السابق</button><button class="btn ghost small" id="academyResultsNext" '+(offset+50>=(count??data?.length??0)?'disabled':'')+'>التالي</button></div>';
   $('#academyResultsPrev').onclick=()=>{offset=Math.max(0,offset-50);load()};$('#academyResultsNext').onclick=()=>{offset+=50;load()};
   rows.querySelectorAll('[data-course-reward]').forEach(button=>button.onclick=async()=>{
    if(!confirm('تأكيد صرف مكافأة 150,000 للمدرب بالفعل؟ لا يمكن تكرار التأشير.'))return;
