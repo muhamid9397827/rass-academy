@@ -65,6 +65,12 @@ const deptUI=window.ASF_DEPARTMENTS.create({
  mountResults:mountAcademyResults
 });
 
+const serviceUI=window.ASF_SERVICE_REWARDS.create({
+ db,
+ getContext:()=>({user,commander,policeHead}),
+ notify:toast
+});
+
 function showScreen(which){['welcome','authScreen','mfaScreen','verifyEmailScreen','recoveryScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which);$('#notificationTrigger').hidden=which!=='workspace';window.ASF_MOBILE?.setWorkspace(which==='workspace')}
 function openAcademy(){window.open('academy.html','_blank','noopener')}
 $('#openAcademy').onclick=openAcademy;
@@ -420,8 +426,8 @@ async function navigate(name){
    }
   if(name==='reports'||name==='inbox'||name==='trash')return await renderReports(name);
   if(name==='compose')return await renderCompose();
-  if(name==='police')return await renderPolice();
-  if(name==='court')return await renderCourt();
+  if(name==='police'){await renderPolice();await serviceUI.mount('police');return;}
+  if(name==='court'){await renderCourt();await serviceUI.mount('court');return;}
   if(name==='members'&&(commander||has('users.review')||has('users.approve')))return await renderMembers();
   if(name==='changes'&&(commander||has('users.review')))return await renderChanges();
   if(name==='delegations'&&commander)return await renderDelegations();
