@@ -61,7 +61,8 @@ const deptUI=window.ASF_DEPARTMENTS.create({
  getContext:()=>({user,commander,roles:departmentRoles,legacyAcademyManage:has('academy.manage')}),
  notify:toast,
  go:navigate,
- mountResults:mountAcademyResults
+ mountResults:mountAcademyResults,
+ mountQualifications:mountQualificationResults
 });
 
 function showScreen(which){['welcome','authScreen','mfaScreen','verifyEmailScreen','recoveryScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which);$('#notificationTrigger').hidden=which!=='workspace';window.ASF_MOBILE?.setWorkspace(which==='workspace')}
@@ -363,7 +364,7 @@ async function loadIdentity(silent=false,fromAuth=false){
    $('#adminNav').hidden=!(commander||has('reports.read')||has('reports.review')||has('users.review')||has('users.approve'));
    document.querySelector('[data-page="members"]').hidden=!(commander||has('users.review')||has('users.approve'));
    document.querySelector('[data-page="changes"]').hidden=!(commander||has('users.review'));
-   $('#academyReviewNav').hidden=!(commander||has('academy.manage')||hasDeptRole('training','head')||hasDeptRole('training','trainer'));
+   $('#academyReviewNav').hidden=!(commander||has('academy.manage')||hasDeptRole('training','head')||hasDeptRole('training','trainer')||hasDeptRole('recruitment','head')||hasDeptRole('recruitment','trainer'));
    $('#departmentNav').hidden=!(hasDept('training')||hasDept('recruitment'));
    $('#trainingCenterNav').hidden=!hasDept('training');
    $('#recruitmentCenterNav').hidden=!hasDept('recruitment');
@@ -401,7 +402,7 @@ async function navigate(name){
  if(!user||!(commander||profile?.status==='approved'))return;
  window.ASF_MOBILE?.closeMenu();window.ASF_MOBILE?.setPage(name);
  pageName=name;document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page===name));
- const titles={notifications:'مركز الإشعارات',dashboard:'لوحة التحكم',academy:'الأكاديمية والدورات','academy-results':'نتائج الدورات والتسليم','training-center':'كلية التدريب','recruitment-center':'القبول والتجنيد','department-admin':'رئاسات الأقسام',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',access:'طلب تصريح ومتابعته','access-queue':'طلبات التصاريح الواردة',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
+ const titles={notifications:'مركز الإشعارات',dashboard:'لوحة التحكم',academy:'الأكاديمية والدورات','academy-results':'نتائج الاختبارات والمراجعة والتسليم','training-center':'كلية التدريب','recruitment-center':'القبول والتجنيد','department-admin':'رئاسات الأقسام',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',access:'طلب تصريح ومتابعته','access-queue':'طلبات التصاريح الواردة',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
  set('#pageTitle','<div><h1>'+esc(titles[name]||'بوابة أمن المنشآت')+'</h1><p>المنصة الموحدة · إعدادات الصلاحيات حسب حسابك</p></div>');
  set('#page','<div class="empty">جارٍ تحميل البيانات...</div>');
  try{
@@ -477,18 +478,63 @@ function renderAcademy(){
  }
 }
 function renderAcademyResults(){
- if(!commander&&!has('academy.manage')&&!hasDeptRole('training','head')&&!hasDeptRole('training','trainer'))return set('#page',empty('نتائج الدورات متاحة فقط لرئاسة كلية التدريب أو مدربيها المصرّح لهم.'));
- set('#page','<div id="academyResultPanel"></div>');mountAcademyResults();
+ const training=commander||has('academy.manage')||hasDeptRole('training','head')||hasDeptRole('training','trainer');
+ const recruitment=commander||hasDeptRole('recruitment','head')||hasDeptRole('recruitment','trainer');
+ if(!training&&!recruitment)return set('#page',empty('هذا السجل خاص برئاسة ومدربي كلية التدريب والقبول والتجنيد.'));
+ set('#page',(recruitment?'<div id="qualificationResultPanel"></div>':'')+(training?'<div id="academyResultPanel"></div>':''));
+ if(recruitment)mountQualificationResults();
+ if(training)mountAcademyResults();
 }
+
+function mountQualificationResults(){
+ const panel=$('#qualificationResultPanel');if(!panel)return;
+ if(!(commander||hasDeptRole('recruitment','head')||hasDeptRole('recruitment','trainer'))){
+  panel.innerHTML=empty('مراجعة التأهيل مخصصة للقبول والتجنيد.');return;
+ }
+ panel.innerHTML='<section class="section-card" style="margin-top:20px"><div class="row between"><h3>نتائج تأهيل المتقدمين والتوظيف</h3>'+badge('قراران مستقلان')+'</div>'+
+ '<p class="muted">تظهر نتيجة النجاح أو الرسوب للمتقدم فور تصحيح الاختبار من الخادم. هنا تُوثّق مراجعة النتيجة باسم المسؤول، ثم يُؤكَّد التوظيف للناجح فقط بعد المراجعة. هذه الإجراءات لا تعطي رول Discord تلقائيًا ولا تغيّر نتيجة الاختبار.</p>'+
+ '<form id="qualificationFilter" class="row" style="margin-bottom:12px"><input name="search" placeholder="بحث بالاسم أو Discord أو الإيصال" maxlength="60" style="max-width:380px"><button class="btn ghost" type="submit">بحث</button><button id="qualificationRefresh" class="btn ghost" type="button">تحديث</button></form><div id="qualificationRows" aria-live="polite"></div></section>';
+ let term='',offset=0,request=0;
+ const load=async()=>{
+  const container=$('#qualificationRows');if(!container)return;const id=++request;
+  container.textContent='جاري تحميل نتائج التأهيل…';
+  let q=db.from('asf_academy_results').select('id,receipt,trainee_name,discord_id,score,total,percentage,passed,assigned_rank,received_at,qualification_reviewed_at,qualification_reviewed_by_name,qualification_hired_at,qualification_hired_by_name',{count:'exact'}).eq('course_id','individual-qualification').eq('is_test',false).order('received_at',{ascending:false});
+  if(term)q=/^\d{15,20}$/.test(term)?q.eq('discord_id',term):/^ACD-\d+$/.test(term)?q.eq('receipt',term):q.ilike('trainee_name','%'+term.replace(/[%_\\]/g,'')+'%');
+  const {data,error,count}=await q.range(offset,offset+29);
+  if(!container.isConnected||id!==request)return;
+  if(error){container.textContent='تعذر تحميل نتائج التأهيل: '+error.message;return;}
+  container.innerHTML='<p class="muted">'+esc(count??data.length)+' نتيجة</p>'+
+   (data.length?'<div class="table-scroll"><table><thead><tr><th>المتقدم والإيصال</th><th>النتيجة</th><th>مراجعة النتيجة</th><th>تأكيد التوظيف</th></tr></thead><tbody>'+
+    data.map(r=>'<tr><td><strong>'+esc(r.trainee_name)+'</strong><br><small dir="ltr">'+esc(r.discord_id)+'</small><br>'+esc(r.receipt)+'<br>'+date(r.received_at)+'</td>'+
+     '<td>'+badge(r.passed?'ناجح':'راسب')+'<br>'+esc(r.score)+' / '+esc(r.total)+' — '+esc(r.percentage)+'%'+(r.passed?'<br>الرتبة المبدئية: '+esc(r.assigned_rank||'—'):'')+'</td>'+
+     '<td>'+(r.qualification_reviewed_at?'<strong>✓ تمت المراجعة بواسطة '+esc(r.qualification_reviewed_by_name)+'</strong><br>'+date(r.qualification_reviewed_at):
+      '<button type="button" class="btn primary small" data-qualification-action="review" data-qualification-id="'+esc(r.id)+'">✓ راجعت النتيجة</button>')+'</td>'+
+     '<td>'+(r.qualification_hired_at?'<strong>✓ تم توظيفه بواسطة '+esc(r.qualification_hired_by_name)+'</strong><br>'+date(r.qualification_hired_at):
+      !r.passed?'غير مؤهل للتوظيف':!r.qualification_reviewed_at?'بانتظار مراجعة النتيجة':
+      '<button type="button" class="btn primary small" data-qualification-action="hire" data-qualification-id="'+esc(r.id)+'">✓ تم توظيفه</button>')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+
+   '<div class="row"><button type="button" class="btn ghost small" id="qualificationPrev" '+(offset===0?'disabled':'')+'>السابق</button><button type="button" class="btn ghost small" id="qualificationNext" '+(offset+30>=(count??data.length)?'disabled':'')+'>التالي</button></div>';
+  $('#qualificationPrev').onclick=()=>{offset=Math.max(0,offset-30);load()};
+  $('#qualificationNext').onclick=()=>{offset+=30;load()};
+  container.querySelectorAll('[data-qualification-action]').forEach(button=>button.onclick=async()=>{
+   const action=button.dataset.qualificationAction,which=button.dataset.qualificationId;
+   if(!confirm(action==='review'?'هل قمت بمراجعة نتيجة هذا المتقدم؟ سيُسجل اسمك وتاريخ المراجعة.':'هل تم توظيف هذا المتقدم الناجح فعلًا؟ سيُسجل اسمك وتاريخ التأكيد، ولا يمنح ذلك رتبة أو رولًا تلقائيًا.'))return;
+   button.disabled=true;
+   try{
+    const {data:result,error:err}=await db.rpc('asf_recruitment_qualification_action',{p_result:which,p_action:action});
+    if(err)throw err;
+    toast(result.already?'سبق توثيق هذا الإجراء.':action==='review'?'تم توثيق مراجعة النتيجة باسم المسؤول.':'تم توثيق توظيف المتقدم باسم المسؤول.');
+    await load();
+   }catch(err){toast(err.message||'تعذر حفظ الإجراء',true);button.disabled=false;}
+  });
+ };
+ $('#qualificationFilter').onsubmit=e=>{e.preventDefault();term=String(new FormData(e.target).get('search')||'').trim();offset=0;load()};
+ $('#qualificationRefresh').onclick=load;
+ load();
+}
+
 function mountAcademyResults(){
  const panel=$('#academyResultPanel');if(!panel)return;
  panel.innerHTML='<section class="section-card" style="margin-top:20px"><h3>نتائج الدورات والتسليم</h3><p class="muted">نفس نتيجة الاختبار تنتقل من النجاح إلى تأكيد تسليم الدورة. التأكيد يسجّل اسمك ووقت الإجراء، ولا يمنح رتبة أو صلاحية تلقائيًا.</p><details class="notice course-notice-flow"><summary>إشعارات النتائج والربط مع جدول Google</summary><p>عند حفظ اختبار ناجح في البوابة، يصل إشعار داخل الموقع إلى القائد ومسؤولي الدورات المفوّضين، ثم تُرسل نسخة النتيجة إلى جدول Google المرتبط. الإشعار لا يعني تأكيد وصول نسخة Google؛ حالة النسخة تظهر في عمودها أدناه.</p><p>تأكيد التسليم واسم المسؤول ووقته محفوظة في هذا السجل داخل الموقع. الإضافة اليدوية إلى Google لا تولّد إشعارًا في البوابة.</p><a class="btn ghost small" id="courseGoogleSheet" href="https://docs.google.com/spreadsheets/d/1PC5iXwHWyFT4kd7qa6oa_JL1-r3F_anv3fPniF8rfdM/edit" target="_blank" rel="noopener noreferrer">فتح جدول Google المرتبط</a></details><form id="academyResultsFilter" class="grid two"><label>الاسم أو Discord أو الإيصال<input name="search" maxlength="60"></label><label>حالة المتابعة<select name="state"><option value="pending">ناجحون بانتظار التسليم</option><option value="delivered">تم تسليم الدورة</option><option value="all" selected>جميع النتائج</option></select></label><label>مسار التأهيل<select name="track"><option value="all">كل الاختبارات</option><option value="qualification">تأهيل المتقدمين الجدد</option><option value="courses">دورات الأفراد</option></select></label><button class="btn ghost" type="submit">بحث وتحديث</button></form><div id="academyResultsRows" aria-live="polite"></div></section>';
- const demoHost=document.createElement('section');
- demoHost.id='academyDemoPanel';
- demoHost.className='section-card';
- demoHost.style.marginTop='16px';
- panel.prepend(demoHost);
- window.ASF_ACADEMY_DEMO?.mount(demoHost);
  let offset=0,term='',filter='all',track='all',generation=0;
  const load=async()=>{
   const rows=$('#academyResultsRows');if(!rows)return;const request=++generation;rows.textContent='جاري تحميل النتائج…';
