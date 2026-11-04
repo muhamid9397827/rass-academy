@@ -134,7 +134,12 @@ function bindAuthListener(){
   }else if(event==='SIGNED_OUT'){
    authEpoch++;user=null;commander=false;policeHead=false;profile=null;grants=[];departmentRoles=[];
    latestReports=[];correctionSource=null;draftId=null;set('#page','');
-   if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
+   if(notificationChannel){
+    const channel=notificationChannel;notificationChannel=null;
+    // Supabase callbacks run under the Auth lock. Do not call async client
+    // methods from this callback; release the Realtime channel next task.
+    setTimeout(()=>{try{Promise.resolve(db.removeChannel(channel)).catch(()=>{});}catch{}},0);
+   }
    commanderMfaUI.reset();noticeUI.reset();
    if(!recoveryMode)showScreen('welcome');
   }
