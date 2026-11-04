@@ -8,6 +8,7 @@ const classify=n=>{
  if(k==='access_decision')return ['قرار طلب الوصول','🛡','access','access'];
  if(k==='access_request')return ['طلب تصريح','🛡','access-queue','access'];
  if(k==='secret_report')return ['تقرير سري وارد','🔒','inbox','reports'];
+ if(k==='report_received')return ['تم استلام تقريرك','✅','reports','reports'];
  if(k==='report')return ['تقرير جديد','📄','inbox','reports'];
  if(k==='registration')return ['طلب عضوية','👤','members','account'];
  if(k==='account_change')return ['تعديل بيانات','✎','changes','account'];
