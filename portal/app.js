@@ -80,7 +80,12 @@ $('#requestRestrictedAccess').onclick=()=>{closeRestricted();navigate('access')}
 restrictedModal.onclick=e=>{if(e.target===restrictedModal)closeRestricted()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!restrictedModal.hidden)closeRestricted()});
 let registering=false,recoveryMode=recoveryLinkOpened;
-function authForm(mode){if(signingOut)return;$('#authStatus').hidden=true;$('#authFresh').hidden=true;registering=mode==='register';showScreen('authScreen');$('#authTitle').textContent=registering?'إنشاء حساب جديد':'تسجيل الدخول';$('#registerFields').hidden=!registering;$('#authSubmit').textContent=registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authToggle').textContent=registering?'لديك حساب بالفعل؟ تسجيل الدخول':'ليس لديك حساب؟ إنشاء حساب';$('#forgotPassword').hidden=registering;['gameName','discordId','rank','activationReason'].forEach(id=>$('#'+id).required=registering);}
+function authForm(mode){if(signingOut)return;$('#authStatus').hidden=true;$('#authFresh').hidden=true;registering=mode==='register';showScreen('authScreen');$('#authTitle').textContent=registering?'إنشاء حساب جديد':'تسجيل الدخول';$('#registerFields').hidden=!registering;$('#authSubmit').textContent=registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authToggle').textContent=registering?'لديك حساب بالفعل؟ تسجيل الدخول':'ليس لديك حساب؟ إنشاء حساب';$('#forgotPassword').hidden=registering;
+ // Do not apply new-password rules to existing accounts: HTML validation
+ // otherwise silently blocks submit with no Auth request at all.
+ $('#password').minLength=registering?8:0;
+ $('#password').setAttribute('autocomplete',registering?'new-password':'current-password');
+ ['gameName','discordId','rank','activationReason'].forEach(id=>$('#'+id).required=registering);}
 $('#authFresh').onclick=()=>{
  window.ASF_AUTH.resetSessionScope();
  window.location.replace(PORTAL_AUTH_REDIRECT+'?login=1&fresh='+Date.now());

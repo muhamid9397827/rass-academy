@@ -45,7 +45,22 @@ const enc=o=>Buffer.from(JSON.stringify(o)).toString('base64url');const jwt=enc(
  await page.reload();await page.locator('#workspace').waitFor({state:'visible',timeout:12000});assert.equal(tokens,1);
  mode='section-error';await page.locator('[data-mobile-page="reports"]').click();await page.getByText('تعذر تحميل القسم:',{exact:false}).waitFor();assert.match(await page.locator('#page').innerText(),/QA temporary section failure/);
  mode='ok';await page.locator('#signOut').click();await page.locator('#welcome').waitFor({state:'visible'});assert.equal(await page.locator('#page').textContent(),'');
- await page.locator('#showLogin').click();mode='invalid';await page.locator('#email').fill('qa@example.invalid');await page.locator('#password').fill('WrongPass2026!');await page.locator('#authSubmit').click();await page.locator('#authStatus.error').waitFor();assert.match(await page.locator('#authStatus').innerText(),/كلمة المرور غير صحيحة/);assert.equal(await page.locator('#authSubmit').isDisabled(),false);
+ // Existing accounts may have a 6-character password allowed by Supabase.
+ // An HTML minlength=8 on the *login* field silently swallowed the click.
+ await page.locator('#showLogin').click();
+ await page.locator('#email').fill('qa@example.invalid');
+ await page.locator('#password').fill('abc123');
+ assert.equal(await page.locator('#password').evaluate(e=>e.minLength),0);
+ const shortBefore=tokens;
+ await page.locator('#authSubmit').click();
+ await page.locator('#workspace').waitFor({state:'visible',timeout:12000});
+ assert.equal(tokens,shortBefore+1,'short existing password must reach Auth API');
+ await page.locator('#signOut').click();await page.locator('#welcome').waitFor({state:'visible'});
+ await page.locator('#showRegister').click();
+ assert.equal(await page.locator('#password').evaluate(e=>e.minLength),8,'new account password still requires eight chars');
+ await page.locator('#authToggle').click();
+ assert.equal(await page.locator('#password').evaluate(e=>e.minLength),0,'return to sign-in removes signup constraint');
+ mode='invalid';await page.locator('#email').fill('qa@example.invalid');await page.locator('#password').fill('WrongPass2026!');await page.locator('#authSubmit').click();await page.locator('#authStatus.error').waitFor();assert.match(await page.locator('#authStatus').innerText(),/كلمة المرور غير صحيحة/);assert.equal(await page.locator('#authSubmit').isDisabled(),false);
  mode='offline';await page.locator('#authSubmit').click();await page.locator('#authStatus.error').waitFor();await page.waitForFunction(()=>!document.querySelector('#authSubmit').disabled);assert.equal(await page.locator('#workspace').isVisible(),false);
  await page.screenshot({path:'/tmp/asf-mobile/login-offline-390.png',fullPage:true});
  await holder.evaluate(()=>window.releaseOldLock());assert.deepEqual(errors,[]);await ctx.close();await browser.close();
