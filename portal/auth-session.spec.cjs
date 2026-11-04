@@ -29,6 +29,9 @@ const enc=o=>Buffer.from(JSON.stringify(o)).toString('base64url');const jwt=enc(
  // Control: the previous SDK reproduces the user's permanently disabled button.
  const oldResponse=await fetch('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js',{signal:AbortSignal.timeout(15000)});assert.equal(oldResponse.ok,true);const oldBundle=await oldResponse.text();
  const probe=await ctx.newPage();await probe.route('**/vendor/supabase-2.118.0/supabase.min.js',r=>r.fulfill({status:200,contentType:'application/javascript',body:oldBundle}));
+ // Legacy control intentionally uses its original shared storage key.
+ await probe.route('**/auth-client.js*',r=>r.fulfill({status:200,contentType:'application/javascript',body:
+  "window.ASF_AUTH={createClient:()=>window.supabase.createClient(window.ASF_CONFIG.supabaseUrl,window.ASF_CONFIG.supabaseAnonKey),deadline:fn=>fn(),cancel:()=>{},resetSessionScope:()=>{}};"}));
  await probe.goto(base);await probe.locator('#showLogin').click();await probe.locator('#email').fill('qa@example.invalid');await probe.locator('#password').fill('TestPass2026!');await probe.locator('#authSubmit').click();await probe.waitForTimeout(700);assert.equal(await probe.locator('#authSubmit').isDisabled(),true,'previous SDK waits indefinitely behind the held lock');assert.equal(tokens,1,'legacy password request succeeded, but loading the session is still blocked');assert.match(await probe.locator('#authStatus').innerText(),/جارٍ (التحقق من بيانات الدخول|تحميل بيانات الحساب)/);await probe.close();
  await holder.evaluate(ref=>localStorage.removeItem('sb-'+ref+'-auth-token'),ref);tokens=0;
  const page=activePage=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));

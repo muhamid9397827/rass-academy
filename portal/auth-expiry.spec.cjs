@@ -27,7 +27,11 @@ const token=ttl=>enc({alg:'HS256',typ:'JWT'})+'.'+enc({sub:uid,role:'authenticat
   await page.goto(base+'config.js');
   await page.evaluate(({ref,token,user})=>{
    const value={access_token:token,token_type:'bearer',expires_in:30,expires_at:Math.floor(Date.now()/1000)+30,refresh_token:'old-qa-refresh',user};
-   localStorage.setItem('sb-'+ref+'-auth-token',JSON.stringify(value));
+   // New sessions are tab-scoped. A corrupted old cross-tab token is ignored.
+   const tab='qa-session-expiry-2026';
+   sessionStorage.setItem('asf-portal-auth-tab-v3',tab);
+   sessionStorage.setItem('asf-portal-auth-v3-'+tab,JSON.stringify(value));
+   localStorage.setItem('sb-'+ref+'-auth-token','{bad legacy session}');
   },{ref,token:token(30),user:member});
   await page.goto(base,{waitUntil:'domcontentloaded'});
   await page.locator('#workspace').waitFor({state:'visible',timeout:14000});

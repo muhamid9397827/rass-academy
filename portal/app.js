@@ -80,7 +80,11 @@ $('#requestRestrictedAccess').onclick=()=>{closeRestricted();navigate('access')}
 restrictedModal.onclick=e=>{if(e.target===restrictedModal)closeRestricted()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!restrictedModal.hidden)closeRestricted()});
 let registering=false,recoveryMode=recoveryLinkOpened;
-function authForm(mode){if(signingOut)return;$('#authStatus').hidden=true;registering=mode==='register';showScreen('authScreen');$('#authTitle').textContent=registering?'إنشاء حساب جديد':'تسجيل الدخول';$('#registerFields').hidden=!registering;$('#authSubmit').textContent=registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authToggle').textContent=registering?'لديك حساب بالفعل؟ تسجيل الدخول':'ليس لديك حساب؟ إنشاء حساب';$('#forgotPassword').hidden=registering;['gameName','discordId','rank','activationReason'].forEach(id=>$('#'+id).required=registering);}
+function authForm(mode){if(signingOut)return;$('#authStatus').hidden=true;$('#authFresh').hidden=true;registering=mode==='register';showScreen('authScreen');$('#authTitle').textContent=registering?'إنشاء حساب جديد':'تسجيل الدخول';$('#registerFields').hidden=!registering;$('#authSubmit').textContent=registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authToggle').textContent=registering?'لديك حساب بالفعل؟ تسجيل الدخول':'ليس لديك حساب؟ إنشاء حساب';$('#forgotPassword').hidden=registering;['gameName','discordId','rank','activationReason'].forEach(id=>$('#'+id).required=registering);}
+$('#authFresh').onclick=()=>{
+ window.ASF_AUTH.resetSessionScope();
+ window.location.replace(PORTAL_AUTH_REDIRECT+'?login=1&fresh='+Date.now());
+};
 $('#showLogin').onclick=()=>authForm('login');$('#showRegister').onclick=()=>authForm('register');
 $('#registerFromHero').onclick=()=>authForm('register');
 $('#authToggle').onclick=()=>{if(!$('#authSubmit').disabled)authForm(registering?'login':'register')};
@@ -99,7 +103,7 @@ $('#signOut').onclick=async()=>{
  if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
  try{const {error}=await window.ASF_AUTH.deadline(()=>db.auth.signOut(),()=>{authNeedsReload=true;window.ASF_AUTH.cancel(db)});if(error)throw error;}catch(err){
   authNeedsReload=true;window.ASF_AUTH.cancel(db);
-  try{localStorage.removeItem('sb-'+new URL(cfg.supabaseUrl).hostname.split('.')[0]+'-auth-token');}catch{}
+  window.ASF_AUTH.resetSessionScope();
   toast('أُغلقت الجلسة محليًا، وتعذر تأكيد إنهائها على الخادم: '+err.message,true);
  }finally{signingOut=false;['showLogin','showRegister','registerFromHero','signOut'].forEach(id=>$('#'+id).disabled=false);}
 };
@@ -152,7 +156,12 @@ function markAuthBlocked(){
 const authDeadline=(work,ms=12000)=>window.ASF_AUTH.deadline(work,markAuthBlocked,ms);
 $('#authForm').onsubmit=async e=>{
  e.preventDefault();if(!ready)return toast('يلزم إعداد Supabase أولًا. الدورات العامة متاحة.',true);
- if(authNeedsReload){location.replace(PORTAL_AUTH_REDIRECT+'?login=1&reconnect='+Date.now());return;}
+ if(authNeedsReload){
+  // A cancelled client must never be reused; offer a new storage namespace.
+  $('#authStatus').hidden=false;$('#authStatus').className='auth-status error';
+  $('#authStatus').textContent='الجلسة القديمة متوقفة. اضغط «إعادة اتصال نظيفة» لإعادة المحاولة دون فقدان حسابك.';
+  $('#authFresh').hidden=false;return;
+ }
  const email=$('#email').value.trim(),password=$('#password').value,attempt=++authEpoch;
  const status=$('#authStatus');status.hidden=false;status.className='auth-status';
  status.textContent=registering?'جارٍ إنشاء الحساب…':'جارٍ التحقق من بيانات الدخول…';
@@ -194,6 +203,7 @@ $('#authForm').onsubmit=async e=>{
   await authDeadline(()=>loadIdentity(false,true),16000);
  }catch(err){
   const timedOut=err?.name==='AuthTimeoutError'||/abort|timeout|fetch|network|lock/i.test(String(err?.message||''));
+  $('#authFresh').hidden=!timedOut;
   if(timedOut)markAuthBlocked();
   status.hidden=false;status.className='auth-status error';
   status.textContent=timedOut
