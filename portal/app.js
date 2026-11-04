@@ -612,7 +612,7 @@ async function renderReports(mode){
 async function downloadPdf(r){
  // A document download is also an open by an authorized report reviewer.
  const reviewer=commander||has('reports.read',r.kind)||has('reports.review',r.kind);
- if(reviewer&&r.author_id!==user?.id){
+ if(reviewer&&r.author_id!==user?.id&&r.deleted_at===null){
   const {error:receiptError}=await db.rpc('asf_report_receipt',{p_report:r.id,p_received:false});
   if(receiptError)return toast('تعذر توثيق فتح التقرير: '+receiptError.message,true);
  }
@@ -641,7 +641,7 @@ async function downloadPdf(r){
 }
 async function detailReport(r,mode){
  const reviewer=commander||has('reports.read',r.kind)||has('reports.review',r.kind);
- const isRecipient=reviewer&&r.author_id!==user?.id;
+ const isRecipient=reviewer&&r.author_id!==user?.id&&r.deleted_at===null&&mode!=='trash';
  // Record the very first view BEFORE rendering report content, even when
  // the reader does not press the explicit receipt button.
  if(isRecipient){
@@ -893,7 +893,7 @@ async function renderAccessRequests(){
  set('#page','<div class="access-workflow"><section class="section-card"><div class="access-heading"><span class="eyebrow">طلبات الصلاحيات</span><h3>طلب تصريح جديد</h3><p>تقدر تطلب الصلاحيات الإدارية المطلوبة، والقرار للقائد فقط. «سري للغاية» لا يمكن تفويضه لأي شخص.</p></div>'+form+'</section>'+
  '<section class="section-card"><h3>سجل طلباتي</h3><div class="access-request-list">'+
  ((rows||[]).map(r=>'<article class="access-request-item"><div class="row between"><strong>'+esc(ACCESS_PERMISSIONS[r.permission]||r.permission)+'</strong><span class="access-state access-state-'+esc(r.status)+'">'+esc(ACCESS_STATES[r.status]||r.status)+'</span></div>'+
- '<p>'+esc(r.reason)+'</p><small class="muted">تاريخ الطلب: '+date(r.created_at)+'</small>'+
+ '<p>'+esc(r.reason)+'</p><small class="muted">رقم المتابعة: '+esc('REQ-'+String(r.id||'').slice(0,12).toUpperCase())+' · تاريخ الطلب: '+date(r.created_at)+'</small>'+
  (r.reviewed_at?'<div class="access-review-note">القرار بتاريخ '+date(r.reviewed_at)+(r.decision_note?' — '+esc(r.decision_note):'')+'</div>':'')+'</article>').join('')||empty('ما أرسلت أي طلب تصريح بعد.'))+'</div></section></div>');
  if(commander){$('#openAccessQueue').onclick=()=>navigate('access-queue');return}
  const select=$('#accessPermission'),hint=$('#accessPermissionHint'),formElement=$('#accessRequestForm');
@@ -936,7 +936,7 @@ async function renderAccessQueue(){
  (requests.map(r=>{
   const p=people.get(r.user_id);
   return '<article class="section-card access-request-item"><div class="row between"><div><strong>'+esc(p?.game_name||'عضو')+' <small class="muted">'+esc(p?.military_code||'')+'</small></strong><p>'+esc(ACCESS_PERMISSIONS[r.permission]||r.permission)+'</p></div><span class="access-state access-state-'+esc(r.status)+'">'+esc(ACCESS_STATES[r.status]||r.status)+'</span></div>'+
-   '<p class="access-reason">'+esc(r.reason)+'</p><small class="muted">تاريخ الطلب: '+date(r.created_at)+'</small>'+
+   '<p class="access-reason">'+esc(r.reason)+'</p><small class="muted">رقم المتابعة: '+esc('REQ-'+String(r.id||'').slice(0,12).toUpperCase())+' · تاريخ الطلب: '+date(r.created_at)+'</small>'+
    (r.status==='pending'?'<form class="access-decision-form" data-access-request="'+esc(r.id)+'"><label>ملاحظة القرار (اختياري)<input type="text" name="note" maxlength="400" placeholder="توضيح يُرسل لصاحب الطلب"></label><div class="row"><button class="btn primary" type="submit" name="decision" value="approve">الموافقة ومنح التصريح</button><button class="btn warn" type="submit" name="decision" value="reject">رفض الطلب</button></div></form>':
    '<div class="access-review-note">تمت المراجعة '+date(r.reviewed_at)+(r.decision_note?' — '+esc(r.decision_note):'')+'</div>')+'</article>';
  }).join('')||empty('لا توجد طلبات تصاريح.'))+'</section></div>');
