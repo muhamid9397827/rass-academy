@@ -11,11 +11,18 @@ edit('getUser:async()=>({data:{user:state.user},error:null})',`getUser:async()=>
    window.__asfTrace.push('getUser:done');
    return {data:{user:state.user},error:null};
   }`);
-edit('onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})',`onAuthStateChange:()=>{
+edit('onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})',`onAuthStateChange:callback=>{
     window.__asfTrace.push('subscribe');
     if(!window.__asfTrace.includes('getUser:done'))throw Error('auth listener attached during initialization');
+    window.__asfAuthEvent=event=>{
+     window.__insideAuthCallback=true;
+     try{callback(event)}finally{window.__insideAuthCallback=false}
+    };
     return {data:{subscription:{unsubscribe(){}}}};
    }`);
+edit('removeChannel(){}',`removeChannel(){
+   if(window.__insideAuthCallback)throw Error('async Supabase operation inside Auth event');
+  }`);
 edit("signInWithPassword:async()=>({data:{},error:null})","signInWithPassword:async()=>({data:{session:{access_token:'test-only-session'}},error:null})");
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
@@ -39,7 +46,11 @@ edit("signInWithPassword:async()=>({data:{},error:null})","signInWithPassword:as
   await page.locator('#workspace').waitFor({state:'visible',timeout:12000});
   await page.waitForFunction(()=>!document.querySelector('#authSubmit').disabled);
   assert.equal(await page.locator('#authSubmit').isDisabled(),false,'login button must always unlock');
-  assert.deepEqual(errors,[],'browser JavaScript errors');
+  // Realtime cleanup must be deferred until AFTER the SDK Auth lock callback.
+  await page.evaluate(()=>window.__asfAuthEvent('SIGNED_OUT'));
+  await page.locator('#welcome').waitFor({state:'visible'});
+  await page.waitForTimeout(50);
+  assert.deepEqual(errors,[],'browser JavaScript errors and Auth callback safety');
   await browser.close();
   console.log('PASS: session initialization before listener, three reloads, password login and button recovery');
  }catch(e){await browser.close();throw e;}
