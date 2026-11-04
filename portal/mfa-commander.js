@@ -82,6 +82,7 @@
    }catch(e){
     if(valid(step)){
      if(serverVerified)failure('تم تأكيد الرمز، لكن تحميل حساب القائد تأخر. أعد فتح الصفحة لاستكمال الدخول بأمان.');
+     else if(e?.name==='AuthTimeoutError')failure('تأخر الاتصال بخدمة المصادقة. أعد فتح الصفحة لاستكمال الدخول بأمان.');
      else status('تعذر التحقق من الرمز: '+(e.message||'أعد المحاولة.'),true);
      if(!serverVerified)$('mfaCode').focus();
     }
