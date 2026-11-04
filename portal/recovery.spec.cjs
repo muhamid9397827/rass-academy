@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const sdk = `
 (() => {
- const state = { reset:null, updated:null, signedOut:0, verified:false, verification:null };
+ const state = { reset:null, updated:null, signedOut:0, verified:false, verification:null, resetError:false, updateError:false };
  window.__recoveryQA=state;
  window.supabase = {createClient:()=>({
   auth: {
@@ -12,8 +12,8 @@ const sdk = `
       {id:'11111111-2222-4333-8444-555555555571'}:null},error:null}),
    onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),
    verifyOtp:async({token_hash,type})=>{state.verification={token_hash,type};if(token_hash==='invalid')return {data:{user:null},error:{message:'expired'}};state.verified=true;return {data:{user:{id:'11111111-2222-4333-8444-555555555571'}},error:null}},
-   resetPasswordForEmail:async(email,options)=>{state.reset={email,redirectTo:options.redirectTo};return {data:{},error:null}},
-   updateUser:async(data)=>{state.updated={password:data.password};return {data:{user:{}},error:null}},
+   resetPasswordForEmail:async(email,options)=>{state.reset={email,redirectTo:options.redirectTo};return state.resetError?{data:null,error:{message:'QA reset unavailable'}}:{data:{},error:null}},
+   updateUser:async(data)=>{state.updated={password:data.password};return state.updateError?{data:null,error:{message:'QA update unavailable'}}:{data:{user:{}},error:null}},
    signOut:async()=>{state.signedOut++;state.verified=false;return {error:null}}
   }
  })}
@@ -33,6 +33,11 @@ const sdk = `
  const reset=await page.evaluate(()=>window.__recoveryQA.reset);
  assert.equal(reset.email,'qa@example.invalid');
  assert.equal(reset.redirectTo,'https://muhamid9397827.github.io/rass-academy/portal/','reset must never redirect to localhost');
+ await page.evaluate(()=>{window.__recoveryQA.resetError=true;window.__recoveryQA.reset=null});
+ await page.locator('#forgotPassword').click();
+ await page.getByText('تعذر إرسال رابط الاستعادة: QA reset unavailable').waitFor({state:'visible'});
+ assert.equal(await page.locator('#forgotPassword').isDisabled(),false,'reset error must restore the forgot-password button');
+ assert.equal(await page.locator('#forgotPassword').getAttribute('aria-busy'),null,'reset error must clear busy state');
  await page.goto(base+'#access_token=mock&refresh_token=mock&type=recovery',{waitUntil:'domcontentloaded'});
  // A click from an email opens a fresh document, not a same-page hash navigation.
  await page.reload({waitUntil:'domcontentloaded'});
@@ -45,6 +50,12 @@ const sdk = `
  await page.getByText('كلمتا المرور غير متطابقتين.').waitFor({state:'visible'});
  assert.equal(await page.evaluate(()=>window.__recoveryQA.updated),null,'invalid confirmation must not update password');
  await page.locator('#recoveryPasswordConfirm').fill('ExamplePassword2026!');
+ await page.evaluate(()=>{window.__recoveryQA.updateError=true});
+ await page.locator('#recoverySubmit').click();
+ await page.locator('#recoveryStatus').getByText('QA update unavailable').waitFor({state:'visible'});
+ assert.equal(await page.locator('#recoverySubmit').isDisabled(),false,'update error must restore the recovery button');
+ assert.equal(await page.locator('#recoverySubmit').getAttribute('aria-busy'),null,'update error must clear busy state');
+ await page.evaluate(()=>{window.__recoveryQA.updateError=false});
  await page.locator('#recoverySubmit').click();
  await page.locator('#authScreen').waitFor({state:'visible'});
  const result=await page.evaluate(()=>({updated:window.__recoveryQA.updated,signedOut:window.__recoveryQA.signedOut,hash:location.hash}));
