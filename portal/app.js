@@ -118,89 +118,111 @@ $('#pendingReasonForm').onsubmit=async e=>{
  }catch(err){toast('تعذر إرسال السبب: '+(err.message||'خطأ غير معروف'),true)}
  finally{submit.disabled=false}
 };
+// Auth transitions are serialized by Supabase's SDK. Never subscribe to auth
+// events during SDK initialization: that can deadlock navigator.locks on reload
+// when a stored session needs refreshing.
+let authListenerBound=false;
+function bindAuthListener(){
+ if(authListenerBound)return;
+ authListenerBound=true;
+ db.auth.onAuthStateChange(event=>{
+  // Keep this handler SYNCHRONOUS: calling auth/database APIs here deadlocks
+  // the auth client's lock (Supabase advisory).
+  if(event==='PASSWORD_RECOVERY'){
+   recoveryMode=true;
+   showRecoveryScreen();
+  }else if(event==='SIGNED_OUT'){
+   authEpoch++;user=null;commander=false;policeHead=false;profile=null;grants=[];departmentRoles=[];
+   latestReports=[];correctionSource=null;draftId=null;set('#page','');
+   if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
+   commanderMfaUI.reset();noticeUI.reset();
+   if(!recoveryMode)showScreen('welcome');
+  }
+ });
+}
+function markAuthBlocked(){
+ if(authNeedsReload)return;
+ authEpoch++;authNeedsReload=true;window.ASF_AUTH.cancel(db);
+}
+const authDeadline=(work,ms=12000)=>window.ASF_AUTH.deadline(work,markAuthBlocked,ms);
 $('#authForm').onsubmit=async e=>{
  e.preventDefault();if(!ready)return toast('يلزم إعداد Supabase أولًا. الدورات العامة متاحة.',true);
- if(authNeedsReload){location.replace(PORTAL_AUTH_REDIRECT+'?login=1&v=20261103-auth-fix');return;}
+ if(authNeedsReload){location.replace(PORTAL_AUTH_REDIRECT+'?login=1&reconnect='+Date.now());return;}
  const email=$('#email').value.trim(),password=$('#password').value,attempt=++authEpoch;
- const status=$('#authStatus');status.hidden=false;status.className='auth-status';status.textContent=registering?'جارٍ إنشاء الحساب…':'جارٍ التحقق من بيانات الدخول…';
- $('#authSubmit').textContent=registering?'جارٍ إنشاء الحساب…':'جارٍ تسجيل الدخول…';$('#authForm').setAttribute('aria-busy','true');
- $('#authToggle').disabled=true;$('#forgotPassword').disabled=true;
- $('#authSubmit').disabled=true;
+ const status=$('#authStatus');status.hidden=false;status.className='auth-status';
+ status.textContent=registering?'جارٍ إنشاء الحساب…':'جارٍ التحقق من بيانات الدخول…';
+ $('#authSubmit').textContent=registering?'جارٍ إنشاء الحساب…':'جارٍ تسجيل الدخول…';
+ $('#authForm').setAttribute('aria-busy','true');
+ $('#authToggle').disabled=true;$('#forgotPassword').disabled=true;$('#authSubmit').disabled=true;
+ let passwordAccepted=false;
  try{
-  await window.ASF_AUTH.deadline(async()=>{
   if(registering){
-    const game_name=$('#gameName').value.trim().replace(/\s+/g,' '),discord_id=$('#discordId').value.trim(),rank=$('#rank').value,
-      activation_reason=$('#activationReason').value.trim();
-    if(!isFullName(game_name))throw Error('اكتب الاسم والكنية، مثل: مجاهد ال عباد. لا يُقبل اسم واحد فقط.');
-     if(!/^[0-9]{17,20}$/.test(discord_id))throw Error('معرّف Discord يجب أن يكون رقميًا من 17 إلى 20 خانة.');
-    if(activation_reason.length<10||activation_reason.length>500)throw Error('سبب طلب التفعيل إلزامي ويجب أن يتراوح بين 10 و500 حرف.');
-    const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:PORTAL_CONFIRMATION_REDIRECT,data:{asf_portal:'true',game_name,discord_id,rank,activation_reason}}});
-    if(attempt!==authEpoch)return;
-    if(error)throw error;
-    if(!data?.session){
-      // With email confirmation enabled Supabase returns a user but NO session.
-      // Never call getUser() or loadIdentity() before email verification/sign-in.
-      $('#verifyEmailMessage').textContent='إذا قُبل طلب التسجيل، ستصلك رسالة على بريدك الإلكتروني لتأكيد الحساب. افتحها، ثم ارجع لتسجيل الدخول.';
-      $('#password').value='';
-      showScreen('verifyEmailScreen');
-      return;
-    }
-    status.textContent='تم تسجيل الدخول؛ جارٍ تحميل بيانات الحساب…';
-    await loadIdentity(false,true);
+   const game_name=$('#gameName').value.trim().replace(/\s+/g,' '),discord_id=$('#discordId').value.trim(),rank=$('#rank').value,
+    activation_reason=$('#activationReason').value.trim();
+   if(!isFullName(game_name))throw Error('اكتب الاسم والكنية، مثل: مجاهد ال عباد. لا يُقبل اسم واحد فقط.');
+   if(!/^[0-9]{17,20}$/.test(discord_id))throw Error('معرّف Discord يجب أن يكون رقميًا من 17 إلى 20 خانة.');
+   if(activation_reason.length<10||activation_reason.length>500)throw Error('سبب طلب التفعيل إلزامي ويجب أن يتراوح بين 10 و500 حرف.');
+   const {data,error}=await authDeadline(()=>db.auth.signUp({email,password,
+    options:{emailRedirectTo:PORTAL_CONFIRMATION_REDIRECT,data:{asf_portal:'true',game_name,discord_id,rank,activation_reason}}}),14000);
+   if(attempt!==authEpoch)return;
+   if(error)throw error;
+   if(!data?.session){
+    $('#verifyEmailMessage').textContent='إذا قُبل طلب التسجيل، ستصلك رسالة على بريدك الإلكتروني لتأكيد الحساب. افتحها، ثم ارجع لتسجيل الدخول.';
+    $('#password').value='';showScreen('verifyEmailScreen');return;
+   }
   }else{
-    const {data,error}=await db.auth.signInWithPassword({email,password});
-    if(attempt!==authEpoch)return;
-    if(error){
-      const message=String(error.message||'');
-      if(/email not confirmed/i.test(message))throw Error('بريدك الإلكتروني لم يتم تأكيده بعد. افتح رسالة التأكيد، ثم عد لتسجيل الدخول.');
-      if(/invalid login credentials/i.test(message))throw Error('البريد الإلكتروني أو كلمة المرور غير صحيحة.');
-      throw error;
-    }
-    if(!data?.session)throw Error('تعذر إنشاء جلسة الدخول. حاول مجددًا.');
-    status.textContent='تم تسجيل الدخول؛ جارٍ تحميل بيانات الحساب…';
-    await loadIdentity(false,true);
+   const {data,error}=await authDeadline(()=>db.auth.signInWithPassword({email,password}),14000);
+   if(attempt!==authEpoch)return;
+   if(error){
+    const message=String(error.message||'');
+    if(/email not confirmed/i.test(message))throw Error('بريدك الإلكتروني لم يتم تأكيده بعد. افتح رسالة التأكيد، ثم عد لتسجيل الدخول.');
+    if(/invalid login credentials/i.test(message))throw Error('البريد الإلكتروني أو كلمة المرور غير صحيحة.');
+    if(/rate.?limit|too many requests|429/i.test(message))throw Error('محاولات دخول كثيرة. حاول لاحقاً ولا تكرر الضغط بسرعة.');
+    throw error;
+   }
+   if(!data?.session)throw Error('تعذر إنشاء جلسة الدخول. حاول مجددًا.');
   }
-  },()=>{authEpoch++;authNeedsReload=true;window.ASF_AUTH.cancel(db)});
+  passwordAccepted=true;
+  status.textContent='تم تسجيل الدخول؛ جارٍ تحميل بيانات الحساب…';
+  // A valid password must never be mistaken for failed sign-in if a
+  // later profile/RPC/MFA request stalls. Bound the post-auth phase separately.
+  await authDeadline(()=>loadIdentity(false,true),16000);
  }catch(err){
   const timedOut=err?.name==='AuthTimeoutError'||/abort|timeout|fetch|network|lock/i.test(String(err?.message||''));
-  if(timedOut){authEpoch++;authNeedsReload=true;window.ASF_AUTH.cancel(db);}
-  status.hidden=false;status.className='auth-status error';status.textContent=timedOut?'تأخر الاتصال أو تعذّر إكمال الجلسة. اضغط «إعادة فتح تسجيل الدخول» للمحاولة بأمان.':err.message||'تعذر تنفيذ العملية';
- }finally{$('#authSubmit').disabled=false;$('#authSubmit').textContent=authNeedsReload?'إعادة فتح تسجيل الدخول':registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';$('#authForm').removeAttribute('aria-busy');$('#authToggle').disabled=false;$('#forgotPassword').disabled=false;}
+  if(timedOut)markAuthBlocked();
+  status.hidden=false;status.className='auth-status error';
+  status.textContent=timedOut
+   ?(passwordAccepted?'تم قبول تسجيل الدخول، لكن تحميل صلاحيات الحساب أو التحقق بخطوتين تأخر. افتح جلسة دخول جديدة بأمان.':'تأخر الاتصال بخدمة الدخول. أعد فتح تسجيل الدخول بأمان.')
+   :(passwordAccepted?'تم قبول كلمة المرور، لكن تعذر تحميل الحساب: ':'')+(err.message||'تعذر تنفيذ العملية');
+ }finally{
+  $('#authSubmit').disabled=false;
+  $('#authSubmit').textContent=authNeedsReload?'إعادة فتح تسجيل الدخول':registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';
+  $('#authForm').removeAttribute('aria-busy');$('#authToggle').disabled=false;$('#forgotPassword').disabled=false;
+ }
 };
 async function init(){
  const epoch=authEpoch;
  if(!ready){showScreen('welcome');toast('البوابة بحاجة لربط قاعدة البيانات لتفعيل الحسابات.',true);return}
- // Subscribe before checking the session: Supabase may complete the recovery redirect immediately.
- db.auth.onAuthStateChange((event,session)=>{
-  if(event==='PASSWORD_RECOVERY'){
-   recoveryMode=true;
-   showRecoveryScreen();
-   return;
-  }
-  if(event==='SIGNED_OUT'){
-   authEpoch++;user=null;commander=false;policeHead=false;profile=null;grants=[];departmentRoles=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');
-   if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
-   commanderMfaUI.reset();noticeUI.reset();if(!recoveryMode)showScreen('welcome');
-  }
- });
  try{
-  // For commander recovery links sent through Resend without Supabase's SMTP.
-  // Token hashes are one-use; clear the URL before exchanging for an Auth session.
+  // Handle one-use recovery tokens explicitly. No auth listener is needed
+  // before initial session recovery/refresh finishes.
   if(recoveryTokenHash && recoveryLinkOpened){
    window.history.replaceState(null,'',window.location.pathname);
-   recoveryMode=true;
-   showRecoveryScreen();
-   const {data:recovered,error:verifyError}=await db.auth.verifyOtp({
-    type:'recovery',token_hash:recoveryTokenHash
-   });
-   if(verifyError || !recovered?.user){
+   recoveryMode=true;showRecoveryScreen();
+   const {data:recovered,error:verifyError}=await authDeadline(
+    ()=>db.auth.verifyOtp({type:'recovery',token_hash:recoveryTokenHash}),14000);
+   bindAuthListener();
+   if(verifyError||!recovered?.user){
     $('#recoveryStatus').textContent='رابط الاستعادة منتهي الصلاحية أو مستخدم من قبل. اطلب رابطًا جديدًا.';
     $('#recoveryForm').hidden=true;
    }
    return;
   }
-  const {data,error}=await window.ASF_AUTH.deadline(()=>db.auth.getUser(),()=>{if(epoch===authEpoch){authEpoch++;authNeedsReload=true;window.ASF_AUTH.cancel(db)}});
+  const {data,error}=await authDeadline(()=>db.auth.getUser(),14000);
   if(epoch!==authEpoch)return;
+  // Subscribe only AFTER initial SDK initialization, avoiding the
+  // onAuthStateChange/getUser near-expiry session-lock deadlock.
+  bindAuthListener();
   if(recoveryMode){
    showRecoveryScreen();
    if(error||!data?.user){
@@ -209,11 +231,17 @@ async function init(){
    }
    return;
   }
-  if(data?.user){user=data.user;await loadIdentity()}else if(new URLSearchParams(window.location.search).get('login')==='1')authForm('login');else showScreen('welcome');
+  if(data?.user){
+   user=data.user;
+   await authDeadline(()=>loadIdentity(),16000);
+  }else if(new URLSearchParams(window.location.search).has('login')||
+           new URLSearchParams(window.location.search).has('reconnect'))authForm('login');
+  else showScreen('welcome');
  }catch(err){
   if(epoch!==authEpoch&&!authNeedsReload)return;
+  if(!authNeedsReload)bindAuthListener();
   showScreen(recoveryMode?'recoveryScreen':'welcome');
-  toast('تعذر التحقق من جلسة تسجيل الدخول.',true);
+  toast(authNeedsReload?'انتهت مهلة الاتصال بالجلسة؛ افتح تسجيل الدخول مجددًا.':'تعذر التحقق من الجلسة؛ يمكنك تجربة تسجيل الدخول من جديد.',true);
  }
 }
 function showRecoveryScreen(){
