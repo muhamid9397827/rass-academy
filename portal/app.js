@@ -628,6 +628,10 @@ async function downloadPdf(r){
   }catch(repairError){toast('تعذر إصلاح ملف PDF: '+repairError.message,true)}
  }
  if(error)return toast('ملف PDF غير جاهز أو ليس لديك صلاحية: '+error.message,true);
+ if(commander||(r.kind!=='secret'&&(has('reports.read',r.kind)||has('reports.review',r.kind)))){
+  const {error:openError}=await db.rpc('asf_report_receipt',{p_report:r.id,p_received:false});
+  if(openError)toast('تم تنزيل PDF لكن تعذر تسجيل الاطلاع: '+openError.message,true);
+ }
  if(!r.pdf_ready_at && r.deleted_at===null){
   const {data:ready,error:markError}=await db.rpc('asf_mark_pdf_ready',{p_report:r.id});
   if(markError||!ready)toast('الملف متاح للقراءة لكن تعذر تحديث حالة حفظه',true);
@@ -639,6 +643,38 @@ async function downloadPdf(r){
  }
  setTimeout(()=>URL.revokeObjectURL(blobUrl),120000);
 }
+
+async function mountReportReceipts(r,recordOpen=true){
+ const panel=$('#reportReceiptPanel');if(!panel)return;
+ const reviewer=commander||(r.kind!=='secret'&&(has('reports.read',r.kind)||has('reports.review',r.kind)));
+ if(reviewer&&recordOpen){
+  const {error:openedError}=await db.rpc('asf_report_receipt',{p_report:r.id,p_received:false});
+  if(openedError)toast('تعذر توثيق فتح التقرير: '+openedError.message,true);
+ }
+ const {data:receipts,error}=await db.from('asf_report_receipts')
+  .select('viewer_name,viewer_unit,first_opened_at,last_opened_at,open_count,received_at')
+  .eq('report_id',r.id).order('first_opened_at',{ascending:false}).limit(80);
+ if(!panel.isConnected)return;
+ const rows=receipts||[];
+ panel.innerHTML='<div class="row between"><h3>سجل فتح التقرير واستلامه</h3>'+badge(rows.length+' جهة/مسؤول')+'</div>'+
+ '<p class="muted">يتم توثيق فتح التقرير تلقائيًا بمجرد عرضه من قبل قائد أو مسؤول مخوّل، حتى دون ضغط زر الاستلام. الاستلام تأكيد إضافي مستقل، ولا يغيّر حالة مراجعة التقرير.</p>'+
+ (error?'<p class="muted">تعذر تحميل السجل: '+esc(error.message)+'</p>':
+ rows.length?'<div class="table-scroll"><table><thead><tr><th>المسؤول</th><th>الجهة</th><th>أول فتح</th><th>آخر فتح</th><th>عدد مرات الفتح</th><th>استلام التقرير</th></tr></thead><tbody>'+
+ rows.map(v=>'<tr><td>'+esc(v.viewer_name)+'</td><td>'+esc(v.viewer_unit)+'</td><td>'+date(v.first_opened_at)+'</td><td>'+date(v.last_opened_at)+'</td><td>'+esc(v.open_count)+'</td><td>'+(v.received_at?'✓ استُلم بتاريخ '+date(v.received_at):'فتح دون تأكيد الاستلام')+'</td></tr>').join('')+'</tbody></table></div>':
+ empty('لم يفتح التقرير مسؤول مخوّل بعد.'))+
+ (reviewer?'<div class="row" style="margin-top:12px"><button type="button" id="markReportReceived" class="btn primary">✓ استلام التقرير</button></div>':'');
+ if(reviewer){
+  const button=$('#markReportReceived');
+  if(button)button.onclick=async()=>{
+   if(!confirm('تأكيد استلام هذا التقرير باسمك؟ يُحفظ وقت الاستلام وتظهر الجهة للمرسل في السجل.'))return;
+   button.disabled=true;
+   const {error:err}=await db.rpc('asf_report_receipt',{p_report:r.id,p_received:true});
+   if(err){toast(err.message||'تعذر تأكيد الاستلام',true);button.disabled=false;return;}
+   toast('تم توثيق استلام التقرير باسمك.');await mountReportReceipts(r,false);
+  };
+ }
+}
+
 async function detailReport(r,mode){
  const [currentReview,historyResult]=await Promise.all([
   db.from('asf_reviews').select('*').eq('report_id',r.id).maybeSingle(),
@@ -652,7 +688,8 @@ async function detailReport(r,mode){
  const content=r.mode==='free'?'<p class="muted">نص التقرير</p><div style="white-space:pre-wrap">'+esc(r.body?.text||'')+'</div>':
  ['achievements','progress','needs','notes'].map((x,i)=>'<h4>'+['الإنجازات','التقدم','الاحتياجات','الملاحظات'][i]+'</h4><p style="white-space:pre-wrap">'+esc(r.body?.[x]||'—')+'</p>').join('');
  set('#page','<div class="section-card"><div class="row between"><h3>'+esc(r.title)+'</h3>'+badge(KINDS[r.kind],r.kind==='secret')+'</div><p class="muted">'+code(r.report_number)+' · '+date(r.submitted_at)+'</p><p>'+esc(r.sender_rank)+' / '+esc(r.sender_name)+' / '+esc(r.sender_code)+'</p><hr>'+content+'<hr><b>مراجعة القائد:</b> '+esc(STATES[rev?.state]||'جديد')+'<p>'+esc(rev?.note||'لا توجد ملاحظات')+'</p><div class="row">'+btn('عرض PDF','pdf',r.id)+(mode==='reports'&&r.kind!=='secret'?btn('تقديم تصحيح','correct',r.id):'')+btn('رجوع','back')+'</div></div>'+
- historyBlock+((commander||has('reports.review',r.kind))?'<section class="section-card"><h3>مراجعة التقرير</h3><form id="reviewForm"><label>حالة التقرير<select name="state">'+opt(Object.entries(STATES),rev?.state||'new')+'</select></label><label>الملاحظات والتوجيهات<textarea name="note" maxlength="4000">'+esc(rev?.note||'')+'</textarea></label><button class="btn primary">حفظ المراجعة</button></form></section>':''));
+ historyBlock+'<section class="section-card" id="reportReceiptPanel"><h3>سجل فتح التقرير واستلامه</h3><p class="muted">جاري تحميل سجل الاطلاع…</p></section>'+((commander||has('reports.review',r.kind))?'<section class="section-card"><h3>مراجعة التقرير</h3><form id="reviewForm"><label>حالة التقرير<select name="state">'+opt(Object.entries(STATES),rev?.state||'new')+'</select></label><label>الملاحظات والتوجيهات<textarea name="note" maxlength="4000">'+esc(rev?.note||'')+'</textarea></label><button class="btn primary">حفظ المراجعة</button></form></section>':''));
+ await mountReportReceipts(r);
  $('#page').querySelector('[data-action="pdf"]').onclick=()=>downloadPdf(r);
  $('#page').querySelector('[data-action="back"]').onclick=()=>renderReports(mode);
  const fix=$('#page').querySelector('[data-action="correct"]');if(fix)fix.onclick=()=>{correctionSource=r;draftId=null;navigate('compose')};
