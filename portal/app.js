@@ -53,6 +53,7 @@ const has=(permission,kind=null)=>commander||grants.some(g=>g.permission===permi
 const hasDeptRole=(department,role)=>commander||departmentRoles.some(r=>r.department===department&&r.role===role);
 const hasDept=(department)=>commander||departmentRoles.some(r=>r.department===department);
 const policeUI=window.ASF_POLICE_UI.create({db,getContext:()=>({user,commander,hasPolice:has('police.manage'),isPoliceHead:policeHead,gameName:profile?.game_name}),notify:toast});
+const operationsUI=window.ASF_OPERATIONS.create({db,getContext:()=>({user,profile,commander}),notify:toast});
 const noticeUI=window.ASF_NOTICE_CENTER.create({db,getUser:()=>user,go:navigate,notify:toast});
 $('#notificationTrigger').onclick=()=>navigate('notifications');
 const commanderMfaUI=window.ASF_COMMANDER_MFA.create({db,onVerified:()=>loadIdentity(true,true),onCancel:()=>$('#signOut').click()});
@@ -61,7 +62,8 @@ const deptUI=window.ASF_DEPARTMENTS.create({
  getContext:()=>({user,commander,roles:departmentRoles,legacyAcademyManage:has('academy.manage')}),
  notify:toast,
  go:navigate,
- mountResults:mountAcademyResults
+ mountResults:mountAcademyResults,
+ mountQualifications:mountQualificationResults
 });
 
 function showScreen(which){['welcome','authScreen','mfaScreen','verifyEmailScreen','recoveryScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which);$('#notificationTrigger').hidden=which!=='workspace';window.ASF_MOBILE?.setWorkspace(which==='workspace')}
@@ -363,11 +365,12 @@ async function loadIdentity(silent=false,fromAuth=false){
    $('#adminNav').hidden=!(commander||has('reports.read')||has('reports.review')||has('users.review')||has('users.approve'));
    document.querySelector('[data-page="members"]').hidden=!(commander||has('users.review')||has('users.approve'));
    document.querySelector('[data-page="changes"]').hidden=!(commander||has('users.review'));
-   $('#academyReviewNav').hidden=!(commander||has('academy.manage')||hasDeptRole('training','head')||hasDeptRole('training','trainer'));
+   $('#academyReviewNav').hidden=!(commander||has('academy.manage')||hasDeptRole('training','head')||hasDeptRole('training','trainer')||hasDeptRole('recruitment','head')||hasDeptRole('recruitment','trainer'));
    $('#departmentNav').hidden=!(hasDept('training')||hasDept('recruitment'));
    $('#trainingCenterNav').hidden=!hasDept('training');
    $('#recruitmentCenterNav').hidden=!hasDept('recruitment');
    $('#departmentAdminNav').hidden=!commander;
+   $('#operationsNav').hidden=false;
    document.querySelectorAll('[data-page="delegations"],[data-page="trash"],[data-page="audit"]').forEach(n=>n.hidden=!commander);
    document.querySelector('[data-page="inbox"]').hidden=!(commander||has('reports.read')||has('reports.review'));
    document.querySelector('[data-page="access-queue"]').hidden=!commander;
@@ -401,12 +404,13 @@ async function navigate(name){
  if(!user||!(commander||profile?.status==='approved'))return;
  window.ASF_MOBILE?.closeMenu();window.ASF_MOBILE?.setPage(name);
  pageName=name;document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page===name));
- const titles={notifications:'مركز الإشعارات',dashboard:'لوحة التحكم',academy:'الأكاديمية والدورات','academy-results':'نتائج الدورات والتسليم','training-center':'كلية التدريب','recruitment-center':'القبول والتجنيد','department-admin':'رئاسات الأقسام',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',access:'طلب تصريح ومتابعته','access-queue':'طلبات التصاريح الواردة',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
+ const titles={notifications:'مركز الإشعارات',dashboard:'لوحة التحكم',operations:'مركز العمليات والمهام',academy:'الأكاديمية والدورات','academy-results':'نتائج الاختبارات والمراجعة والتسليم','training-center':'كلية التدريب','recruitment-center':'القبول والتجنيد','department-admin':'رئاسات الأقسام',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',access:'طلب تصريح ومتابعته','access-queue':'طلبات التصاريح الواردة',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
  set('#pageTitle','<div><h1>'+esc(titles[name]||'بوابة أمن المنشآت')+'</h1><p>المنصة الموحدة · إعدادات الصلاحيات حسب حسابك</p></div>');
  set('#page','<div class="empty">جارٍ تحميل البيانات...</div>');
  try{
   if(name==='notifications')return await noticeUI.render();
   if(name==='dashboard')return await renderDashboard();
+  if(name==='operations')return await operationsUI.render();
   if(name==='academy')return await renderAcademy();
   if(name==='academy-results')return await renderAcademyResults();
   if(name==='training-center')return await deptUI.render('training');
@@ -477,18 +481,63 @@ function renderAcademy(){
  }
 }
 function renderAcademyResults(){
- if(!commander&&!has('academy.manage')&&!hasDeptRole('training','head')&&!hasDeptRole('training','trainer'))return set('#page',empty('نتائج الدورات متاحة فقط لرئاسة كلية التدريب أو مدربيها المصرّح لهم.'));
- set('#page','<div id="academyResultPanel"></div>');mountAcademyResults();
+ const training=commander||has('academy.manage')||hasDeptRole('training','head')||hasDeptRole('training','trainer');
+ const recruitment=commander||hasDeptRole('recruitment','head')||hasDeptRole('recruitment','trainer');
+ if(!training&&!recruitment)return set('#page',empty('هذا السجل خاص برئاسة ومدربي كلية التدريب والقبول والتجنيد.'));
+ set('#page',(recruitment?'<div id="qualificationResultPanel"></div>':'')+(training?'<div id="academyResultPanel"></div>':''));
+ if(recruitment)mountQualificationResults();
+ if(training)mountAcademyResults();
 }
+
+function mountQualificationResults(){
+ const panel=$('#qualificationResultPanel');if(!panel)return;
+ if(!(commander||hasDeptRole('recruitment','head')||hasDeptRole('recruitment','trainer'))){
+  panel.innerHTML=empty('مراجعة التأهيل مخصصة للقبول والتجنيد.');return;
+ }
+ panel.innerHTML='<section class="section-card" style="margin-top:20px"><div class="row between"><h3>نتائج تأهيل المتقدمين والتوظيف</h3>'+badge('قراران مستقلان')+'</div>'+
+ '<p class="muted">تظهر نتيجة النجاح أو الرسوب للمتقدم فور تصحيح الاختبار من الخادم. هنا تُوثّق مراجعة النتيجة باسم المسؤول، ثم يُؤكَّد التوظيف للناجح فقط بعد المراجعة. هذه الإجراءات لا تعطي رول Discord تلقائيًا ولا تغيّر نتيجة الاختبار.</p>'+
+ '<form id="qualificationFilter" class="row" style="margin-bottom:12px"><input name="search" placeholder="بحث بالاسم أو Discord أو الإيصال" maxlength="60" style="max-width:380px"><button class="btn ghost" type="submit">بحث</button><button id="qualificationRefresh" class="btn ghost" type="button">تحديث</button></form><div id="qualificationRows" aria-live="polite"></div></section>';
+ let term='',offset=0,request=0;
+ const load=async()=>{
+  const container=$('#qualificationRows');if(!container)return;const id=++request;
+  container.textContent='جاري تحميل نتائج التأهيل…';
+  let q=db.from('asf_academy_results').select('id,receipt,trainee_name,discord_id,score,total,percentage,passed,assigned_rank,received_at,qualification_reviewed_at,qualification_reviewed_by_name,qualification_hired_at,qualification_hired_by_name',{count:'exact'}).eq('course_id','individual-qualification').eq('is_test',false).order('received_at',{ascending:false});
+  if(term)q=/^\d{15,20}$/.test(term)?q.eq('discord_id',term):/^ACD-\d+$/.test(term)?q.eq('receipt',term):q.ilike('trainee_name','%'+term.replace(/[%_\\]/g,'')+'%');
+  const {data,error,count}=await q.range(offset,offset+29);
+  if(!container.isConnected||id!==request)return;
+  if(error){container.textContent='تعذر تحميل نتائج التأهيل: '+error.message;return;}
+  container.innerHTML='<p class="muted">'+esc(count??data.length)+' نتيجة</p>'+
+   (data.length?'<div class="table-scroll"><table><thead><tr><th>المتقدم والإيصال</th><th>النتيجة</th><th>مراجعة النتيجة</th><th>تأكيد التوظيف</th></tr></thead><tbody>'+
+    data.map(r=>'<tr><td><strong>'+esc(r.trainee_name)+'</strong><br><small dir="ltr">'+esc(r.discord_id)+'</small><br>'+esc(r.receipt)+'<br>'+date(r.received_at)+'</td>'+
+     '<td>'+badge(r.passed?'ناجح':'راسب')+'<br>'+esc(r.score)+' / '+esc(r.total)+' — '+esc(r.percentage)+'%'+(r.passed?'<br>الرتبة المبدئية: '+esc(r.assigned_rank||'—'):'')+'</td>'+
+     '<td>'+(r.qualification_reviewed_at?'<strong>✓ تمت المراجعة بواسطة '+esc(r.qualification_reviewed_by_name)+'</strong><br>'+date(r.qualification_reviewed_at):
+      '<button type="button" class="btn primary small" data-qualification-action="review" data-qualification-id="'+esc(r.id)+'">✓ راجعت النتيجة</button>')+'</td>'+
+     '<td>'+(r.qualification_hired_at?'<strong>✓ تم توظيفه بواسطة '+esc(r.qualification_hired_by_name)+'</strong><br>'+date(r.qualification_hired_at):
+      !r.passed?'غير مؤهل للتوظيف':!r.qualification_reviewed_at?'بانتظار مراجعة النتيجة':
+      '<button type="button" class="btn primary small" data-qualification-action="hire" data-qualification-id="'+esc(r.id)+'">✓ تم توظيفه</button>')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+
+   '<div class="row"><button type="button" class="btn ghost small" id="qualificationPrev" '+(offset===0?'disabled':'')+'>السابق</button><button type="button" class="btn ghost small" id="qualificationNext" '+(offset+30>=(count??data.length)?'disabled':'')+'>التالي</button></div>';
+  $('#qualificationPrev').onclick=()=>{offset=Math.max(0,offset-30);load()};
+  $('#qualificationNext').onclick=()=>{offset+=30;load()};
+  container.querySelectorAll('[data-qualification-action]').forEach(button=>button.onclick=async()=>{
+   const action=button.dataset.qualificationAction,which=button.dataset.qualificationId;
+   if(!confirm(action==='review'?'هل قمت بمراجعة نتيجة هذا المتقدم؟ سيُسجل اسمك وتاريخ المراجعة.':'هل تم توظيف هذا المتقدم الناجح فعلًا؟ سيُسجل اسمك وتاريخ التأكيد، ولا يمنح ذلك رتبة أو رولًا تلقائيًا.'))return;
+   button.disabled=true;
+   try{
+    const {data:result,error:err}=await db.rpc('asf_recruitment_qualification_action',{p_result:which,p_action:action});
+    if(err)throw err;
+    toast(result.already?'سبق توثيق هذا الإجراء.':action==='review'?'تم توثيق مراجعة النتيجة باسم المسؤول.':'تم توثيق توظيف المتقدم باسم المسؤول.');
+    await load();
+   }catch(err){toast(err.message||'تعذر حفظ الإجراء',true);button.disabled=false;}
+  });
+ };
+ $('#qualificationFilter').onsubmit=e=>{e.preventDefault();term=String(new FormData(e.target).get('search')||'').trim();offset=0;load()};
+ $('#qualificationRefresh').onclick=load;
+ load();
+}
+
 function mountAcademyResults(){
  const panel=$('#academyResultPanel');if(!panel)return;
  panel.innerHTML='<section class="section-card" style="margin-top:20px"><h3>نتائج الدورات والتسليم</h3><p class="muted">نفس نتيجة الاختبار تنتقل من النجاح إلى تأكيد تسليم الدورة. التأكيد يسجّل اسمك ووقت الإجراء، ولا يمنح رتبة أو صلاحية تلقائيًا.</p><details class="notice course-notice-flow"><summary>إشعارات النتائج والربط مع جدول Google</summary><p>عند حفظ اختبار ناجح في البوابة، يصل إشعار داخل الموقع إلى القائد ومسؤولي الدورات المفوّضين، ثم تُرسل نسخة النتيجة إلى جدول Google المرتبط. الإشعار لا يعني تأكيد وصول نسخة Google؛ حالة النسخة تظهر في عمودها أدناه.</p><p>تأكيد التسليم واسم المسؤول ووقته محفوظة في هذا السجل داخل الموقع. الإضافة اليدوية إلى Google لا تولّد إشعارًا في البوابة.</p><a class="btn ghost small" id="courseGoogleSheet" href="https://docs.google.com/spreadsheets/d/1PC5iXwHWyFT4kd7qa6oa_JL1-r3F_anv3fPniF8rfdM/edit" target="_blank" rel="noopener noreferrer">فتح جدول Google المرتبط</a></details><form id="academyResultsFilter" class="grid two"><label>الاسم أو Discord أو الإيصال<input name="search" maxlength="60"></label><label>حالة المتابعة<select name="state"><option value="pending">ناجحون بانتظار التسليم</option><option value="delivered">تم تسليم الدورة</option><option value="all" selected>جميع النتائج</option></select></label><label>مسار التأهيل<select name="track"><option value="all">كل الاختبارات</option><option value="qualification">تأهيل المتقدمين الجدد</option><option value="courses">دورات الأفراد</option></select></label><button class="btn ghost" type="submit">بحث وتحديث</button></form><div id="academyResultsRows" aria-live="polite"></div></section>';
- const demoHost=document.createElement('section');
- demoHost.id='academyDemoPanel';
- demoHost.className='section-card';
- demoHost.style.marginTop='16px';
- panel.prepend(demoHost);
- window.ASF_ACADEMY_DEMO?.mount(demoHost);
  let offset=0,term='',filter='all',track='all',generation=0;
  const load=async()=>{
   const rows=$('#academyResultsRows');if(!rows)return;const request=++generation;rows.textContent='جاري تحميل النتائج…';
@@ -582,6 +631,10 @@ async function downloadPdf(r){
   }catch(repairError){toast('تعذر إصلاح ملف PDF: '+repairError.message,true)}
  }
  if(error)return toast('ملف PDF غير جاهز أو ليس لديك صلاحية: '+error.message,true);
+ if(commander||(r.kind!=='secret'&&(has('reports.read',r.kind)||has('reports.review',r.kind)))){
+  const {error:openError}=await db.rpc('asf_report_receipt',{p_report:r.id,p_received:false});
+  if(openError)toast('تم تنزيل PDF لكن تعذر تسجيل الاطلاع: '+openError.message,true);
+ }
  if(!r.pdf_ready_at && r.deleted_at===null){
   const {data:ready,error:markError}=await db.rpc('asf_mark_pdf_ready',{p_report:r.id});
   if(markError||!ready)toast('الملف متاح للقراءة لكن تعذر تحديث حالة حفظه',true);
@@ -593,6 +646,38 @@ async function downloadPdf(r){
  }
  setTimeout(()=>URL.revokeObjectURL(blobUrl),120000);
 }
+
+async function mountReportReceipts(r,recordOpen=true){
+ const panel=$('#reportReceiptPanel');if(!panel)return;
+ const reviewer=commander||(r.kind!=='secret'&&(has('reports.read',r.kind)||has('reports.review',r.kind)));
+ if(reviewer&&recordOpen){
+  const {error:openedError}=await db.rpc('asf_report_receipt',{p_report:r.id,p_received:false});
+  if(openedError)toast('تعذر توثيق فتح التقرير: '+openedError.message,true);
+ }
+ const {data:receipts,error}=await db.from('asf_report_receipts')
+  .select('viewer_name,viewer_unit,first_opened_at,last_opened_at,open_count,received_at')
+  .eq('report_id',r.id).order('first_opened_at',{ascending:false}).limit(80);
+ if(!panel.isConnected)return;
+ const rows=receipts||[];
+ panel.innerHTML='<div class="row between"><h3>سجل فتح التقرير واستلامه</h3>'+badge(rows.length+' جهة/مسؤول')+'</div>'+
+ '<p class="muted">يتم توثيق فتح التقرير تلقائيًا بمجرد عرضه من قبل قائد أو مسؤول مخوّل، حتى دون ضغط زر الاستلام. الاستلام تأكيد إضافي مستقل، ولا يغيّر حالة مراجعة التقرير.</p>'+
+ (error?'<p class="muted">تعذر تحميل السجل: '+esc(error.message)+'</p>':
+ rows.length?'<div class="table-scroll"><table><thead><tr><th>المسؤول</th><th>الجهة</th><th>أول فتح</th><th>آخر فتح</th><th>عدد مرات الفتح</th><th>استلام التقرير</th></tr></thead><tbody>'+
+ rows.map(v=>'<tr><td>'+esc(v.viewer_name)+'</td><td>'+esc(v.viewer_unit)+'</td><td>'+date(v.first_opened_at)+'</td><td>'+date(v.last_opened_at)+'</td><td>'+esc(v.open_count)+'</td><td>'+(v.received_at?'✓ استُلم بتاريخ '+date(v.received_at):'فتح دون تأكيد الاستلام')+'</td></tr>').join('')+'</tbody></table></div>':
+ empty('لم يفتح التقرير مسؤول مخوّل بعد.'))+
+ (reviewer?'<div class="row" style="margin-top:12px"><button type="button" id="markReportReceived" class="btn primary">✓ استلام التقرير</button></div>':'');
+ if(reviewer){
+  const button=$('#markReportReceived');
+  if(button)button.onclick=async()=>{
+   if(!confirm('تأكيد استلام هذا التقرير باسمك؟ يُحفظ وقت الاستلام وتظهر الجهة للمرسل في السجل.'))return;
+   button.disabled=true;
+   const {error:err}=await db.rpc('asf_report_receipt',{p_report:r.id,p_received:true});
+   if(err){toast(err.message||'تعذر تأكيد الاستلام',true);button.disabled=false;return;}
+   toast('تم توثيق استلام التقرير باسمك.');await mountReportReceipts(r,false);
+  };
+ }
+}
+
 async function detailReport(r,mode){
  const [currentReview,historyResult]=await Promise.all([
   db.from('asf_reviews').select('*').eq('report_id',r.id).maybeSingle(),
@@ -606,7 +691,8 @@ async function detailReport(r,mode){
  const content=r.mode==='free'?'<p class="muted">نص التقرير</p><div style="white-space:pre-wrap">'+esc(r.body?.text||'')+'</div>':
  ['achievements','progress','needs','notes'].map((x,i)=>'<h4>'+['الإنجازات','التقدم','الاحتياجات','الملاحظات'][i]+'</h4><p style="white-space:pre-wrap">'+esc(r.body?.[x]||'—')+'</p>').join('');
  set('#page','<div class="section-card"><div class="row between"><h3>'+esc(r.title)+'</h3>'+badge(KINDS[r.kind],r.kind==='secret')+'</div><p class="muted">'+code(r.report_number)+' · '+date(r.submitted_at)+'</p><p>'+esc(r.sender_rank)+' / '+esc(r.sender_name)+' / '+esc(r.sender_code)+'</p><hr>'+content+'<hr><b>مراجعة القائد:</b> '+esc(STATES[rev?.state]||'جديد')+'<p>'+esc(rev?.note||'لا توجد ملاحظات')+'</p><div class="row">'+btn('عرض PDF','pdf',r.id)+(mode==='reports'&&r.kind!=='secret'?btn('تقديم تصحيح','correct',r.id):'')+btn('رجوع','back')+'</div></div>'+
- historyBlock+((commander||has('reports.review',r.kind))?'<section class="section-card"><h3>مراجعة التقرير</h3><form id="reviewForm"><label>حالة التقرير<select name="state">'+opt(Object.entries(STATES),rev?.state||'new')+'</select></label><label>الملاحظات والتوجيهات<textarea name="note" maxlength="4000">'+esc(rev?.note||'')+'</textarea></label><button class="btn primary">حفظ المراجعة</button></form></section>':''));
+ historyBlock+'<section class="section-card" id="reportReceiptPanel"><h3>سجل فتح التقرير واستلامه</h3><p class="muted">جاري تحميل سجل الاطلاع…</p></section>'+((commander||has('reports.review',r.kind))?'<section class="section-card"><h3>مراجعة التقرير</h3><form id="reviewForm"><label>حالة التقرير<select name="state">'+opt(Object.entries(STATES),rev?.state||'new')+'</select></label><label>الملاحظات والتوجيهات<textarea name="note" maxlength="4000">'+esc(rev?.note||'')+'</textarea></label><button class="btn primary">حفظ المراجعة</button></form></section>':''));
+ await mountReportReceipts(r);
  $('#page').querySelector('[data-action="pdf"]').onclick=()=>downloadPdf(r);
  $('#page').querySelector('[data-action="back"]').onclick=()=>renderReports(mode);
  const fix=$('#page').querySelector('[data-action="correct"]');if(fix)fix.onclick=()=>{correctionSource=r;draftId=null;navigate('compose')};
@@ -682,7 +768,60 @@ async function buildPdf(report){
  if(typeof window.html2pdf!=='function')throw Error('مكتبة PDF لم تُحمّل');
  return window.html2pdf().set({margin:5,filename:code(report.report_number)+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(renderPaper(report)).outputPdf('blob');
 }
-async function renderPolice(){return policeUI.render();}
+
+async function renderServiceRewards(department,cachedCases=null,cachedDecisions=null){
+ const panel=$('#serviceRewardsPanel');if(!panel)return;
+ const [casesResult,decisionsResult,rewardsResult]=await Promise.all([
+  cachedCases?Promise.resolve({data:cachedCases,error:null}):db.from('asf_court_cases').select('id,subject,submitted_by,created_at').order('created_at',{ascending:false}).limit(150),
+  cachedDecisions?Promise.resolve({data:cachedDecisions,error:null}):db.from('asf_court_decisions').select('case_id,decided_by,decided_at').limit(200),
+  db.from('asf_service_rewards').select('id,department,case_id,actor_id,actor_name,subject_label,amount,earned_at,paid_at,paid_by_name').eq('department',department).order('earned_at',{ascending:false}).limit(150)
+ ]);
+ if(!panel.isConnected)return;
+ const err=casesResult.error||decisionsResult.error||rewardsResult.error;
+ if(err){panel.innerHTML='<h3>مكافآت القسم</h3><p class="muted">تعذر تحميل الاستحقاقات: '+esc(err.message)+'</p>';return;}
+ const cases=casesResult.data||[],decisions=decisionsResult.data||[],rewards=rewardsResult.data||[];
+ const existing=new Set(rewards.map(r=>r.case_id)),decisionMap=new Map(decisions.map(d=>[d.case_id,d]));
+ const value=department==='police'?100000:150000,unit=department==='police'?'الشرطة العسكرية':'مجلس القضاء';
+ const eligible=cases.filter(c=>{
+  const d=decisionMap.get(c.id);
+  return d&&!existing.has(c.id)&&(department==='police'?c.submitted_by===user.id:d.decided_by===user.id);
+ });
+ const canPay=commander||(department==='police'&&policeHead);
+ panel.innerHTML='<div class="row between"><h3>مكافآت جهود '+unit+'</h3>'+badge('توثيق إداري')+'</div>'+
+ '<p class="muted">تُحتسب الاستحقاقات عن القضايا التي صدر فيها قرار قضائي: '+value.toLocaleString('en-US')+' عن القضية المستحقة. تسجيل الاستحقاق لا يعني صرفه؛ يؤكد القائد أو رئاسة الشرطة المخولة الصرف الفعلي، ولا يستطيع الشخص اعتماد مكافأته بنفسه.</p>'+
+ (eligible.length?'<h4>أعمال مؤهلة لتسجيل الاستحقاق</h4><div class="dept-record-list">'+eligible.map(c=>
+  '<div class="dept-record"><strong>'+esc(c.subject)+'</strong><br><small>قرار قضائي بتاريخ '+date(decisionMap.get(c.id).decided_at)+'</small><div style="margin-top:10px"><button type="button" class="btn primary small" data-service-claim="'+esc(c.id)+'">تسجيل استحقاق '+value.toLocaleString('en-US')+'</button></div></div>').join('')+'</div>':'')+
+ '<h4>سجل المكافآت</h4>'+
+ (rewards.length?'<div class="dept-record-list">'+rewards.map(r=>
+  '<div class="dept-record"><div class="row between"><strong>'+esc(r.subject_label)+'</strong>'+badge(r.paid_at?'تم تسجيل الصرف':'بانتظار الصرف')+'</div>'+
+  '<p class="muted">المستحق: '+esc(r.actor_name)+' · المبلغ: '+Number(r.amount).toLocaleString('en-US')+' · '+date(r.earned_at)+'</p>'+
+  (r.paid_at?'<small>صرف بواسطة '+esc(r.paid_by_name||'القيادة')+' — '+date(r.paid_at)+'</small>':
+   canPay&&r.actor_id!==user.id?'<button type="button" class="btn primary small" data-service-paid="'+esc(r.id)+'">✓ تأكيد صرف المكافأة</button>':'<small>بانتظار اعتماد جهة الصرف</small>')+
+  '</div>').join('')+'</div>':empty('لا توجد مكافآت مسجلة حتى الآن.'))+
+ '<div class="row" style="margin-top:10px"><button type="button" class="btn ghost small" id="refreshServiceRewards">تحديث المكافآت</button></div>';
+ const refresh=()=>renderServiceRewards(department,cachedCases,cachedDecisions).catch(err=>toast(err.message,true));
+ $('#refreshServiceRewards').onclick=refresh;
+ panel.querySelectorAll('[data-service-claim]').forEach(button=>button.onclick=async()=>{
+  if(!confirm('تسجيل استحقاق عن القضية المكتملة باسمك؟ لا يُصرف المبلغ تلقائيًا.'))return;
+  button.disabled=true;
+  const {error}=await db.rpc('asf_service_reward_claim',{p_case:button.dataset.serviceClaim,p_department:department});
+  if(error){toast(error.message,true);button.disabled=false;return;}
+  toast('تم تسجيل استحقاق مكافأتك؛ بانتظار الصرف.');await refresh();
+ });
+ panel.querySelectorAll('[data-service-paid]').forEach(button=>button.onclick=async()=>{
+  if(!confirm('هل تم إعطاء هذه المكافأة فعلًا؟ سيُحفظ اسمك ووقت الصرف نهائيًا.'))return;
+  button.disabled=true;
+  const {error}=await db.rpc('asf_service_reward_mark_paid',{p_reward:button.dataset.servicePaid});
+  if(error){toast(error.message,true);button.disabled=false;return;}
+  toast('تم توثيق الصرف باسم المسؤول.');await refresh();
+ });
+}
+
+async function renderPolice(){
+ await policeUI.render();
+ $('#page').insertAdjacentHTML('beforeend','<section class="section-card" id="serviceRewardsPanel"><h3>مكافآت الشرطة العسكرية</h3><p class="muted">جاري تحميل الاستحقاقات…</p></section>');
+ await renderServiceRewards('police');
+}
 async function renderCourt(){
  if(!(commander||profile?.court_enabled||has('court.manage')))return set('#page',empty('مجلس القضاء يتطلب تفعيلًا خاصًا من القائد.'));
  const [cases,decisions,warnings]=await Promise.all([query('asf_court_cases'),query('asf_court_decisions'),query('asf_court_warnings')]);
@@ -703,6 +842,8 @@ async function renderCourt(){
  '<div class="section-card"><div class="row between"><h3>السجل القضائي والإنذارات</h3>'+badge(String(warnings.length)+' سجل')+'</div>'+
  '<div class="mp-court-lookup"><h4>استعلام سريع عن إنذارات عسكري</h4><p class="muted">أدخل الاسم الكامل ومعرّف Discord معًا لعرض الإنذارات النشطة. السجلات القديمة دون معرّف لا تظهر في الاستعلام المزدوج.</p><form id="warningLookupForm" class="grid two"><label>اسم العسكري الكامل<input name="player" required maxlength="80" placeholder="الاسم والكنية"></label><label>Discord ID<input name="discord" required inputmode="numeric" pattern="[0-9]{15,22}" maxlength="22"></label><button class="btn primary" type="submit">بحث عن الإنذارات النشطة</button></form><div id="warningLookupResult" aria-live="polite"></div></div><input id="warningSearch" placeholder="ابحث بالاسم أو الكود أو Discord أو الرتبة أو المخالفة">'+
  '<div class="row"><label>السجل<select id="warningScope"><option value="active">الإنذارات النشطة</option><option value="archive">الأرشيف: المنتهية والملغاة</option><option value="all">جميع السجلات</option></select></label></div><div id="warningRows"></div></div>');
+ $('#page').insertAdjacentHTML('beforeend','<section class="section-card" id="serviceRewardsPanel"><h3>مكافآت مجلس القضاء</h3><p class="muted">جاري تحميل الاستحقاقات…</p></section>');
+ renderServiceRewards('court',cases,decisions).catch(err=>toast(err.message,true));
  $('#page').onclick=async e=>{
   const b=e.target.closest('[data-action]');if(!b)return;
   if(b.dataset.action.startsWith('decide')){
@@ -774,7 +915,7 @@ async function renderAudit(){
  const actors=new Map((users||[]).map(p=>[p.user_id,p]));
  const names={approve:'تفعيل عضو',suspend:'إيقاف عضو',reject:'رفض عضو',rank:'تعديل رتبة',court_on:'منح القضاء',court_off:'سحب القضاء',
  delegation:'تعديل صلاحية',review:'مراجعة تقرير',restore:'استعادة تقرير',trash:'حذف إلى السلة',
- access_requested:'طلب تصريح',access_reviewed:'قرار تصريح',police_rule_override:'تعديل عقوبة',court_warning_cancel:'إلغاء إنذار',pdf_finalized:'تأكيد ملف PDF',permanent_delete:'حذف نهائي تلقائي',profile_change:'تعديل بيانات',academy_delivered:'تأكيد تسليم دورة',activation_reason_submitted:'استكمال سبب التفعيل',commander_profile_init:'ملف القائد'};
+ access_requested:'طلب تصريح',access_reviewed:'قرار تصريح',police_rule_override:'تعديل عقوبة',court_warning_cancel:'إلغاء إنذار',pdf_finalized:'تأكيد ملف PDF',permanent_delete:'حذف نهائي تلقائي',profile_change:'تعديل بيانات',academy_delivered:'تأكيد تسليم دورة',qualification_reviewed:'مراجعة نتيجة التأهيل',qualification_hired:'توثيق توظيف متقدم',report_opened:'فتح تقرير من مسؤول',report_received:'استلام تقرير',service_reward_claimed:'تسجيل استحقاق مكافأة',service_reward_paid:'توثيق صرف مكافأة',operation_task_created:'إسناد مهمة جديدة',operation_task_status:'تحديث حالة مهمة',activation_reason_submitted:'استكمال سبب التفعيل',commander_profile_init:'ملف القائد'};
  set('#page','<section class="section-card"><h3>سجل الإجراءات الإدارية</h3>'+
  '<p>يُعرض للقائد فقط، ويحتفظ بتاريخ التعديلات دون منح صلاحية حذف السجل.</p>'+
  '<input id="auditSearch" placeholder="بحث بالعملية أو المستخدم أو السجل" style="margin-bottom:15px">'+
