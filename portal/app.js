@@ -7,25 +7,19 @@ const KINDS={personnel:'تقرير مسؤول الأفراد',officers:'تقري
 const STATES={new:'جديد',reviewing:'قيد المراجعة',reviewed:'تمت المراجعة',needs_more:'يحتاج استكمال'};
 
 const ACCESS_PERMISSIONS={
- 'court.manage':'إدارة مجلس القضاء',
- 'police.manage':'قسم الشرطة العسكرية',
  'reports.read':'الاطلاع على التقارير العادية',
  'reports.review':'مراجعة التقارير العادية',
  'users.review':'الاطلاع على طلبات الأعضاء',
- 'users.approve':'قبول الأعضاء الجدد',
- 'academy.manage':'رئاسة الدورات ومتابعة التسليم'
+ 'users.approve':'قبول الأعضاء الجدد'
 };
 const ACCESS_HINTS={
- 'court.manage':'القضايا والقرارات القضائية، بعد تصريح القيادة فقط.',
- 'police.manage':'تعديل العقوبات المقترحة داخل قسم الشرطة العسكرية.',
  'reports.read':'التقارير غير السرية فقط؛ لا يشمل تقارير «سري للغاية».',
  'reports.review':'إضافة ملاحظات ومراجعة التقارير غير السرية فقط.',
  'users.review':'الاطلاع على طلبات الأعضاء دون صلاحية اعتماد الحسابات.',
- 'users.approve':'قبول أو رفض الطلبات الجديدة فقط، دون تغيير الرتب أو توزيع الصلاحيات.',
- 'academy.manage':'إشعارات النجاح، والاطلاع على جدول الدورات وتأكيد التسليم باسمك.'
+ 'users.approve':'قبول أو رفض الطلبات الجديدة فقط، دون تغيير الرتب أو توزيع الصلاحيات.'
 };
 const ACCESS_STATES={pending:'قيد المراجعة',approved:'موافق عليه',rejected:'مرفوض'};
-let accessPrefill='court.manage';
+let accessPrefill='reports.read';
 
 const RANKS=['جندي','جندي أول','عريف','وكيل رقيب','رقيب','رقيب أول','رئيس رقباء','ملازم','ملازم أول','نقيب','رائد','مقدم','عقيد','عميد','لواء','فريق','فريق أول'];
 const cfg=window.ASF_CONFIG||{}, ready=!!(cfg.supabaseUrl&&cfg.supabaseAnonKey&&window.supabase);
@@ -38,7 +32,7 @@ const recoveryTokenHash=recoveryHash.get('token_hash')||recoveryQuery.get('token
 const recoveryLinkOpened=recoveryHash.get('type')==='recovery'||recoveryQuery.get('type')==='recovery';
 let db=ready?window.ASF_AUTH.createClient():null;
 let authEpoch=0,authNeedsReload=false,signingOut=false;
-let user=null, profile=null, commander=false, policeHead=false, grants=[], departmentRoles=[], pageName=new URLSearchParams(location.search).get('view')==='academy-results'?'academy-results':'dashboard', draftId=null, latestReports=[], correctionSource=null, notificationChannel=null;
+let user=null, profile=null, commander=false, policeHead=false, courtHead=false, canManageMembers=false, grants=[], departmentRoles=[], pageName=new URLSearchParams(location.search).get('view')==='academy-results'?'academy-results':'dashboard', draftId=null, latestReports=[], correctionSource=null, notificationChannel=null;
 const toast=(m,error=false)=>{const b=$('#toast');b.textContent=m;b.className='show'+(error?' error':'');clearTimeout(toast.t);toast.t=setTimeout(()=>b.className='',5800)};
 const set=(s,html)=>{$(s).innerHTML=html};
 const date=d=>d?new Date(d).toLocaleString('ar-SA',{dateStyle:'short',timeStyle:'short'}):'—';
@@ -49,7 +43,7 @@ const btn=(label,act,id='',kind='ghost')=>'<button class="btn '+kind+' small" da
 const badge=(s,secret=false)=>'<span class="badge '+(secret?'secret':'')+'">'+esc(s)+'</span>';
 const empty=msg=>'<div class="empty">'+esc(msg)+'</div>';
 const isFullName=value=>{const name=String(value||'').trim();const parts=name.split(/\s+/);return name.length<=80&&parts.length>=2&&parts.every(p=>p.length>=2&&/^\p{L}+$/u.test(p));};
-const has=(permission,kind=null)=>commander||grants.some(g=>g.permission===permission&&(kind===null||g.report_kind===null||g.report_kind===kind));
+const has=(permission,kind=null)=>commander||((permission==='police.manage'&&(policeHead||courtHead))||(permission==='court.manage'&&courtHead)||(['users.review','users.approve'].includes(permission)&&canManageMembers))||grants.some(g=>g.permission===permission&&(kind===null||g.report_kind===null||g.report_kind===kind));
 const hasDeptRole=(department,role)=>commander||departmentRoles.some(r=>r.department===department&&r.role===role);
 const hasDept=(department)=>commander||departmentRoles.some(r=>r.department===department);
 const policeUI=window.ASF_POLICE_UI.create({db,getContext:()=>({user,commander,hasPolice:has('police.manage'),isPoliceHead:policeHead,gameName:profile?.game_name}),notify:toast});
@@ -65,16 +59,28 @@ const deptUI=window.ASF_DEPARTMENTS.create({
  mountResults:mountAcademyResults,
  mountQualifications:mountQualificationResults
 });
+const memberUI=window.ASF_MEMBER_CENTER.create({
+ db,
+ getContext:()=>({user,commander,policeHead,courtHead,canManageMembers,
+  canApprove:has('users.approve'),
+  trainingHead:hasDeptRole('training','head'),recruitmentHead:hasDeptRole('recruitment','head')}),
+ notify:toast
+});
 
 function showScreen(which){['welcome','authScreen','mfaScreen','verifyEmailScreen','recoveryScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which);$('#notificationTrigger').hidden=which!=='workspace';window.ASF_MOBILE?.setWorkspace(which==='workspace')}
 function openAcademy(){window.open('academy.html','_blank','noopener')}
 $('#openAcademy').onclick=openAcademy;
 const restrictedModal=$('#restrictedModal');
 function showRestricted(section){
- accessPrefill=section.includes('القضاء')?'court.manage':section.includes('الدورات')?'academy.manage':'police.manage';
+ const deptRole=/القضاء|الشرطة|الدورات|التدريب|التجنيد/.test(section);
+ accessPrefill='reports.read';
  $('#restrictedTitle').textContent=section+' — يتطلب تصريحًا خاصًا';
- $('#restrictedMessage').textContent='لا تملك صلاحية الدخول إلى قسم '+section+'. يمكنك إرسال طلب تصريح إلى القائد مع توضيح السبب.';
- restrictedModal.hidden=false;document.body.classList.add('modal-open');$('#requestRestrictedAccess').focus();
+ $('#restrictedMessage').textContent=deptRole?
+  'الوصول إلى هذا القسم يتطلب رولًا إداريًا يُمنح عبر مركز العضويات والصلاحيات بواسطة الرئاسة المخوّلة. لا يمكن الحصول عليه من طلبات تصاريح التقارير.':
+  'لا تملك صلاحية الدخول إلى قسم '+section+'. يمكنك تقديم طلب تصريح تقارير إلى القائد مع توضيح السبب.';
+ $('#requestRestrictedAccess').hidden=deptRole;
+ restrictedModal.hidden=false;document.body.classList.add('modal-open');
+ (deptRole?$('#ackRestricted'):$('#requestRestrictedAccess')).focus();
 }
 function closeRestricted(){restrictedModal.hidden=true;document.body.classList.remove('modal-open')}
 $('#closeRestricted').onclick=closeRestricted;$('#ackRestricted').onclick=closeRestricted;
@@ -106,7 +112,7 @@ $('#verifyEmailBack').onclick=()=>showScreen('welcome');
 $('#rank').innerHTML=opt(RANKS.map(r=>[r,r]));
 $('#signOut').onclick=async()=>{
  if(signingOut)return;signingOut=true;['showLogin','showRegister','registerFromHero','signOut'].forEach(id=>$('#'+id).disabled=true);
- authEpoch++;user=null;profile=null;commander=false;policeHead=false;grants=[];departmentRoles=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');showScreen('welcome');$('#signOut').hidden=true;$('#sessionLabel').textContent='';
+ authEpoch++;user=null;profile=null;commander=false;policeHead=false;courtHead=false;canManageMembers=false;grants=[];departmentRoles=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');showScreen('welcome');$('#signOut').hidden=true;$('#sessionLabel').textContent='';
  if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
  try{const {error}=await window.ASF_AUTH.deadline(()=>db.auth.signOut(),()=>{authNeedsReload=true;window.ASF_AUTH.cancel(db)});if(error)throw error;}catch(err){
   authNeedsReload=true;window.ASF_AUTH.cancel(db);
@@ -143,7 +149,7 @@ function bindAuthListener(){
    recoveryMode=true;
    showRecoveryScreen();
   }else if(event==='SIGNED_OUT'){
-   authEpoch++;user=null;commander=false;policeHead=false;profile=null;grants=[];departmentRoles=[];
+   authEpoch++;user=null;commander=false;policeHead=false;courtHead=false;canManageMembers=false;profile=null;grants=[];departmentRoles=[];
    latestReports=[];correctionSource=null;draftId=null;set('#page','');
    if(notificationChannel){
     const channel=notificationChannel;notificationChannel=null;
@@ -348,17 +354,19 @@ async function loadIdentity(silent=false,fromAuth=false){
     return;
    }
   }
- const [{data:p,error:pe},{data:cm,error:ce},{data:dg,error:de},{data:responsibilities,error:re},{data:departmentMemberships,error:dme},{data:policeMembership,error:hme}]=await Promise.all([
+ const [{data:p,error:pe},{data:cm,error:ce},{data:dg,error:de},{data:responsibilities,error:re},{data:departmentMemberships,error:dme},{data:policeMembership,error:hme},{data:courtChief,error:che},{data:managementScope,error:mse}]=await Promise.all([
     db.from('asf_profiles').select('*').eq('user_id',user.id).maybeSingle(),
     db.rpc('asf_is_commander'),
     db.from('asf_delegations').select('*').eq('user_id',user.id),
     db.from('asf_responsibilities').select('*').eq('user_id',user.id),
     db.from('asf_department_roles').select('user_id,department,role').eq('user_id',user.id),
-    db.from('asf_police_heads').select('user_id').eq('user_id',user.id)
+    db.from('asf_police_heads').select('user_id').eq('user_id',user.id),
+    db.rpc('asf_is_court_head'),
+    db.rpc('asf_can_manage_members')
   ]);
   if(epoch!==authEpoch)return;
-  if(pe||ce||de||re||dme||hme)throw pe||ce||de||re||dme||hme;
-  profile=p;commander=!!cm;policeHead=!!policeMembership?.length;grants=[...(dg||[]),...(responsibilities||[])];departmentRoles=departmentMemberships||[];
+  if(pe||ce||de||re||dme||hme||che||mse)throw pe||ce||de||re||dme||hme||che||mse;
+  profile=p;commander=!!cm;policeHead=!!policeMembership?.length;courtHead=!!courtChief;canManageMembers=!!managementScope;grants=[...(dg||[]),...(responsibilities||[])];departmentRoles=departmentMemberships||[];
   if(!notificationChannel){
     // All signed-in members can receive their own decision notices. RLS stays authoritative.
     notificationChannel=db.channel('asf-notices-'+user.id)
@@ -388,9 +396,9 @@ async function loadIdentity(silent=false,fromAuth=false){
   $('#sessionLabel').textContent=p?.game_name||user.email;$('#signOut').hidden=false;noticeUI.refreshBadge().catch(()=>{});
   if(commander||p?.status==='approved'){
    showScreen('workspace');$('#courtNav').hidden=!(commander||p?.court_enabled||has('court.manage'));
-    $('#policeNav').hidden=!(commander||policeHead||has('police.manage'));
+    $('#policeNav').hidden=!(commander||policeHead||courtHead||has('police.manage'));
    $('#adminNav').hidden=!(commander||has('reports.read')||has('reports.review')||has('users.review')||has('users.approve'));
-   document.querySelector('[data-page="members"]').hidden=!(commander||has('users.review')||has('users.approve'));
+   document.querySelector('[data-page="members"]').hidden=!(commander||canManageMembers||has('users.approve'));
    document.querySelector('[data-page="changes"]').hidden=!(commander||has('users.review'));
    $('#academyReviewNav').hidden=!(commander||has('academy.manage')||hasDeptRole('training','head')||hasDeptRole('training','trainer')||hasDeptRole('recruitment','head')||hasDeptRole('recruitment','trainer'));
    $('#departmentNav').hidden=!(hasDept('training')||hasDept('recruitment'));
@@ -403,7 +411,7 @@ async function loadIdentity(silent=false,fromAuth=false){
    document.querySelector('[data-page="access-queue"]').hidden=!commander;
    await navigate(pageName);
   }else{
-   showScreen('pendingScreen');
+   set('#page','');showScreen('pendingScreen');
    const missingReason=p?.status==='pending'&&String(p?.activation_reason||'').trim().length<10;
    $('#pendingText').textContent=p?.status==='rejected'?'تم رفض الطلب. تواصل مع الإدارة.':p?.status==='suspended'?'الحساب موقوف حاليًا.':missingReason?'يجب استكمال سبب طلب التفعيل قبل أن يتمكن القائد من الموافقة.':'حسابك بانتظار موافقة القائد. يمكنك دخول الدورات العامة.';
    $('#pendingReasonSection').hidden=!missingReason;
@@ -431,7 +439,7 @@ async function navigate(name){
  if(!user||!(commander||profile?.status==='approved'))return;
  window.ASF_MOBILE?.closeMenu();window.ASF_MOBILE?.setPage(name);
  pageName=name;document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page===name));
- const titles={notifications:'مركز الإشعارات',dashboard:'لوحة التحكم',operations:'مركز العمليات والمهام',academy:'الأكاديمية والدورات','academy-results':'نتائج الاختبارات والمراجعة والتسليم','training-center':'كلية التدريب','recruitment-center':'القبول والتجنيد','department-admin':'رئاسات الأقسام',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',access:'طلب تصريح ومتابعته','access-queue':'طلبات التصاريح الواردة',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
+ const titles={notifications:'مركز الإشعارات',dashboard:'لوحة التحكم',operations:'مركز العمليات والمهام',academy:'الأكاديمية والدورات','academy-results':'نتائج الاختبارات والمراجعة والتسليم','training-center':'كلية التدريب','recruitment-center':'القبول والتجنيد','department-admin':'توزيع الرئاسات',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'مركز العضويات والصلاحيات',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',access:'طلب تصريح ومتابعته','access-queue':'طلبات التصاريح الواردة',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
  set('#pageTitle','<div><h1>'+esc(titles[name]||'بوابة أمن المنشآت')+'</h1><p>المنصة الموحدة · إعدادات الصلاحيات حسب حسابك</p></div>');
  set('#page','<div class="empty">جارٍ تحميل البيانات...</div>');
  try{
@@ -442,17 +450,12 @@ async function navigate(name){
   if(name==='academy-results')return await renderAcademyResults();
   if(name==='training-center')return await deptUI.render('training');
   if(name==='recruitment-center')return await deptUI.render('recruitment');
-  if(name==='department-admin'&&commander){
-    await deptUI.renderAdmin();
-    $('#page').insertAdjacentHTML('beforeend','<section class="section-card"><h3>رئاسة الشرطة العسكرية</h3><p class="muted">تعيين رئيس الشرطة وتوزيع رول الشرطة العسكرية ورول مجلس القضاء للأعضاء المعتمدين من مكان واحد.</p><button type="button" class="btn primary" id="openPoliceLeadership">فتح إدارة رئاسة الشرطة</button></section>');
-    $('#openPoliceLeadership').onclick=async()=>{await navigate('police');const details=$('#mpLeadershipDetails');if(details){details.open=true;details.scrollIntoView({block:'start',behavior:'smooth'});}};
-    return;
-   }
+  if(name==='department-admin'&&commander)return await memberUI.renderHeads();
   if(name==='reports'||name==='inbox'||name==='trash')return await renderReports(name);
   if(name==='compose')return await renderCompose();
   if(name==='police')return await renderPolice();
   if(name==='court')return await renderCourt();
-  if(name==='members'&&(commander||has('users.review')||has('users.approve')))return await renderMembers();
+  if(name==='members'&&(commander||canManageMembers||has('users.approve')))return await renderMembers();
   if(name==='changes'&&(commander||has('users.review')))return await renderChanges();
   if(name==='delegations'&&commander)return await renderDelegations();
   if(name==='access')return await renderAccessRequests();
@@ -521,38 +524,40 @@ function mountQualificationResults(){
  if(!(commander||hasDeptRole('recruitment','head')||hasDeptRole('recruitment','trainer'))){
   panel.innerHTML=empty('مراجعة التأهيل مخصصة للقبول والتجنيد.');return;
  }
- panel.innerHTML='<section class="section-card" style="margin-top:20px"><div class="row between"><h3>نتائج تأهيل المتقدمين والتوظيف</h3>'+badge('قراران مستقلان')+'</div>'+
- '<p class="muted">تظهر نتيجة النجاح أو الرسوب للمتقدم فور تصحيح الاختبار من الخادم. هنا تُوثّق مراجعة النتيجة باسم المسؤول، ثم يُؤكَّد التوظيف للناجح فقط بعد المراجعة. هذه الإجراءات لا تعطي رول Discord تلقائيًا ولا تغيّر نتيجة الاختبار.</p>'+
+ const canHire=commander||hasDeptRole('recruitment','head');
+ panel.innerHTML='<section class="section-card" style="margin-top:20px"><div class="row between"><h3>نتائج تأهيل المتقدمين والقبول المبدئي</h3>'+badge('3 إجراءات مستقلة')+'</div>'+
+ '<p class="muted">تظهر نتيجة النجاح أو الرسوب للمتقدم فور تصحيح الاختبار من الخادم. هنا تُوثّق مراجعة النتيجة باسم المسؤول، ثم القبول المبدئي للناجح فقط، ثم يؤكد رئيس القبول والتجنيد التوظيف النهائي بإجراء منفصل. لا يتغير التقييم ولا تُمنح رولات Discord تلقائيًا.</p>'+
  '<form id="qualificationFilter" class="row" style="margin-bottom:12px"><input name="search" placeholder="بحث بالاسم أو Discord أو الإيصال" maxlength="60" style="max-width:380px"><button class="btn ghost" type="submit">بحث</button><button id="qualificationRefresh" class="btn ghost" type="button">تحديث</button></form><div id="qualificationRows" aria-live="polite"></div></section>';
  let term='',offset=0,request=0;
  const load=async()=>{
   const container=$('#qualificationRows');if(!container)return;const id=++request;
   container.textContent='جاري تحميل نتائج التأهيل…';
-  let q=db.from('asf_academy_results').select('id,receipt,trainee_name,discord_id,score,total,percentage,passed,assigned_rank,received_at,qualification_reviewed_at,qualification_reviewed_by_name,qualification_hired_at,qualification_hired_by_name',{count:'exact'}).eq('course_id','individual-qualification').eq('is_test',false).order('received_at',{ascending:false});
+  let q=db.from('asf_academy_results').select('id,receipt,trainee_name,discord_id,score,total,percentage,passed,assigned_rank,received_at,qualification_reviewed_at,qualification_reviewed_by_name,qualification_preliminary_at,qualification_preliminary_by_name,qualification_hired_at,qualification_hired_by_name',{count:'exact'}).eq('course_id','individual-qualification').eq('is_test',false).order('received_at',{ascending:false});
   if(term)q=/^\d{15,20}$/.test(term)?q.eq('discord_id',term):/^ACD-\d+$/.test(term)?q.eq('receipt',term):q.ilike('trainee_name','%'+term.replace(/[%_\\]/g,'')+'%');
   const {data,error,count}=await q.range(offset,offset+29);
   if(!container.isConnected||id!==request)return;
   if(error){container.textContent='تعذر تحميل نتائج التأهيل: '+error.message;return;}
   container.innerHTML='<p class="muted">'+esc(count??data.length)+' نتيجة</p>'+
-   (data.length?'<div class="table-scroll"><table><thead><tr><th>المتقدم والإيصال</th><th>النتيجة</th><th>مراجعة النتيجة</th><th>تأكيد التوظيف</th></tr></thead><tbody>'+
+   (data.length?'<div class="table-scroll"><table><thead><tr><th>المتقدم والإيصال</th><th>النتيجة</th><th>مراجعة النتيجة</th><th>القبول المبدئي</th><th>التوظيف النهائي · الرئاسة</th></tr></thead><tbody>'+
     data.map(r=>'<tr><td><strong>'+esc(r.trainee_name)+'</strong><br><small dir="ltr">'+esc(r.discord_id)+'</small><br>'+esc(r.receipt)+'<br>'+date(r.received_at)+'</td>'+
      '<td>'+badge(r.passed?'ناجح':'راسب')+'<br>'+esc(r.score)+' / '+esc(r.total)+' — '+esc(r.percentage)+'%'+(r.passed?'<br>الرتبة المبدئية: '+esc(r.assigned_rank||'—'):'')+'</td>'+
      '<td>'+(r.qualification_reviewed_at?'<strong>✓ تمت المراجعة بواسطة '+esc(r.qualification_reviewed_by_name)+'</strong><br>'+date(r.qualification_reviewed_at):
       '<button type="button" class="btn primary small" data-qualification-action="review" data-qualification-id="'+esc(r.id)+'">✓ راجعت النتيجة</button>')+'</td>'+
-     '<td>'+(r.qualification_hired_at?'<strong>✓ تم توظيفه بواسطة '+esc(r.qualification_hired_by_name)+'</strong><br>'+date(r.qualification_hired_at):
-      !r.passed?'غير مؤهل للتوظيف':!r.qualification_reviewed_at?'بانتظار مراجعة النتيجة':
-      '<button type="button" class="btn primary small" data-qualification-action="hire" data-qualification-id="'+esc(r.id)+'">✓ تم توظيفه</button>')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+
+     '<td>'+(r.qualification_preliminary_at?'<strong>✓ قبول مبدئي بواسطة '+esc(r.qualification_preliminary_by_name)+'</strong><br>'+date(r.qualification_preliminary_at):
+       !r.passed?'غير مؤهل للقبول':!r.qualification_reviewed_at?'بانتظار مراجعة النتيجة':
+       '<button type="button" class="btn primary small" data-qualification-action="preliminary" data-qualification-id="'+esc(r.id)+'">✓ قبول مبدئي</button>')+'</td>'+ '<td>'+(r.qualification_hired_at?'<strong>✓ تم توظيفه بواسطة '+esc(r.qualification_hired_by_name||'الرئاسة')+'</strong><br>'+date(r.qualification_hired_at):!r.passed?'غير مؤهل للتوظيف':!r.qualification_preliminary_at?'بانتظار القبول المبدئي':!canHire?'قرار الرئاسة فقط':'<button type="button" class="btn primary small" data-qualification-action="hire" data-qualification-id="'+esc(r.id)+'">✓ تأكيد التوظيف النهائي</button>')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+
    '<div class="row"><button type="button" class="btn ghost small" id="qualificationPrev" '+(offset===0?'disabled':'')+'>السابق</button><button type="button" class="btn ghost small" id="qualificationNext" '+(offset+30>=(count??data.length)?'disabled':'')+'>التالي</button></div>';
   $('#qualificationPrev').onclick=()=>{offset=Math.max(0,offset-30);load()};
   $('#qualificationNext').onclick=()=>{offset+=30;load()};
   container.querySelectorAll('[data-qualification-action]').forEach(button=>button.onclick=async()=>{
    const action=button.dataset.qualificationAction,which=button.dataset.qualificationId;
-   if(!confirm(action==='review'?'هل قمت بمراجعة نتيجة هذا المتقدم؟ سيُسجل اسمك وتاريخ المراجعة.':'هل تم توظيف هذا المتقدم الناجح فعلًا؟ سيُسجل اسمك وتاريخ التأكيد، ولا يمنح ذلك رتبة أو رولًا تلقائيًا.'))return;
+   const question=action==='review'?'هل قمت بمراجعة نتيجة هذا المتقدم؟ سيُسجل اسمك وتاريخ المراجعة.':action==='preliminary'?'هل تؤكد القبول المبدئي لهذا المتقدم الناجح؟ سيُسجل اسمك وتاريخ القرار دون منح رول تلقائيًا.':'هل تؤكد توظيف هذا المتقدم نهائيًا؟ هذه شهادة تسجيل قرار الرئاسة وليست منحًا آليًا لرول Discord.';
+   if(!confirm(question))return;
    button.disabled=true;
    try{
     const {data:result,error:err}=await db.rpc('asf_recruitment_qualification_action',{p_result:which,p_action:action});
     if(err)throw err;
-    toast(result.already?'سبق توثيق هذا الإجراء.':action==='review'?'تم توثيق مراجعة النتيجة باسم المسؤول.':'تم توثيق توظيف المتقدم باسم المسؤول.');
+    toast(result.already?'سبق توثيق هذا الإجراء.':action==='review'?'تم توثيق مراجعة النتيجة باسم المسؤول.':action==='preliminary'?'تم تسجيل القبول المبدئي باسم المسؤول.':'تم توثيق التوظيف النهائي باسم مسؤول الرئاسة.');
     await load();
    }catch(err){toast(err.message||'تعذر حفظ الإجراء',true);button.disabled=false;}
   });
@@ -564,11 +569,11 @@ function mountQualificationResults(){
 
 function mountAcademyResults(){
  const panel=$('#academyResultPanel');if(!panel)return;
- panel.innerHTML='<section class="section-card" style="margin-top:20px"><h3>نتائج الدورات والتسليم</h3><p class="muted">نفس نتيجة الاختبار تنتقل من النجاح إلى تأكيد تسليم الدورة. التأكيد يسجّل اسمك ووقت الإجراء، ولا يمنح رتبة أو صلاحية تلقائيًا.</p><details class="notice course-notice-flow"><summary>إشعارات النتائج والربط مع جدول Google</summary><p>عند حفظ اختبار ناجح في البوابة، يصل إشعار داخل الموقع إلى القائد ومسؤولي الدورات المفوّضين، ثم تُرسل نسخة النتيجة إلى جدول Google المرتبط. الإشعار لا يعني تأكيد وصول نسخة Google؛ حالة النسخة تظهر في عمودها أدناه.</p><p>تأكيد التسليم واسم المسؤول ووقته محفوظة في هذا السجل داخل الموقع. الإضافة اليدوية إلى Google لا تولّد إشعارًا في البوابة.</p><a class="btn ghost small" id="courseGoogleSheet" href="https://docs.google.com/spreadsheets/d/1PC5iXwHWyFT4kd7qa6oa_JL1-r3F_anv3fPniF8rfdM/edit" target="_blank" rel="noopener noreferrer">فتح جدول Google المرتبط</a></details><form id="academyResultsFilter" class="grid two"><label>الاسم أو Discord أو الإيصال<input name="search" maxlength="60"></label><label>حالة المتابعة<select name="state"><option value="pending">ناجحون بانتظار التسليم</option><option value="delivered">تم تسليم الدورة</option><option value="all" selected>جميع النتائج</option></select></label><label>مسار التأهيل<select name="track"><option value="all">كل الاختبارات</option><option value="qualification">تأهيل المتقدمين الجدد</option><option value="courses">دورات الأفراد</option></select></label><button class="btn ghost" type="submit">بحث وتحديث</button></form><div id="academyResultsRows" aria-live="polite"></div></section>';
+ panel.innerHTML='<section class="section-card" style="margin-top:20px"><h3>نتائج الدورات والتسليم</h3><p class="muted">تمر نتيجة الاختبار بمراجعة المدرب ثم توثيق تسليم الدورة. التأكيد يسجّل اسمك ووقت الإجراء، ولا يمنح رتبة أو صلاحية تلقائيًا.</p><details class="notice course-notice-flow"><summary>إشعارات النتائج والربط مع جدول Google</summary><p>عند حفظ اختبار ناجح في البوابة، يصل إشعار داخل الموقع إلى القائد ومسؤولي الدورات المفوّضين، ثم تُرسل نسخة النتيجة إلى جدول Google المرتبط. الإشعار لا يعني تأكيد وصول نسخة Google؛ حالة النسخة تظهر في عمودها أدناه.</p><p>تأكيد التسليم واسم المسؤول ووقته محفوظة في هذا السجل داخل الموقع. الإضافة اليدوية إلى Google لا تولّد إشعارًا في البوابة.</p><a class="btn ghost small" id="courseGoogleSheet" href="https://docs.google.com/spreadsheets/d/1PC5iXwHWyFT4kd7qa6oa_JL1-r3F_anv3fPniF8rfdM/edit" target="_blank" rel="noopener noreferrer">فتح جدول Google المرتبط</a></details><form id="academyResultsFilter" class="grid two"><label>الاسم أو Discord أو الإيصال<input name="search" maxlength="60"></label><label>حالة المتابعة<select name="state"><option value="pending">ناجحون بانتظار التسليم</option><option value="delivered">تم تسليم الدورة</option><option value="all" selected>جميع النتائج</option></select></label><label>مسار التأهيل<select name="track"><option value="all">كل الاختبارات</option><option value="qualification">تأهيل المتقدمين الجدد</option><option value="courses">دورات الأفراد</option></select></label><button class="btn ghost" type="submit">بحث وتحديث</button></form><div id="academyResultsRows" aria-live="polite"></div></section>';
  let offset=0,term='',filter='all',track='all',generation=0;
  const load=async()=>{
   const rows=$('#academyResultsRows');if(!rows)return;const request=++generation;rows.textContent='جاري تحميل النتائج…';
-  let q=db.from('asf_academy_results').select('id,receipt,course_id,trainee_name,trainee_rank,discord_id,course_title,score,total,percentage,passed,received_at,legacy_status,delivered_at,delivered_by_name,delivered_by_code',{count:'exact'}).eq('is_test',false).order('received_at',{ascending:false});
+  let q=db.from('asf_academy_results').select('id,receipt,course_id,trainee_name,trainee_rank,discord_id,course_title,score,total,percentage,passed,received_at,legacy_status,training_reviewed_at,training_reviewed_by_name,delivered_at,delivered_by_name,delivered_by_code',{count:'exact'}).eq('is_test',false).order('received_at',{ascending:false});
   if(track==='qualification')q=q.eq('course_id','individual-qualification');
   if(track==='courses')q=q.neq('course_id','individual-qualification');
   if(filter==='pending')q=q.eq('passed',true).is('delivered_at',null);
@@ -591,8 +596,17 @@ function mountAcademyResults(){
     (canReviewReward&&reward.actor_id!==user.id?'<button class="btn primary small" data-course-reward="'+esc(reward.id)+'">✓ تم إعطاء المكافأة</button>':'');
   };
   const sync={pending:'قيد المتابعة',confirmed:'مؤكد',unconfirmed:'غير مؤكد',failed:'تعذر الإرسال'};
-  rows.innerHTML='<p class="muted">'+esc(count??data?.length??0)+' نتيجة</p>'+(data?.length?'<div class="table-scroll"><table><thead><tr><th>الإيصال والتاريخ</th><th>المتدرّب</th><th>الدورة</th><th>النتيجة</th><th>تسليم الرول للمتدرب</th><th>المدرب ووقت الإجراء</th><th>مكافأة المدرب</th><th>نسخة الجدول القديم</th></tr></thead><tbody>'+data.map(r=>'<tr><td>'+esc(r.receipt)+'<br>'+date(r.received_at)+'</td><td>'+esc(r.trainee_name)+'<br>'+esc(r.trainee_rank)+'<br>'+esc(r.discord_id)+'</td><td>'+esc(r.course_title)+'</td><td>'+esc(r.score)+' / '+esc(r.total)+' · '+esc(r.percentage)+'%<br>'+badge(r.passed?'اجتياز':'رسوب')+'</td><td>'+(r.delivered_at?'<span class="course-delivered">✓ تم تسليم الرول (توثيق يدوي)</span>':r.passed?'<button class="btn primary small" data-deliver-result="'+esc(r.id)+'">✓ تم إعطاء رول الدورة</button>':badge('غير مجتاز'))+'</td><td>'+esc(r.delivered_by_name||'—')+(r.delivered_by_code?'<br>'+esc(r.delivered_by_code):'')+(r.delivered_at?'<br>'+date(r.delivered_at):'')+'</td><td class="dept-reward-cell">'+rewardCell(r)+'</td><td>'+esc(sync[r.legacy_status]||'غير مؤكد')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+'<div class="row"><button class="btn ghost small" id="academyResultsPrev" '+(offset===0?'disabled':'')+'>السابق</button><button class="btn ghost small" id="academyResultsNext" '+(offset+50>=(count??data?.length??0)?'disabled':'')+'>التالي</button></div>';
+  rows.innerHTML='<p class="muted">'+esc(count??data?.length??0)+' نتيجة</p>'+(data?.length?'<div class="table-scroll"><table><thead><tr><th>الإيصال والتاريخ</th><th>المتدرّب</th><th>الدورة</th><th>النتيجة</th><th>مراجعة المدرب</th><th>تسليم الرول للمتدرب</th><th>المدرب ووقت الإجراء</th><th>مكافأة المدرب</th><th>نسخة الجدول القديم</th></tr></thead><tbody>'+data.map(r=>'<tr><td>'+esc(r.receipt)+'<br>'+date(r.received_at)+'</td><td>'+esc(r.trainee_name)+'<br>'+esc(r.trainee_rank)+'<br>'+esc(r.discord_id)+'</td><td>'+esc(r.course_title)+'</td><td>'+esc(r.score)+' / '+esc(r.total)+' · '+esc(r.percentage)+'%<br>'+badge(r.passed?'اجتياز':'رسوب')+'</td><td>'+(r.training_reviewed_at?'<strong>✓ تمت المراجعة بواسطة '+esc(r.training_reviewed_by_name||'المدرب')+'</strong><br>'+date(r.training_reviewed_at):r.course_id==='individual-qualification'?'مراجعة القبول والتجنيد':'<button type="button" class="btn ghost small" data-review-result="'+esc(r.id)+'">✓ تمت مراجعة الدورة</button>')+'</td><td>'+(r.delivered_at?'<span class="course-delivered">✓ تم تسليم الرول (توثيق يدوي)</span>':r.course_id==='individual-qualification'?'يتبع القبول والتجنيد':!r.passed?badge('غير مجتاز'):!r.training_reviewed_at?'بانتظار مراجعة المدرب':'<button class="btn primary small" data-deliver-result="'+esc(r.id)+'">✓ تم إعطاء رول الدورة</button>')+'</td><td>'+esc(r.delivered_by_name||'—')+(r.delivered_by_code?'<br>'+esc(r.delivered_by_code):'')+(r.delivered_at?'<br>'+date(r.delivered_at):'')+'</td><td class="dept-reward-cell">'+rewardCell(r)+'</td><td>'+esc(sync[r.legacy_status]||'غير مؤكد')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+'<div class="row"><button class="btn ghost small" id="academyResultsPrev" '+(offset===0?'disabled':'')+'>السابق</button><button class="btn ghost small" id="academyResultsNext" '+(offset+50>=(count??data?.length??0)?'disabled':'')+'>التالي</button></div>';
   $('#academyResultsPrev').onclick=()=>{offset=Math.max(0,offset-50);load()};$('#academyResultsNext').onclick=()=>{offset+=50;load()};
+  rows.querySelectorAll('[data-review-result]').forEach(button=>button.onclick=async()=>{
+   if(!confirm('هل راجعت نتيجة الدورة؟ سيتم حفظ اسمك وتاريخ المراجعة دون تعديل درجتها.'))return;
+   button.disabled=true;
+   try{
+    const {error}=await db.rpc('asf_training_review_result',{p_result:button.dataset.reviewResult});
+    if(error)throw error;
+    toast('تم تسجيل مراجعة الدورة باسم المدرب.');await load();
+   }catch(error){toast(error.message||'تعذر تسجيل المراجعة',true);button.disabled=false;}
+  });
   rows.querySelectorAll('[data-course-reward]').forEach(button=>button.onclick=async()=>{
    if(!confirm('تأكيد صرف مكافأة 150,000 للمدرب بالفعل؟ لا يمكن تكرار التأشير.'))return;
    button.disabled=true;
@@ -913,20 +927,8 @@ function courtWarningCard(w){
  (state.expiresAt?'<p class="muted">نهاية المدة: '+date(state.expiresAt)+'</p>':'')+
  (w.cancelled_at?'<p class="muted">أُلغي بتاريخ '+date(w.cancelled_at)+'؛ السبب: '+esc(w.cancellation_reason)+'</p>':state.archived?'':btn('إلغاء الإنذار','cancel-warning',w.id,'warn'))+'</div>';
 }
-async function renderMembers(){
- const rows=await query('asf_profiles');rows.sort((a,b)=>a.created_at<b.created_at?1:-1);
- const hasReason=p=>String(p.activation_reason||'').trim().length>=10;
- const admission=p=>p.status==='pending'&&(commander||has('users.approve'))?(hasReason(p)?btn('تفعيل','approve',p.user_id,'primary'):'<span class="activation-missing">بانتظار سبب التفعيل</span>')+btn('رفض','reject',p.user_id,'warn'):'—';
- const actions=p=>!commander?admission(p):'<div class="actions">'+(p.status!=='approved'?(hasReason(p)?btn('تفعيل','approve',p.user_id,'primary'):'<span class="activation-missing">بانتظار سبب التفعيل</span>'):btn('إيقاف','suspend',p.user_id,'warn'))+
- btn('تغيير الرتبة','rank',p.user_id)+btn(p.court_enabled?'إلغاء القضاء':'تفعيل القضاء',p.court_enabled?'court_off':'court_on',p.user_id)+btn('رفض','reject',p.user_id,'warn')+'</div>';
- set('#page','<div class="section-card"><h3>طلبات التفعيل وجميع الأعضاء</h3><p class="muted">سبب طلب التفعيل إلزامي. لن يسمح النظام باعتماد أي حساب غير معتمد لم يقدّم سببًا واضحًا.</p><div class="table-wrap"><table><thead><tr><th>الاسم</th><th>الرتبة</th><th>الكود</th><th>Discord ID</th><th>سبب طلب التفعيل</th><th>الحالة</th><th>إجراءات القائد</th></tr></thead><tbody>'+
- rows.map(p=>'<tr><td>'+esc(p.game_name)+'</td><td>'+esc(p.rank)+'</td><td>'+esc(p.military_code||'—')+'</td><td dir="ltr">'+esc(p.discord_id)+'</td><td><div class="member-reason">'+(hasReason(p)?esc(p.activation_reason):'<span class="activation-missing">لم يُذكر السبب</span>')+'</div></td><td>'+badge(p.status)+'</td><td>'+actions(p)+'</td></tr>').join('')+'</tbody></table></div></div>');
- $('#page').onclick=async e=>{if(!commander&&!has('users.approve'))return;const b=e.target.closest('button[data-action]');if(!b)return;const action=b.dataset.action;
- let arg=null;if(action==='rank'){arg=prompt('الرتبة الجديدة (من القائمة المعتمدة):',rows.find(r=>r.user_id===b.dataset.id)?.rank||'');if(!arg||!RANKS.includes(arg))return toast('الرتبة غير معتمدة',true);}
- if(['reject','suspend'].includes(action)&&!confirm('تأكيد الإجراء على الحساب؟'))return;
- const {data,error}=await db.rpc('asf_admin_action',{op:action,target:b.dataset.id,arg});if(error)return toast(error.message,true);
- toast(action==='approve'?'تم تفعيل الحساب والكود: '+data:'تم حفظ التغيير');renderMembers();};
-}
+async function renderMembers(){return memberUI.render();}
+
 async function renderChanges(){
  const rows=await query('asf_change_requests');
  set('#page','<div class="section-card"><h3>طلبات تعديل الاسم ومعرّف ديسكورد</h3><div class="table-wrap"><table><thead><tr><th>صاحب الطلب</th><th>الاسم الجديد</th><th>Discord ID</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>'+

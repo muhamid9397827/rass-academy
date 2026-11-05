@@ -11,36 +11,7 @@ function create({db,getContext,notify}){
  const $=s=>document.querySelector(s);
  const R=()=>getContext();
  const label=p=>p==='police'?'رول الشرطة العسكرية':p==='court'?'رول مجلس القضاء':'رئاسة الشرطة العسكرية';
- async function leadership(){
-  const area=$('#mpLeadershipBody');if(!area)return;
-  area.innerHTML='<p class="muted">جاري تحميل الأعضاء والصلاحيات…</p>';
-  const {data:members,error}=await db.rpc('asf_police_directory');
-  if(!area.isConnected)return;
-  if(error){area.textContent='تعذر تحميل أعضاء القسم: '+error.message;return}
-  const all=(members||[]),canSetHead=!!R().commander;
-  area.innerHTML='<p class="muted">الرئاسة تستطيع منح وسحب رول الشرطة العسكرية ورول مجلس القضاء فقط. القائد وحده يعيّن رئاسة الشرطة العسكرية. هذه صلاحيات للبوابة ولا تغيّر رولات Discord.</p>'+
-   '<label>ابحث عن عضو بالاسم أو الكود<input id="mpRoleSearch" type="search" autocomplete="off" placeholder="ابحث عن عضو معتمد"></label><div id="mpRoleMembers" class="mp-role-members"></div>';
-  const draw=()=>{
-   const q=norm($('#mpRoleSearch').value);
-   const found=all.filter(p=>norm([p.game_name,p.rank,p.military_code].join(' ')).includes(q)).slice(0,40);
-   $('#mpRoleMembers').innerHTML=found.map(p=>{
-    const controls=[['police',p.police_role],['court',p.court_role],...(canSetHead?[['head',p.police_head]]:[])];
-    return '<article class="mp-role-person"><div><strong>'+esc(p.game_name)+'</strong><small>'+esc(p.rank||'')+' · '+esc(p.military_code||'—')+'</small></div><div class="mp-role-buttons">'+controls.map(([role,enabled])=>
-     '<button type="button" class="btn small '+(enabled?'ghost':'primary')+'" data-mp-user="'+esc(p.user_id)+'" data-mp-role="'+role+'" data-mp-enable="'+(!enabled)+'">'+(enabled?'سحب ':'منح ')+label(role)+'</button>').join('')+'</div></article>';
-   }).join('')||'<div class="empty">لا يوجد عضو مطابق.</div>';
-   $('#mpRoleMembers').querySelectorAll('[data-mp-user]').forEach(button=>button.onclick=async()=>{
-    const target=button.dataset.mpUser,role=button.dataset.mpRole,enable=button.dataset.mpEnable==='true';
-    if(!enable&&!confirm('هل تؤكد سحب '+label(role)+' من هذا العضو؟'))return;
-    button.disabled=true;
-    const args=role==='head'?{p_user:target,p_enable:enable}:{p_user:target,p_role:role,p_enable:enable};
-    const {error:err}=await db.rpc(role==='head'?'asf_police_set_head':'asf_police_set_role',args);
-    if(err){notify(err.message||'تعذر تحديث الرول',true);button.disabled=false;return}
-    notify('تم '+(enable?'منح ':'سحب ')+label(role)+' وتوثيق العملية.');
-    await leadership();
-   });
-  };
-  $('#mpRoleSearch').oninput=draw;draw();
- }
+
  async function render(){
   const ctx=R();
   if(!ctx.commander&&!ctx.hasPolice&&!ctx.isPoliceHead)throw Error('هذا القسم لا يظهر إلا لأصحاب الصلاحية.');
@@ -48,7 +19,7 @@ function create({db,getContext,notify}){
   const displayRanks=[['جندي','جندي'],['جندي أول','جندي اول'],['عريف','عريف + وكيل رقيب'],['وكيل رقيب','عريف + وكيل رقيب'],['رقيب','رقيب + رقيب اول'],['رقيب أول','رقيب + رقيب اول'],['رئيس رقباء','رئيس رقباء'],['ملازم','ملازم'],['ملازم أول','ملازم اول'],['نقيب فما فوق','نقيب فما فوق']].filter(([_,key])=>ranks.includes(key));
   const {data:overrides,error}=await db.from('asf_police_overrides').select('rule_key,rank_key,penalty');
   if(error)throw error;
-  const canModify=ctx.commander||ctx.hasPolice||ctx.isPoliceHead,canLead=ctx.commander||ctx.isPoliceHead;
+  const canModify=ctx.commander||ctx.hasPolice||ctx.isPoliceHead;
   const penaltyFor=(v,rank)=>{
    const match=(overrides||[]).find(x=>x.rule_key===v?.key&&x.rank_key===rank);
    if(match?.penalty)return match.penalty;
@@ -67,7 +38,7 @@ function create({db,getContext,notify}){
   '<form id="investigationForm"><div class="grid two"><label>رقم ملف التحقيق<input name="reportNumber" required maxlength="100" value="INV-'+asDate()+'"></label><label>اسم المحقق الكامل<input name="investigator" required maxlength="80" value="'+esc(ctx.gameName||'')+'" placeholder="الاسم والكنية"></label><label>اسم العسكري المتهم الكامل<input name="accused" required maxlength="80" placeholder="مثال: مجاهد ال عباد"></label><label>Discord ID للمتهم<input name="discord" required inputmode="numeric" pattern="[0-9]{15,22}" maxlength="22" placeholder="المعرّف الرقمي"></label></div><button class="btn primary" type="submit">تجهيز التقرير</button></form><pre id="investigationPreview" class="mp-preview" hidden></pre><div class="row"><button class="btn ghost" id="copyInvestigation" type="button" hidden>نسخ تقرير التحقيق</button><button class="btn ghost" id="useInvestigation" type="button" hidden>إحالته إلى مجلس القضاء</button></div></details>'+
   (canModify?'<details class="section-card mp-tool" id="mpReferralDetails"><summary>3 — إرسال قضية إلى مجلس القضاء</summary><form id="caseForm"><label>الموضوع<input name="subject" maxlength="200" required></label><label>تفاصيل القضية<textarea name="details" required maxlength="12000"></textarea></label><button type="submit" class="btn primary">إرسال القضية</button></form></details>':'')+
   (canModify?'<details class="section-card mp-tool" id="mpRulesDetails"><summary>إدارة العقوبات والتعديلات</summary><p class="muted">لا تتغير اللوائح القديمة، ويُسجّل كل تعديل في سجل القيادة.</p><form id="policeAdminForm"><label>المخالفة<select name="rule">'+all.map(v=>'<option value="'+esc(v.key)+'">'+esc(v.id||'ثابت')+' — '+esc(v.text)+'</option>').join('')+'</select></label><label>الرتبة<select name="rank">'+ranks.map(r=>'<option value="'+esc(r)+'">'+esc(r)+'</option>').join('')+'</select></label><label>العقوبة<textarea name="penalty" maxlength="500" required></textarea></label><div class="row"><button class="btn primary" name="action" value="save" type="submit">حفظ التعديل</button><button class="btn ghost" name="action" value="reset" type="submit">استعادة الأصل</button></div></form></details>':'')+
-  (canLead?'<details class="section-card mp-tool" id="mpLeadershipDetails"><summary>رئاسة الشرطة العسكرية وتوزيع الرولين</summary><div id="mpLeadershipBody"></div></details>':'');
+  '';
   let kind='standard',tier='all',selected=all[0],investigationText='';
   const visible=()=>{
    const raw=kind==='standard'?rules.standardViolations:rules.fixedViolations,q=norm($('#violationSearch').value);
@@ -157,11 +128,9 @@ function create({db,getContext,notify}){
     if(err){notify(err.message,true);return}notify('تم إرسال القضية للمجلس');e.target.reset();
    };
   }
-  if(canLead){
-   $('#mpLeadershipDetails').addEventListener('toggle',()=>{if($('#mpLeadershipDetails')?.open&&!$('#mpLeadershipBody').dataset.loaded){$('#mpLeadershipBody').dataset.loaded='true';leadership();}});
-  }
+
  }
- return {render,leadership};
+ return {render};
 }
 window.ASF_POLICE_UI={create,nameOk,norm};
 })();

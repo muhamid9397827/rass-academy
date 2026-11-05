@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 const {portalMock}=require('./completion-fixtures.cjs');
 const injected="\nconst scenario=new URLSearchParams(location.search).get('role')||'trainer-recruitment';\nconst qaRoles=scenario==='head-training'?[{user_id:'11111111-2222-4333-8444-555555555571',department:'training',role:'head'}]:\n scenario==='trainer-training'?[{user_id:'11111111-2222-4333-8444-555555555571',department:'training',role:'trainer'}]:\n scenario==='trainer-recruitment'?[{user_id:'11111111-2222-4333-8444-555555555571',department:'recruitment',role:'trainer'}]:\n scenario==='head-recruitment'?[{user_id:'11111111-2222-4333-8444-555555555571',department:'recruitment',role:'head'}]:\n scenario==='member-training'?[{user_id:'11111111-2222-4333-8444-555555555571',department:'training',role:'member'}]:[];\nconst qaResult={id:'77777777-2222-4333-8444-555555555580',receipt:'ACD-00000111',\n course_id:'operations',trainee_name:'متدرب التدريب',trainee_rank:'جندي',\n discord_id:'123456789012345678',course_title:'دورة العمليات',score:9,total:10,percentage:90,\n passed:true,is_test:false,received_at:new Date().toISOString(),legacy_status:'unconfirmed',delivered_at:null};\nconst rewards=scenario==='head-recruitment'?[{id:'88888888-2222-4333-8444-555555555582',subject_id:'77777777-2222-4333-8444-555555555581',department:'recruitment',\n subject_label:'مجند تمت الموافقة عليه',actor_id:'11111111-2222-4333-8444-555555555572',\n actor_name:'مدرب القبول',amount:150000,earned_at:new Date().toISOString(),paid_at:null}]:[];\nconst actions=[];";
 const beforeClass="if(scenario==='trainer-recruitment') {state.member.status='pending';state.member.activation_reason='سبب طلب تفعيل تجريبي مكتمل للموافقة.';}";
-const extraRpcs="\nif(name==='asf_department_candidates')return {data:[state.member],error:null};\nif(name==='asf_department_set_role'){\n actions.push({name,args});\n if(args.p_enable)qaRoles.push({user_id:args.p_user,department:args.p_department,role:args.p_role});\n return {data:null,error:null};\n}\nif(name==='asf_recruitment_accept'){\n actions.push({name,args});state.member.status='approved';\n rewards.push({id:'88888888-2222-4333-8444-555555555580',department:'recruitment',\n subject_label:state.member.game_name,actor_id:userId,actor_name:state.profile.game_name,\n amount:150000,earned_at:new Date().toISOString(),paid_at:null});\n return {data:'ASF-TEST',error:null};\n}\nif(name==='asf_confirm_academy_delivery'){\n actions.push({name,args});qaResult.delivered_at=new Date().toISOString();\n qaResult.delivered_by_name=state.profile.game_name;\n rewards.push({id:'88888888-2222-4333-8444-555555555581',department:'training',\n  subject_id:qaResult.id,subject_label:'متدرب التدريب - دورة العمليات',actor_id:userId,\n  actor_name:state.profile.game_name,amount:150000,earned_at:new Date().toISOString(),paid_at:null});\n return {data:{already_delivered:false,delivered_by_name:state.profile.game_name},error:null};\n}\nif(name==='asf_department_mark_paid'){\n actions.push({name,args});const reward=rewards.find(x=>x.id===args.p_reward);\n reward.paid_at=new Date().toISOString();return {data:{paid_at:reward.paid_at},error:null};\n}";
+const extraRpcs="\n\nif(name==='asf_can_manage_members')return {data:scenario.startsWith('head-')||scenario==='commander',error:null};\nif(name==='asf_management_directory')return {data:[{...state.member,training_head:false,recruitment_head:false,police_head:false,court_head:false,training_trainer:false,recruitment_trainer:false,police_staff:false,court_staff:false}],error:null};\nif(name==='asf_training_review_result'){qaResult.training_reviewed_at=new Date().toISOString();qaResult.training_reviewed_by_name=state.profile.game_name;return {data:{already:false},error:null};}\nif(name==='asf_department_candidates')return {data:[state.member],error:null};\nif(name==='asf_department_set_role'){\n actions.push({name,args});\n if(args.p_enable)qaRoles.push({user_id:args.p_user,department:args.p_department,role:args.p_role});\n return {data:null,error:null};\n}\nif(name==='asf_recruitment_accept'){\n actions.push({name,args});state.member.status='approved';\n rewards.push({id:'88888888-2222-4333-8444-555555555580',department:'recruitment',\n subject_label:state.member.game_name,actor_id:userId,actor_name:state.profile.game_name,\n amount:150000,earned_at:new Date().toISOString(),paid_at:null});\n return {data:'ASF-TEST',error:null};\n}\nif(name==='asf_confirm_academy_delivery'){\n actions.push({name,args});qaResult.delivered_at=new Date().toISOString();\n qaResult.delivered_by_name=state.profile.game_name;\n rewards.push({id:'88888888-2222-4333-8444-555555555581',department:'training',\n  subject_id:qaResult.id,subject_label:'متدرب التدريب - دورة العمليات',actor_id:userId,\n  actor_name:state.profile.game_name,amount:150000,earned_at:new Date().toISOString(),paid_at:null});\n return {data:{already_delivered:false,delivered_by_name:state.profile.game_name},error:null};\n}\nif(name==='asf_department_mark_paid'){\n actions.push({name,args});const reward=rewards.find(x=>x.id===args.p_reward);\n reward.paid_at=new Date().toISOString();return {data:{paid_at:reward.paid_at},error:null};\n}";
 let sdk=portalMock
  .replace(" const userId="," "+injected+"\n const userId=")
  .replace(" class Q {",beforeClass+"\n class Q {")
@@ -36,37 +36,18 @@ assert.match(sdk,/asf_recruitment_accept/,'the SDK mock must include recruitment
  assert.equal(await page.locator('#trainingCenterNav').evaluate(el=>el.hidden),true);
  await page.locator('#mobileMenuToggle').click();
  await page.locator('#recruitmentCenterNav').click();
- await page.locator('#departmentApplicants').waitFor({state:'visible'});
- assert.equal(await page.locator('#departmentRolesPanel').count(),0);
- await page.locator('[data-recruit]').click();
- await page.waitForTimeout(450);
- console.log('DEPT_QA_RECRUITMENT',JSON.stringify(await page.evaluate(()=>({
-  actions:window.__asfTest.actions,rewards:window.__asfTest.rewards,
-  rewardPanel:document.querySelector('#departmentRewards')?.innerText,
-  toast:document.querySelector('#toast')?.innerText
- }))));
- const debugReward=await page.evaluate(()=>{
-   const el=document.querySelector('#departmentRewards .dept-record');
-   const parent=document.querySelector('#departmentRewards');
-   return {exists:!!el,rect:el?el.getBoundingClientRect().toJSON():null,
-    style:el?{display:getComputedStyle(el).display,visibility:getComputedStyle(el).visibility}:null,
-    parentStyle:parent?{display:getComputedStyle(parent).display,visibility:getComputedStyle(parent).visibility}:null,
-    closestHidden:el?Array.from((function*(n){while(n){yield n;n=n.parentElement}})(el)).filter(n=>n.hidden).map(n=>n.id||n.tagName):[]};
-  });
- console.log('DEPT_QA_REWARD_VISIBILITY',JSON.stringify(debugReward));
- assert.equal(debugReward.exists,true,'reward row must be rendered');
-
- assert.match(await page.locator('#departmentRewards').innerText(),/150,000/);
- assert.equal((await page.evaluate(()=>window.__asfTest.actions))[0].name,'asf_recruitment_accept');
+ await page.locator('#qualificationResultPanel').waitFor({state:'visible'});
+ assert.equal(await page.locator('#departmentRoleForm').count(),0,'staff grants live in unified center only');
  await visit('head-training');
  await page.locator('#mobileMenuToggle').click();await page.locator('#trainingCenterNav').click();
- await page.locator('#departmentRoleForm').waitFor({state:'visible'});
- assert.deepEqual(await page.locator('#departmentRoleForm select[name="role"] option').allTextContents(),['مدرب القسم']);
- await page.locator('#departmentRoleForm select[name="user"]').selectOption('11111111-2222-4333-8444-555555555572');
- await page.locator('#departmentRoleForm button[value="true"]').click();
- assert.equal((await page.evaluate(()=>window.__asfTest.actions)).some(x=>x.name==='asf_department_set_role'&&x.args.p_role==='trainer'),true);
+ await page.locator('#deptManageTrainers').waitFor({state:'visible'});
+ await page.locator('#deptManageTrainers').click();
+ await page.locator('.ac-hero h2').waitFor({state:'visible'});
+ assert.match(await page.locator('.ac-hero h2').textContent(),/مركز العضويات/);
  await visit('trainer-training');
  await page.locator('#mobileMenuToggle').click();await page.locator('#trainingCenterNav').click();
+ await page.locator('[data-review-result]').waitFor({state:'visible'});
+ await page.locator('[data-review-result]').click();
  await page.locator('[data-deliver-result]').waitFor({state:'visible'});
  await page.locator('[data-deliver-result]').click();
  await page.locator('#departmentRewards .dept-record').waitFor({state:'visible'});
@@ -79,10 +60,8 @@ assert.match(sdk,/asf_recruitment_accept/,'the SDK mock must include recruitment
  await page.getByText('✓ تم صرف المكافأة').waitFor({state:'visible'});
  await visit('commander');await page.locator('#mobileMenuToggle').click();
  await page.locator('#departmentAdminNav').click();
- await page.locator('#departmentRoleForm').waitFor({state:'visible'});
- assert.equal(await page.locator('#departmentRoleForm select[name="role"] option').count(),3);
- await page.locator('#departmentAdminSelect').selectOption('recruitment');
- await page.locator('#departmentRoleForm').waitFor({state:'visible'});
+ await page.locator('#acHeadSearch').waitFor({state:'visible'});
+ assert.equal(await page.locator('[data-head-section]').count(),4,'four presidency toggles in one center');
  assert.deepEqual(errors,[]);
  await browser.close();
  console.log('PASS: roles, restricted department menus, training and recruitment workflows, supervisor payout and mobile');
