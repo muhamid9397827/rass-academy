@@ -53,6 +53,7 @@ let sdk=portalMock.replace(" const userId=",' const role=new URLSearchParams(loc
  await page.locator('input[name="features"][value="reports.read"]').check();await page.locator('input[name="features"][value="users.approve"]').check();
  await page.screenshot({path:'/tmp/asf-mobile/permissions-390.png',fullPage:true});
  await page.locator('#grantsForm button[value="true"]').click();
+ await page.waitForFunction(()=>window.__asfTest.state.batches.length>0);
  const batches=await page.evaluate(()=>window.__asfTest.state.batches);assert.equal(batches.length,1);assert.equal(batches[0].p_users.length,2);assert.deepEqual(batches[0].p_features,['reports.read','users.approve']);
  assert.equal(await page.locator('input[name="features"][value*="secret"]').count(),0);
  assert.deepEqual(errors,[]);await browser.close();console.log('PASS: delegated admissions without rank powers, course delivery identity, ordinary-member exclusion, mobile layout and multi-person independent permissions');
