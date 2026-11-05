@@ -4,7 +4,7 @@ vm.runInNewContext(fs.readFileSync(__dirname+'/auth-client.js','utf8'),{window,W
 (async()=>{
  const {boundedFetch,deadline,cancel,createClient}=window.ASF_AUTH;
  const client=createClient();assert.equal(typeof client.opts.global.fetch,'function');
- assert.ok(client.opts.auth.storageKey.startsWith('asf-portal-auth-v3-'));
+ assert.ok(client.opts.auth.storageKey.startsWith('asf-portal-auth-v4-'));
  assert.equal(client.opts.auth.persistSession,false,'storage-disabled client must not claim persistence');
  assert.equal(typeof window.ASF_AUTH.resetSessionScope,'function');
  const hanging=(_u,{signal})=>new Promise((_,reject)=>signal.addEventListener('abort',()=>reject(signal.reason),{once:true}));

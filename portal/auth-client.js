@@ -26,44 +26,82 @@
    }finally{clearTimeout(timer);for(const [signal,listener] of listeners)signal.removeEventListener('abort',listener);}
   };
  }
- // A stale localStorage session and/or a zombie Web Lock from an older tab
- // must not prevent the portal from reaching Supabase Auth at all. Each tab
- // maintains its own sessionStorage-backed token and storage/lock namespace.
- // The tab id persists across reloads, but is not shared via localStorage.
- const TAB_KEY='asf-portal-auth-tab-v3';
- const STORAGE_PREFIX='asf-portal-auth-v3-';
- let activeStorageKey=null;
- function storageScope(){
+ // The vendored SDK coordinates refreshes across tabs without the legacy Web Lock.
+ // Keep one project-scoped session, with a 21-day browser reauthentication window.
+ const SESSION_MAX_AGE=21*24*60*60*1000;
+ const TAB_KEY='asf-portal-auth-tab-v3',OLD_PREFIX='asf-portal-auth-v3-';
+ let activeSession=null;
+ function sessionIdentity(raw){
   try{
-   const store=window.sessionStorage;
-   const probe=TAB_KEY+'-probe';store.setItem(probe,'1');store.removeItem(probe);
-   let tab=store.getItem(TAB_KEY);
-   if(!/^[a-zA-Z0-9_-]{12,80}$/.test(tab||'')){
-    tab=(window.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2)).replace(/[^a-zA-Z0-9_-]/g,'-');
-    store.setItem(TAB_KEY,tab);
+   const value=JSON.parse(raw),part=value.access_token?.split('.')[1];
+   if(part&&window.atob){
+    const claims=JSON.parse(window.atob(part.replace(/-/g,'+').replace(/_/g,'/')));
+    if(claims.session_id)return claims.session_id;
    }
-   return {storage:store,key:STORAGE_PREFIX+tab,persist:true};
-  }catch{
-   // Storage may be blocked in privacy modes. In-memory Auth still allows
-   // login in this tab; it just will not persist after a page reload.
-   return {storage:undefined,key:STORAGE_PREFIX+'memory-'+Math.random().toString(36).slice(2),persist:false};
+   return value.user?.id||null;
+  }catch{return null;}
+ }
+ function storageScope(){
+  const project=new URL(window.ASF_CONFIG.supabaseUrl).hostname.split('.')[0];
+  const key='asf-portal-auth-v4-'+project,metaKey=key+'-lifetime',logoutKey=key+'-signed-out';
+  for(const name of ['localStorage','sessionStorage']){
+   try{
+    const store=window[name],probe=key+'-probe';store.setItem(probe,'1');store.removeItem(probe);
+    const metadata=()=>{try{return JSON.parse(store.getItem(metaKey)||'null')}catch{return null}};
+    const expired=()=>{const m=metadata();return !!m&&(!Number.isFinite(m.startedAt)||Date.now()-m.startedAt>=SESSION_MAX_AGE)};
+    const clear=()=>{store.removeItem(key);store.removeItem(metaKey);store.setItem(logoutKey,String(Date.now()));};
+    const storage={
+     getItem(k){
+      if(k===key&&expired()){clear();return null;}
+      return store.getItem(k);
+     },
+     setItem(k,value){
+      if(k===key){
+       const id=sessionIdentity(value),m=metadata();
+       if(!m||m.sessionId!==id)store.setItem(metaKey,JSON.stringify({sessionId:id,startedAt:Date.now()}));
+      }
+      store.setItem(k,value);
+     },
+     removeItem(k){if(k===key)clear();else store.removeItem(k);}
+    };
+    // Migrate this tab's current v3 login once. Never revive a v3 token after logout.
+    if(!store.getItem(key)&&!store.getItem(logoutKey)){
+     const old=window.sessionStorage,tab=old?.getItem(TAB_KEY),oldKey=OLD_PREFIX+tab;
+     const raw=tab&&old.getItem(oldKey);
+     if(raw&&sessionIdentity(raw)){storage.setItem(key,raw);old.removeItem(oldKey);old.removeItem(TAB_KEY);}
+    }
+    return {key,storage,persist:true,expired,clear};
+   }catch{}
   }
+  return {key:key+'-memory',storage:undefined,persist:false,expired:()=>false,clear:()=>{}};
  }
  function createClient(){
   const cfg=window.ASF_CONFIG,scope=new AbortController(),session=storageScope();
-  activeStorageKey=session.key;
+  activeSession=session;
   const client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{
    global:{fetch:boundedFetch(scope.signal)},
    auth:{storageKey:session.key,storage:session.storage,persistSession:session.persist,
     autoRefreshToken:true,detectSessionInUrl:true}
   });
-  scopes.set(client,scope);return client;
+  scopes.set(client,scope);
+  // Clear expired or remotely signed-out views even in an already-open tab.
+  if(window.addEventListener&&window.setInterval){
+   let closing=false;
+   const closeLocal=()=>{
+    if(closing||scope.signal.aborted)return;closing=true;session.clear();
+    Promise.resolve(client.auth.signOut({scope:'local'})).catch(()=>{}).finally(()=>{closing=false});
+   };
+   const check=()=>{if(session.expired())closeLocal();};
+   const storageChanged=e=>{if(e.key===session.key&&e.newValue===null)closeLocal();else if(e.key===session.key+'-lifetime')check();};
+   const timer=window.setInterval(check,60000);
+   window.addEventListener('focus',check);window.addEventListener('storage',storageChanged);
+   scope.signal.addEventListener('abort',()=>{window.clearInterval(timer);window.removeEventListener('focus',check);window.removeEventListener('storage',storageChanged);},{once:true});
+  }
+  return client;
  }
  function resetSessionScope(){
-  try{
-   if(activeStorageKey)window.sessionStorage.removeItem(activeStorageKey);
-   window.sessionStorage.removeItem(TAB_KEY);
-  }catch{}
+  try{activeSession?.clear();}catch{}
+  try{const old=window.sessionStorage,tab=old.getItem(TAB_KEY);if(tab)old.removeItem(OLD_PREFIX+tab);old.removeItem(TAB_KEY);}catch{}
  }
 
  function cancel(client){
@@ -76,5 +114,5 @@
   try{return await Promise.race([Promise.resolve().then(task),new Promise((_,reject)=>{timer=setTimeout(()=>{try{onTimeout();}finally{reject(new AuthTimeoutError());}},milliseconds);})]);}
   finally{clearTimeout(timer);}
  }
- window.ASF_AUTH=Object.freeze({createClient,cancel,deadline,boundedFetch,resetSessionScope,AuthTimeoutError});
+ window.ASF_AUTH=Object.freeze({createClient,cancel,deadline,boundedFetch,resetSessionScope,SESSION_MAX_AGE,AuthTimeoutError});
 })();

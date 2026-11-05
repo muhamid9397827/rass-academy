@@ -1,25 +1,34 @@
-// Isolated per-tab Supabase Auth storage; no real credentials or external calls.
+// Shared browser sessions: persistence, migration, bounded lifetime and logout.
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const source=fs.readFileSync(__dirname+'/auth-client.js','utf8');
 function makeStore(){const data=new Map();return {getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k),data};}
-function load(store,uuid){
- const fakeWindow={fetch,sessionStorage:store,crypto:{randomUUID:()=>uuid},
+let now=1700000000000;
+class Clock extends Date{static now(){return now}}
+function load(shared,tab=makeStore()){
+ const w={fetch,localStorage:shared,sessionStorage:tab,atob:s=>Buffer.from(s,'base64').toString(),
   ASF_CONFIG:{supabaseUrl:'https://example.invalid',supabaseAnonKey:'publishable-test'},
   supabase:{createClient:(u,k,opts)=>({opts,auth:{stopAutoRefresh(){}}})}};
- vm.runInNewContext(source,{window:fakeWindow,WeakMap,Error,Promise,AbortController,Request,Response,URL,DOMException,setTimeout,clearTimeout,Math,Date});
- return fakeWindow.ASF_AUTH;
+ vm.runInNewContext(source,{window:w,WeakMap,Error,Promise,AbortController,Request,Response,URL,DOMException,setTimeout,clearTimeout,Math,Date:Clock});
+ return w.ASF_AUTH;
 }
-const oldStore=makeStore();
-const api1=load(oldStore,'qa-tab-one-20261104'),client1=api1.createClient();
-assert.equal(client1.opts.auth.persistSession,true);
-assert.equal(client1.opts.auth.storage,oldStore);
-assert.equal(client1.opts.auth.storageKey,'asf-portal-auth-v3-qa-tab-one-20261104');
-oldStore.setItem(client1.opts.auth.storageKey,'stored-token-fixture');
-assert.equal(load(oldStore,'new-uuid-is-ignored').createClient().opts.auth.storageKey,client1.opts.auth.storageKey,'reload retains its tab session');
-const tab2=makeStore(),client2=load(tab2,'qa-tab-two-20261104').createClient();
-assert.notEqual(client1.opts.auth.storageKey,client2.opts.auth.storageKey,'separate tabs do not share their auth namespace');
-assert.equal(tab2.getItem(client1.opts.auth.storageKey),null,'second tab has no first tab token');
-api1.resetSessionScope();
-assert.equal(oldStore.getItem(client1.opts.auth.storageKey),null,'clean reconnect removes just the current token');
-assert.equal(oldStore.getItem('asf-portal-auth-tab-v3'),null,'clean reconnect rotates tab identity');
-console.log('PASS: per-tab isolated storage, reload persistence, independent tabs and clean reconnect');
+const raw=id=>JSON.stringify({access_token:'header.'+Buffer.from(JSON.stringify({session_id:id})).toString('base64url')+'.sig',refresh_token:'test-refresh',user:{id:'qa-member'}});
+const shared=makeStore(),api=load(shared),one=api.createClient(),key=one.opts.auth.storageKey;
+assert.equal(key,'asf-portal-auth-v4-example');assert.equal(one.opts.auth.persistSession,true);
+one.opts.auth.storage.setItem(key,raw('session-one'));
+const two=load(shared).createClient();
+assert.equal(two.opts.auth.storageKey,key);assert.equal(two.opts.auth.storage.getItem(key),raw('session-one'),'new tab shares login');
+now+=20*86400000;
+assert.ok(load(shared).createClient().opts.auth.storage.getItem(key),'browser restart retains session before 21 days');
+two.opts.auth.storage.setItem(key,raw('session-one'));
+now+=2*86400000;
+assert.equal(two.opts.auth.storage.getItem(key),null,'refresh cannot extend the original 21-day window');
+one.opts.auth.storage.setItem(key,raw('session-two'));
+assert.ok(two.opts.auth.storage.getItem(key),'fresh sign-in starts a new window');
+api.resetSessionScope();assert.equal(two.opts.auth.storage.getItem(key),null,'logout clears shared session');
+const legacy=makeStore(),next=makeStore();legacy.setItem('asf-portal-auth-tab-v3','legacy-tab');legacy.setItem('asf-portal-auth-v3-legacy-tab',raw('old-session'));
+const migrated=load(next,legacy).createClient();assert.equal(migrated.opts.auth.storage.getItem(key),raw('old-session'));assert.equal(legacy.getItem('asf-portal-auth-v3-legacy-tab'),null);
+const loggedOut=load(next,legacy);loggedOut.createClient();loggedOut.resetSessionScope();legacy.setItem('asf-portal-auth-tab-v3','stale-tab');legacy.setItem('asf-portal-auth-v3-stale-tab',raw('stale-session'));
+assert.equal(load(next,legacy).createClient().opts.auth.storage.getItem(key),null,'stale tabs cannot resurrect a signed-out session');
+const blocked={getItem(){throw Error('blocked')},setItem(){throw Error('blocked')}};
+assert.equal(load(blocked,blocked).createClient().opts.auth.persistSession,false,'memory fallback when all storage is blocked');
+console.log('PASS: shared tabs, restart persistence, absolute 21-day lifetime, refresh, logout and legacy migration');
