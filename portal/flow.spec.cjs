@@ -103,6 +103,15 @@ const mockSupabase=String.raw`
  assert.equal(qa.n,1,'one report stored');
  assert.ok(qa.pdf?.size>1500,'PDF uploaded');
  assert.ok(qa.complete,'PDF finalized after upload');
+ // An old archived PDF must never hide the report body on a new download.
+ await page.evaluate(()=>{const state=window.__asfTest.state,r=state.reports[0];state.pdfs.set(r.pdf_path,new Blob(['%PDF-old-heading-only'],{type:'application/pdf'}));});
+ require('node:fs').mkdirSync('/tmp/asf-pdf',{recursive:true});
+ const downloaded=page.waitForEvent('download');await page.locator('#reportCards [data-action="pdf"]').click();
+ const file=await downloaded;await file.saveAs('/tmp/asf-pdf/downloaded-existing-report.pdf');
+ const bytes=require('node:fs').readFileSync('/tmp/asf-pdf/downloaded-existing-report.pdf');
+ assert.ok(bytes.length>5000,'existing report download is rebuilt from its saved body');
+ assert.equal(bytes.subarray(0,5).toString(),'%PDF-');
+
  await page.locator('#reportCards [data-action="detail"]').click();
  await page.locator('#reviewForm').waitFor({state:'visible'});
  await page.locator('#reviewForm select[name="state"]').selectOption('reviewed');

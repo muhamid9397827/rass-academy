@@ -700,10 +700,8 @@ async function downloadPdf(r){
   if(markError||!ready)toast('الملف متاح للقراءة لكن تعذر تحديث حالة حفظه',true);
  }
  const blobUrl=URL.createObjectURL(data);
- const opened=window.open(blobUrl,'_blank','noopener,noreferrer');
- if(!opened){
-  const link=document.createElement('a');link.href=blobUrl;link.download=code(r.report_number)+'.pdf';link.click();
- }
+ const link=document.createElement('a');link.href=blobUrl;link.download=code(r.report_number)+'.pdf';link.rel='noopener';
+ document.body.append(link);link.click();link.remove();
  setTimeout(()=>URL.revokeObjectURL(blobUrl),120000);
 }
 
