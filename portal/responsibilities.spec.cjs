@@ -20,6 +20,7 @@ let sdk=portalMock.replace(" const userId=",' const role=new URLSearchParams(loc
  await page.goto(base+'?role=admissions');await page.locator('#workspace').waitFor({state:'visible'});
  await page.locator('#mobileMenuToggle').click();await page.locator('[data-page="members"]').click();
  await page.locator('[data-ac-action="approve"]').click();
+ await page.waitForFunction(()=>window.__asfTest.state.decisions.length>0);
  assert.equal((await page.evaluate(()=>window.__asfTest.state.decisions))[0].op,'approve');
  assert.equal(await page.locator('[data-ac-action="suspend"]').count(),0,'delegated admissions cannot suspend');
  assert.equal(await page.locator('#academyReviewNav').isVisible(),false);
