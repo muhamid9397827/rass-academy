@@ -196,8 +196,8 @@
       if(err)throw err;
       const {data:updated,error:readError}=await db.rpc('asf_management_directory');
       if(readError)throw readError;
-      members=updated||[];const fresh=members.find(p=>p.user_id===target);
-      if(fresh)Object.assign(p,fresh);
+      members=updated||[];
+      approved.splice(0,approved.length,...members.filter(member=>member.status==='approved'));
       draw();notify('تم تحديث رئاسة القسم وتوثيق الإجراء.');
      }catch(error){notify(error.message||'تعذر تعديل الرئاسة',true);button.disabled=false}
      finally{busy=false;}
