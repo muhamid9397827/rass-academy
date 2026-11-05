@@ -393,7 +393,7 @@ async function loadIdentity(silent=false,fromAuth=false){
    showScreen('workspace');$('#courtNav').hidden=!(commander||p?.court_enabled||has('court.manage'));
     $('#policeNav').hidden=!(commander||policeHead||courtHead||has('police.manage'));
    $('#adminNav').hidden=!(commander||has('reports.read')||has('reports.review')||has('users.review')||has('users.approve'));
-   document.querySelector('[data-page="members"]').hidden=!(commander||has('users.review')||has('users.approve'));
+   document.querySelector('[data-page="members"]').hidden=!(commander||canManageMembers||has('users.approve'));
    document.querySelector('[data-page="changes"]').hidden=!(commander||has('users.review'));
    $('#academyReviewNav').hidden=!(commander||has('academy.manage')||hasDeptRole('training','head')||hasDeptRole('training','trainer')||hasDeptRole('recruitment','head')||hasDeptRole('recruitment','trainer'));
    $('#departmentNav').hidden=!(hasDept('training')||hasDept('recruitment'));
@@ -450,7 +450,7 @@ async function navigate(name){
   if(name==='compose')return await renderCompose();
   if(name==='police')return await renderPolice();
   if(name==='court')return await renderCourt();
-  if(name==='members'&&(commander||has('users.review')||has('users.approve')))return await renderMembers();
+  if(name==='members'&&(commander||canManageMembers||has('users.approve')))return await renderMembers();
   if(name==='changes'&&(commander||has('users.review')))return await renderChanges();
   if(name==='delegations'&&commander)return await renderDelegations();
   if(name==='access')return await renderAccessRequests();
