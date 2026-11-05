@@ -372,6 +372,8 @@ begin
   or public.asf_department_has_role('recruitment','trainer'))
  then raise exception 'Recruitment reviewer only'; end if;
  if p_action not in ('review','preliminary','hire') then raise exception 'Invalid action'; end if;
+ if p_action='hire' and not (public.asf_is_commander() or public.asf_department_has_role('recruitment','head')) then
+  raise exception 'Final hiring is restricted to recruitment leadership'; end if;
  select * into actor from public.asf_profiles where user_id=auth.uid() and status='approved';
  if not found then raise exception 'Active reviewer required'; end if;
  select * into r from public.asf_academy_results where id=p_result for update;
