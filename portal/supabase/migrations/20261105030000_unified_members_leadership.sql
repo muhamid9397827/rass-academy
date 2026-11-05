@@ -100,7 +100,7 @@ as $$
 begin
  if auth.uid() is null or not public.asf_is_commander()
  then raise exception 'Commander only'; end if;
- if p_user is null or p_enable is null or p_section not in ('training','recruitment','police','court')
+ if p_user is null or p_enable is null or p_section is null or p_section is null or p_section not in ('training','recruitment','police','court')
    or p_user=auth.uid()
    or exists(select 1 from app_private.commanders c where c.user_id=p_user)
    or not exists(select 1 from public.asf_profiles p where p.user_id=p_user and p.status='approved')
@@ -197,7 +197,7 @@ create or replace function public.asf_police_set_role(p_user uuid,p_role text,p_
 returns void language plpgsql security definer set search_path=''
 as $$
 begin
- if p_role not in ('police','court') then raise exception 'Invalid section'; end if;
+ if p_role is null or p_role not in ('police','court') then raise exception 'Invalid section'; end if;
  perform public.asf_management_set_staff(p_user,p_role,p_enable);
 end;
 $$;
@@ -371,7 +371,7 @@ begin
   or public.asf_department_has_role('recruitment','head')
   or public.asf_department_has_role('recruitment','trainer'))
  then raise exception 'Recruitment reviewer only'; end if;
- if p_action not in ('review','preliminary','hire') then raise exception 'Invalid action'; end if;
+ if p_action is null or p_action not in ('review','preliminary','hire') then raise exception 'Invalid action'; end if;
  if p_action='hire' and not (public.asf_is_commander() or public.asf_department_has_role('recruitment','head')) then
   raise exception 'Final hiring is restricted to recruitment leadership'; end if;
  select * into actor from public.asf_profiles where user_id=auth.uid() and status='approved';
