@@ -161,6 +161,20 @@ function markAuthBlocked(){
  authEpoch++;authNeedsReload=true;window.ASF_AUTH.cancel(db);
 }
 const authDeadline=(work,ms=12000)=>window.ASF_AUTH.deadline(work,markAuthBlocked,ms);
+// Browser-native validation can block a submit before the onsubmit handler runs.
+// Surface this otherwise silent rejection in Arabic, without weakening signup rules.
+$('#authForm').addEventListener('invalid',event=>{
+ const field=event.target,validity=field.validity||{};
+ let message;
+ if(field.id==='email')message=validity.valueMissing?'أدخل بريدك الإلكتروني للمتابعة.':'صيغة البريد الإلكتروني غير صحيحة.';
+ else if(field.id==='password')message=validity.valueMissing?'أدخل كلمة المرور للمتابعة.':registering&&validity.tooShort?'يجب أن تتكون كلمة مرور الحساب الجديد من 8 أحرف على الأقل.':'تحقق من كلمة المرور المدخلة.';
+ else if(field.id==='gameName')message='اكتب الاسم والكنية داخل اللعبة.';
+ else if(field.id==='discordId')message='أدخل Discord ID رقميًا من 17 إلى 20 خانة.';
+ else if(field.id==='activationReason')message='سبب طلب التفعيل إلزامي ويجب أن يتكون من 10 أحرف على الأقل.';
+ else message='تحقق من بيانات الحقول المطلوبة قبل المتابعة.';
+ const status=$('#authStatus');
+ status.hidden=false;status.className='auth-status error';status.textContent=message;
+},true);
 $('#authForm').onsubmit=async e=>{
  e.preventDefault();if(!ready)return toast('يلزم إعداد Supabase أولًا. الدورات العامة متاحة.',true);
  if(authNeedsReload){

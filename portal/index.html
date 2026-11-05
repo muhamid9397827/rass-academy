@@ -158,18 +158,24 @@
 <button class="mobile-menu-backdrop" id="mobileMenuBackdrop" type="button" aria-label="إغلاق القائمة" hidden></button>
 <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="التنقل السريع" hidden><button type="button" data-mobile-page="dashboard"><span aria-hidden="true">▦</span>الرئيسية</button><button type="button" data-mobile-page="reports"><span aria-hidden="true">▤</span>تقاريري</button><button type="button" data-mobile-page="compose"><span aria-hidden="true">＋</span>تقرير جديد</button><button type="button" id="mobileMore" aria-controls="portalSidebar" aria-expanded="false"><span aria-hidden="true">☰</span>الأقسام</button></nav>
 <div class="modal-backdrop" id="restrictedModal" hidden><section class="access-modal" role="dialog" aria-modal="true" aria-labelledby="restrictedTitle" aria-describedby="restrictedMessage"><button class="modal-close" id="closeRestricted" type="button" aria-label="إغلاق">×</button><span class="modal-lock" aria-hidden="true">🔒</span><span class="restricted-badge">قسم مقيّد</span><h2 id="restrictedTitle">يتطلب تصريحًا خاصًا</h2><p id="restrictedMessage">لا تملك صلاحية الدخول إلى هذا القسم. تواصل مع القيادة لطلب التصريح المناسب.</p><div class="access-modal-actions"><button class="btn primary" id="requestRestrictedAccess" type="button">طلب تصريح من القائد</button><button class="btn primary" id="ackRestricted" type="button">حسنًا، فهمت</button></div></section></div>
-<script src="config.js"></script>
+<!-- Keep dependency order deterministic while forcing fresh first-party JS every page load.
+     GitHub Pages cannot set per-file no-cache headers for this static site. -->
+<script>
+window.ASF_PAGE_ASSET_REV=Date.now().toString(36);
+document.write('<script src="config.js?v='+window.ASF_PAGE_ASSET_REV+'"><\/script>');
+</script>
 <script src="vendor/supabase-2.118.0/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-<script src="../js/courses.js"></script>
-<script src="mp-data.js"></script>
-<script src="workflow-tools.js?v=20261103-5"></script>
-<script src="mobile.js?v=20261103-mobile-1"></script>
-<script src="auth-client.js?v=20261104-isolated-auth-1"></script>
-<script src="departments.js?v=20261104-qualification-1"></script>
-<script src="operations-center.js?v=20261104-ops-1"></script>
-<script src="police-workspace.js?v=20261103-police-1"></script>
-<script src="notice-center.js?v=20261103-1"></script>
-<script src="mfa-commander.js?v=20261104-auth-stability-2"></script>
-<script src="app.js?v=20261104-operations-1" defer></script>
+<script>
+(() => {
+ const firstParty=[
+  '../js/courses.js','mp-data.js','workflow-tools.js','mobile.js',
+  'auth-client.js','departments.js','operations-center.js',
+  'police-workspace.js','notice-center.js','mfa-commander.js','app.js'
+ ];
+ for(const path of firstParty){
+  document.write('<script src="'+path+'?v='+window.ASF_PAGE_ASSET_REV+'"><\/script>');
+ }
+})();
+</script>
 </body></html>
