@@ -16,7 +16,9 @@ const sdk=portalMock
   "asf_profiles:[state.profile,state.member],asf_police_heads:role==='head'?[{user_id:userId}]:[],asf_delegations:role==='officer'?[{user_id:userId,permission:'police.manage',report_kind:null}]:[]")
  .replace("if(name==='asf_is_commander')return {data:true,error:null};",
   "if(name==='asf_is_commander')return {data:role==='commander',error:null};"+
-  "if(name==='asf_police_directory')return {data:policeDirectory,error:null};"+
+  "if(name==='asf_can_manage_members')return {data:role==='head'||role==='commander',error:null};"+
+  "if(name==='asf_management_directory')return {data:[{...state.member,training_head:false,recruitment_head:false,police_head:false,court_head:false,training_trainer:false,recruitment_trainer:false,police_staff:false,court_staff:false}],error:null};"+
+  "if(name==='asf_management_set_staff'||name==='asf_management_set_head'){operations.push({name,args});return {data:null,error:null};}"+"if(name==='asf_police_directory')return {data:policeDirectory,error:null};"+
   "if(name==='asf_police_set_role'||name==='asf_police_set_head'){operations.push({name,args});return {data:null,error:null};}");
 assert.match(sdk,/asf_police_set_role/,'must include police leadership mock');
 (async()=>{
@@ -58,17 +60,21 @@ assert.match(sdk,/asf_police_set_role/,'must include police leadership mock');
  assert.equal(await page.locator('#policeNav').evaluate(el=>!el.hidden),true,'police chief has access');
  await page.locator('#mobileMenuToggle').click();
  await page.locator('#policeNav').click();
- await page.locator('#mpLeadershipDetails summary').click();
- await page.locator('[data-mp-role="court"]').waitFor({state:'visible'});
- assert.equal(await page.locator('[data-mp-role="head"]').count(),0,'chief cannot appoint another chief');
- await page.locator('[data-mp-role="court"]').click();
+ assert.equal(await page.locator('#mpLeadershipDetails').count(),0,'all staff toggles moved out of police tools');
+ await page.locator('#mobileMenuToggle').click();
+ await page.locator('[data-page="members"]').click();
+ await page.locator('[data-ac-staff="police"]').waitFor({state:'visible'});
+ assert.equal(await page.locator('[data-ac-staff="court"]').count(),0,'police chief cannot distribute court roles');
+ await page.locator('[data-ac-staff="police"]').click();
  const actions=await page.evaluate(()=>window.__policeOps);
- assert.ok(actions.some(x=>x.name==='asf_police_set_role'&&x.args.p_role==='court'&&x.args.p_enable===true));
+ assert.ok(actions.some(x=>x.name==='asf_management_set_staff'&&x.args.p_section==='police'&&x.args.p_enable===true));
  await visit('commander');
  await page.locator('#mobileMenuToggle').click();
+ await page.locator('#departmentAdminNav').click();
+ await page.locator('#acHeadSearch').waitFor({state:'visible'});
+ assert.equal(await page.locator('[data-head-section]').count(),4,'commander controls four presidencies');
+ await page.locator('#mobileMenuToggle').click();
  await page.locator('#policeNav').click();
- await page.locator('#mpLeadershipDetails summary').click();
- await page.locator('[data-mp-role="head"]').waitFor({state:'visible'});
  await page.locator('#mpInvestigationDetails summary').click();
  await page.locator('#investigationForm input[name="accused"]').fill('عسكري تجريبي');
  await page.locator('#investigationForm input[name="discord"]').fill('99999999999999999999');
