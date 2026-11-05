@@ -135,6 +135,9 @@
     const oldStatus=p.status;
     const {error}=await db.rpc('asf_admin_action',{op:action,target:id,arg:null});
     if(error)throw error;
+    // Keep the affected member visible in its new status instead of silently
+    // removing the row from the pending queue after approving/rejecting it.
+    filter=action==='approve'?'approved':action==='reject'?'rejected':'suspended';
     await reload();
     const isBan=action==='suspend'||action==='reject';
     const shouldSync=isBan||oldStatus==='suspended'||oldStatus==='rejected';
