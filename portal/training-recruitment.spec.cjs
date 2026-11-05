@@ -27,7 +27,9 @@ const functions=extract('function mountQualificationResults(){','function mountA
   const page=await browser.newPage(),errors=[];
   page.on('pageerror',err=>errors.push(err.message));
   page.on('dialog',dialog=>dialog.accept());
-  await page.goto('http://127.0.0.1:8000/portal/config.js',{waitUntil:'domcontentloaded'});
+  await page.route('**/portal/qa-blank',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:'<!doctype html><meta charset="utf-8"><title>Test</title>'}));
+  await page.goto('http://127.0.0.1:8000/portal/qa-blank',{waitUntil:'domcontentloaded'});
+  assert.equal(await page.evaluate(()=>document.characterSet),'UTF-8','browser test must decode Arabic strings as UTF-8');
   await page.setContent('<main id="page"><div id="qualificationResultPanel"></div><div id="academyResultPanel"></div></main>');
   await page.evaluate(()=>{
    const now='2026-11-05T03:00:00Z';
