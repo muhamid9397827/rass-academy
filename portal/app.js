@@ -525,38 +525,38 @@ function mountQualificationResults(){
  if(!(commander||hasDeptRole('recruitment','head')||hasDeptRole('recruitment','trainer'))){
   panel.innerHTML=empty('مراجعة التأهيل مخصصة للقبول والتجنيد.');return;
  }
- panel.innerHTML='<section class="section-card" style="margin-top:20px"><div class="row between"><h3>نتائج تأهيل المتقدمين والتوظيف</h3>'+badge('قراران مستقلان')+'</div>'+
- '<p class="muted">تظهر نتيجة النجاح أو الرسوب للمتقدم فور تصحيح الاختبار من الخادم. هنا تُوثّق مراجعة النتيجة باسم المسؤول، ثم يُؤكَّد التوظيف للناجح فقط بعد المراجعة. هذه الإجراءات لا تعطي رول Discord تلقائيًا ولا تغيّر نتيجة الاختبار.</p>'+
+ panel.innerHTML='<section class="section-card" style="margin-top:20px"><div class="row between"><h3>نتائج تأهيل المتقدمين والقبول المبدئي</h3>'+badge('قراران مستقلان')+'</div>'+
+ '<p class="muted">تظهر نتيجة النجاح أو الرسوب للمتقدم فور تصحيح الاختبار من الخادم. هنا تُوثّق مراجعة النتيجة باسم المسؤول، ثم يُسجَّل القبول المبدئي للناجح فقط بعد المراجعة. هذه الإجراءات لا تعطي رول Discord تلقائيًا ولا تغيّر نتيجة الاختبار.</p>'+
  '<form id="qualificationFilter" class="row" style="margin-bottom:12px"><input name="search" placeholder="بحث بالاسم أو Discord أو الإيصال" maxlength="60" style="max-width:380px"><button class="btn ghost" type="submit">بحث</button><button id="qualificationRefresh" class="btn ghost" type="button">تحديث</button></form><div id="qualificationRows" aria-live="polite"></div></section>';
  let term='',offset=0,request=0;
  const load=async()=>{
   const container=$('#qualificationRows');if(!container)return;const id=++request;
   container.textContent='جاري تحميل نتائج التأهيل…';
-  let q=db.from('asf_academy_results').select('id,receipt,trainee_name,discord_id,score,total,percentage,passed,assigned_rank,received_at,qualification_reviewed_at,qualification_reviewed_by_name,qualification_hired_at,qualification_hired_by_name',{count:'exact'}).eq('course_id','individual-qualification').eq('is_test',false).order('received_at',{ascending:false});
+  let q=db.from('asf_academy_results').select('id,receipt,trainee_name,discord_id,score,total,percentage,passed,assigned_rank,received_at,qualification_reviewed_at,qualification_reviewed_by_name,qualification_preliminary_at,qualification_preliminary_by_name,qualification_hired_at,qualification_hired_by_name',{count:'exact'}).eq('course_id','individual-qualification').eq('is_test',false).order('received_at',{ascending:false});
   if(term)q=/^\d{15,20}$/.test(term)?q.eq('discord_id',term):/^ACD-\d+$/.test(term)?q.eq('receipt',term):q.ilike('trainee_name','%'+term.replace(/[%_\\]/g,'')+'%');
   const {data,error,count}=await q.range(offset,offset+29);
   if(!container.isConnected||id!==request)return;
   if(error){container.textContent='تعذر تحميل نتائج التأهيل: '+error.message;return;}
   container.innerHTML='<p class="muted">'+esc(count??data.length)+' نتيجة</p>'+
-   (data.length?'<div class="table-scroll"><table><thead><tr><th>المتقدم والإيصال</th><th>النتيجة</th><th>مراجعة النتيجة</th><th>تأكيد التوظيف</th></tr></thead><tbody>'+
+   (data.length?'<div class="table-scroll"><table><thead><tr><th>المتقدم والإيصال</th><th>النتيجة</th><th>مراجعة النتيجة</th><th>القبول المبدئي</th></tr></thead><tbody>'+
     data.map(r=>'<tr><td><strong>'+esc(r.trainee_name)+'</strong><br><small dir="ltr">'+esc(r.discord_id)+'</small><br>'+esc(r.receipt)+'<br>'+date(r.received_at)+'</td>'+
      '<td>'+badge(r.passed?'ناجح':'راسب')+'<br>'+esc(r.score)+' / '+esc(r.total)+' — '+esc(r.percentage)+'%'+(r.passed?'<br>الرتبة المبدئية: '+esc(r.assigned_rank||'—'):'')+'</td>'+
      '<td>'+(r.qualification_reviewed_at?'<strong>✓ تمت المراجعة بواسطة '+esc(r.qualification_reviewed_by_name)+'</strong><br>'+date(r.qualification_reviewed_at):
       '<button type="button" class="btn primary small" data-qualification-action="review" data-qualification-id="'+esc(r.id)+'">✓ راجعت النتيجة</button>')+'</td>'+
-     '<td>'+(r.qualification_hired_at?'<strong>✓ تم توظيفه بواسطة '+esc(r.qualification_hired_by_name)+'</strong><br>'+date(r.qualification_hired_at):
-      !r.passed?'غير مؤهل للتوظيف':!r.qualification_reviewed_at?'بانتظار مراجعة النتيجة':
-      '<button type="button" class="btn primary small" data-qualification-action="hire" data-qualification-id="'+esc(r.id)+'">✓ تم توظيفه</button>')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+
+     '<td>'+(r.qualification_preliminary_at?'<strong>✓ قبول مبدئي بواسطة '+esc(r.qualification_preliminary_by_name)+'</strong><br>'+date(r.qualification_preliminary_at):
+       !r.passed?'غير مؤهل للقبول':!r.qualification_reviewed_at?'بانتظار مراجعة النتيجة':
+       '<button type="button" class="btn primary small" data-qualification-action="preliminary" data-qualification-id="'+esc(r.id)+'">✓ قبول مبدئي</button>')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+
    '<div class="row"><button type="button" class="btn ghost small" id="qualificationPrev" '+(offset===0?'disabled':'')+'>السابق</button><button type="button" class="btn ghost small" id="qualificationNext" '+(offset+30>=(count??data.length)?'disabled':'')+'>التالي</button></div>';
   $('#qualificationPrev').onclick=()=>{offset=Math.max(0,offset-30);load()};
   $('#qualificationNext').onclick=()=>{offset+=30;load()};
   container.querySelectorAll('[data-qualification-action]').forEach(button=>button.onclick=async()=>{
    const action=button.dataset.qualificationAction,which=button.dataset.qualificationId;
-   if(!confirm(action==='review'?'هل قمت بمراجعة نتيجة هذا المتقدم؟ سيُسجل اسمك وتاريخ المراجعة.':'هل تم توظيف هذا المتقدم الناجح فعلًا؟ سيُسجل اسمك وتاريخ التأكيد، ولا يمنح ذلك رتبة أو رولًا تلقائيًا.'))return;
+   if(!confirm(action==='review'?'هل قمت بمراجعة نتيجة هذا المتقدم؟ سيُسجل اسمك وتاريخ المراجعة.':'هل تؤكد القبول المبدئي لهذا المتقدم الناجح؟ سيُسجل اسمك وتاريخ القرار، دون منح رتبة أو رول تلقائيًا.'))return;
    button.disabled=true;
    try{
     const {data:result,error:err}=await db.rpc('asf_recruitment_qualification_action',{p_result:which,p_action:action});
     if(err)throw err;
-    toast(result.already?'سبق توثيق هذا الإجراء.':action==='review'?'تم توثيق مراجعة النتيجة باسم المسؤول.':'تم توثيق توظيف المتقدم باسم المسؤول.');
+    toast(result.already?'سبق توثيق هذا الإجراء.':action==='review'?'تم توثيق مراجعة النتيجة باسم المسؤول.':'تم تسجيل القبول المبدئي باسم المسؤول.');
     await load();
    }catch(err){toast(err.message||'تعذر حفظ الإجراء',true);button.disabled=false;}
   });
