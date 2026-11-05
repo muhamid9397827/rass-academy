@@ -63,6 +63,7 @@ assert.match(sdk,/asf_police_set_role/,'must include police leadership mock');
  assert.equal(await page.locator('#mpLeadershipDetails').count(),0,'all staff toggles moved out of police tools');
  await page.locator('#mobileMenuToggle').click();
  await page.locator('[data-page="members"]').click();
+ await page.locator('#acFilter').selectOption('approved');
  await page.locator('[data-ac-staff="police"]').waitFor({state:'visible'});
  assert.equal(await page.locator('[data-ac-staff="court"]').count(),0,'police chief cannot distribute court roles');
  await page.locator('[data-ac-staff="police"]').click();
