@@ -100,7 +100,7 @@ as $$
 begin
  if auth.uid() is null or not public.asf_is_commander()
  then raise exception 'Commander only'; end if;
- if p_user is null or p_enable is null or p_section is null or p_section is null or p_section not in ('training','recruitment','police','court')
+ if p_user is null or p_enable is null or p_section is null or p_section not in ('training','recruitment','police','court')
    or p_user=auth.uid()
    or exists(select 1 from app_private.commanders c where c.user_id=p_user)
    or not exists(select 1 from public.asf_profiles p where p.user_id=p_user and p.status='approved')
@@ -145,7 +145,7 @@ declare v_allow boolean:=public.asf_is_commander();
  v_feature text;
 begin
  if auth.uid() is null or p_user is null or p_enable is null
-  or p_section not in ('training','recruitment','police','court')
+  or p_section is null or p_section not in ('training','recruitment','police','court')
   or p_user=auth.uid()
   or exists(select 1 from app_private.commanders c where c.user_id=p_user)
   or not exists(select 1 from public.asf_profiles p where p.user_id=p_user and p.status='approved')
