@@ -8,7 +8,7 @@ const priorities={normal:'عادية',high:'عالية',urgent:'عاجلة'};
 function create({db,getContext,notify}){
  const $=s=>document.querySelector(s);
  const ctx=()=>getContext();
- let allTasks=[],allReports=[],reportReceipts=[];
+ let allTasks=[],allReports=[],reportReceipts=[],leadershipPeople=[];
  async function loadTasks(){
   const {data,error}=await db.from('asf_operations_tasks')
    .select('id,title,description,created_by,created_by_name,assigned_to,assigned_to_name,priority,status,reference_code,created_at,updated_at,completed_at')
@@ -111,6 +111,55 @@ function create({db,getContext,notify}){
   host.innerHTML=out.map(([label,ok,detail])=>'<p><strong>'+(ok?'✓ ':'⚠ ')+esc(label)+'</strong> — '+esc(ok?'متصل':'تعذر الاتصال')+'<small class="muted"> · '+esc(detail)+'</small></p>').join('')+
    '<small class="muted">هذا فحص اتصال أساسي، ولا يثبت جاهزية إرسال البريد أو تحمل أعداد كبيرة من المستخدمين.</small>';
  }
+ const memberSections=p=>[
+  (p.training_head||p.training_trainer)&&'training',
+  (p.recruitment_head||p.recruitment_trainer)&&'recruitment',
+  (p.police_head||p.police_staff)&&'police',
+  (p.court_head||p.court_staff)&&'court'
+ ].filter(Boolean);
+ const sectionNames={training:'كلية التدريب',recruitment:'القبول والتجنيد',police:'الشرطة العسكرية',court:'مجلس القضاء'};
+ async function showCommanderStats(){
+  const host=$('#operationsLeadershipStats');if(!host||!ctx().commander)return;
+  const count=async query=>{try{const {count,error}=await query;return error?'غير متاح':String(count??'غير متاح')}catch{return 'غير متاح'}};
+  const [results,newReports,serviceRewards,departmentRewards]=await Promise.all([
+   count(db.from('asf_academy_results').select('id',{count:'exact',head:true})),
+   count(db.from('asf_reviews').select('report_id',{count:'exact',head:true}).eq('state','new')),
+   count(db.from('asf_service_rewards').select('id',{count:'exact',head:true}).is('paid_at',null)),
+   count(db.from('asf_department_rewards').select('id',{count:'exact',head:true}).is('paid_at',null))
+  ]);
+  if(!host.isConnected)return;
+  const pendingRewards=serviceRewards==='غير متاح'||departmentRewards==='غير متاح'?'غير متاح':String(Number(serviceRewards)+Number(departmentRewards));
+  const values=[
+   ['أعضاء معتمدون',leadershipPeople.filter(p=>p.status==='approved').length],
+   ['طلبات تفعيل معلقة',leadershipPeople.filter(p=>p.status==='pending').length],
+   ['نتائج الاختبارات',results],['تقارير جديدة',newReports],
+   ['مهام مفتوحة',allTasks.filter(t=>t.status!=='done').length],['مكافآت قيد الصرف',pendingRewards]
+  ];
+  host.innerHTML=values.map(([label,value])=>'<div class="section-card"><strong style="font-size:25px">'+esc(value)+'</strong><p class="muted">'+esc(label)+'</p></div>').join('');
+ }
+ function showPeopleDirectory(){
+  const host=$('#operationsPeopleResults');if(!host)return;
+  const search=String($('#operationsPeopleSearch')?.value||'').trim().toLowerCase();
+  const section=$('#operationsPeopleSection')?.value||'all',rank=$('#operationsPeopleRank')?.value||'all';
+  const status=$('#operationsPeopleStatus')?.value||'all';
+  const matches=leadershipPeople.filter(p=>
+   (status==='all'||p.status===status)&&(rank==='all'||p.rank===rank)&&
+   (section==='all'||memberSections(p).includes(section))&&
+   (!search||[p.game_name,p.rank,p.military_code].some(x=>String(x||'').toLowerCase().includes(search)))
+  );
+  host.innerHTML='<p class="muted">'+matches.length+' نتيجة ضمن '+leadershipPeople.length+' حسابًا إداريًا ظاهرًا للقائد</p>'+(
+   matches.length?'<div class="table-scroll"><table><thead><tr><th>الاسم</th><th>الرتبة</th><th>الكود</th><th>الحالة</th><th>الأقسام</th></tr></thead><tbody>'+matches.slice(0,100).map(p=>
+    '<tr><td>'+esc(p.game_name)+'</td><td>'+esc(p.rank||'—')+'</td><td>'+esc(p.military_code||'—')+'</td><td>'+esc(p.status||'—')+'</td><td>'+esc(memberSections(p).map(x=>sectionNames[x]).join('، ')||'عضو عام')+'</td></tr>'
+   ).join('')+'</tbody></table></div>':'<div class="empty">لا توجد نتائج مطابقة.</div>');
+ }
+ async function showRecentAudit(){
+  const host=$('#operationsRecentAudit');if(!host||!ctx().commander)return;
+  const {data,error}=await db.from('asf_audit').select('action,target_id,created_at').order('created_at',{ascending:false}).limit(12);
+  if(!host.isConnected)return;
+  host.innerHTML=error?'<p class="muted">تعذر تحميل سجل الإجراءات.</p>':(data||[]).map(row=>
+   '<p><strong>'+esc(row.action)+'</strong> · '+dates(row.created_at)+'<small class="muted"> · '+esc(row.target_id||'—')+'</small></p>'
+  ).join('')||'<p class="muted">لا توجد إجراءات مسجلة.</p>';
+ }
  async function render(){
   const c=ctx();
   if(!c.user||(!c.commander&&c.profile?.status!=='approved'))throw Error('حساب معتمد مطلوب');
@@ -120,15 +169,24 @@ function create({db,getContext,notify}){
   const canCreate=!!c.commander;
   let people=[];
   if(canCreate){
-   const res=await db.from('asf_profiles').select('user_id,game_name,military_code').eq('status','approved').order('game_name').limit(350);
-   people=res.data||[];
+   const directory=await db.rpc('asf_management_directory');
+   leadershipPeople=!directory.error&&Array.isArray(directory.data)?directory.data:[];
+   if(!leadershipPeople.length){
+    const fallback=await db.from('asf_profiles').select('user_id,game_name,military_code,rank,status').order('game_name').limit(350);
+    leadershipPeople=fallback.data||[];
+   }
+   people=leadershipPeople.filter(p=>p.status==='approved');
   }
-  page.innerHTML='<section class="section-card"><h3>مركز العمليات — متابعة المعاملات</h3><p class="muted">تُعرض فقط المهام والتقارير المسموح لحسابك بالاطلاع عليها. تظهر حالة التقرير تلقائيًا بعد تسجيل فتحه أو استلامه، وتبقى الموافقة الرسمية إجراءً مستقلًا.</p><div id="operationsReports"></div></section>'+
+  const ranks=[...new Set(leadershipPeople.map(p=>p.rank).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  page.innerHTML=(canCreate?'<section class="section-card"><h3>مؤشرات القيادة</h3><div class="grid three" id="operationsLeadershipStats">جاري تحميل المؤشرات…</div><p class="muted">تُحسب المؤشرات من السجلات التي تسمح قاعدة البيانات للقائد بقراءتها.</p></section>':'')+
+   '<section class="section-card"><h3>مركز العمليات — متابعة المعاملات</h3><p class="muted">تُعرض فقط المهام والتقارير المسموح لحسابك بالاطلاع عليها. تظهر حالة التقرير تلقائيًا بعد تسجيل فتحه أو استلامه، وتبقى الموافقة الرسمية إجراءً مستقلًا.</p><div id="operationsReports"></div></section>'+
    '<section class="section-card"><div class="row between"><h3>مركز المهام</h3><span class="badge">'+allTasks.length+' مهمة ظاهرة</span></div>'+
     '<p class="muted">كل تحديث يُسجّل باسم صاحبه وتوقيته، ولا يمكن للموظف إعادة فتح مهمة مكتملة دون القائد.</p>'+
     '<div class="row"><input id="operationsSearch" type="search" placeholder="بحث بالاسم أو الموضوع أو مرجع المعاملة" style="max-width:400px"><select id="operationsStatus">'+
     '<option value="all">جميع الحالات</option>'+Object.entries(labels).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select></div>'+
     '<div id="operationsTasks"></div></section>'+
+   (canCreate?'<section class="section-card"><h3>دليل الأعضاء الإداري</h3><p class="muted">بحث وتصفية للقائد فقط؛ لا يعرض البريد أو أسرار المصادقة.</p><div class="grid three"><label>بحث<input id="operationsPeopleSearch" type="search" placeholder="الاسم أو الرتبة أو الكود"></label><label>القسم<select id="operationsPeopleSection"><option value="all">كل الأقسام</option>'+Object.entries(sectionNames).map(([key,label])=>'<option value="'+key+'">'+label+'</option>').join('')+'</select></label><label>الرتبة<select id="operationsPeopleRank"><option value="all">كل الرتب</option>'+ranks.map(value=>'<option value="'+esc(value)+'">'+esc(value)+'</option>').join('')+'</select></label><label>الحالة<select id="operationsPeopleStatus"><option value="all">كل الحالات</option><option value="approved">مفعّل</option><option value="pending">قيد المراجعة</option><option value="suspended">ملغى التفعيل</option><option value="rejected">مرفوض</option></select></label></div><div id="operationsPeopleResults"></div></section>':'')+
+   (canCreate?'<section class="section-card"><h3>آخر إجراءات النظام</h3><div id="operationsRecentAudit">جاري تحميل السجل…</div></section>':'')+
    (canCreate?'<section class="section-card"><h3>تكليف مهمة جديدة</h3><form id="operationsCreate"><label>عنوان المهمة<input name="title" required minlength="4" maxlength="180"></label>'+
     '<label>وصف وتوجيهات<textarea name="description" maxlength="4000" rows="3"></textarea></label><div class="grid two">'+
     '<label>المكلف<select name="assignee" required>'+people.map(p=>'<option value="'+esc(p.user_id)+'">'+esc(p.game_name)+' — '+esc(p.military_code||'')+'</option>').join('')+'</select></label>'+
@@ -140,6 +198,8 @@ function create({db,getContext,notify}){
   paintReports();paintTasks();$('#operationsSearch').oninput=paintTasks;$('#operationsStatus').onchange=paintTasks;
   $('#operationsHealthRefresh').onclick=diagnostics;diagnostics();
   if(canCreate){
+   showCommanderStats();showPeopleDirectory();showRecentAudit();
+   ['operationsPeopleSearch','operationsPeopleSection','operationsPeopleRank','operationsPeopleStatus'].forEach(id=>$('#'+id).oninput=showPeopleDirectory);
    $('#operationsCreate').onsubmit=async e=>{
     e.preventDefault();const form=new FormData(e.target),button=e.target.querySelector('[type="submit"]');
     button.disabled=true;

@@ -21,9 +21,15 @@
    const c=ctx();
    return c.commander||section==='training'&&c.trainingHead||
     section==='recruitment'&&c.recruitmentHead||
-    section==='police'&&c.policeHead;
+    section==='police'&&c.policeHead||section==='court'&&c.courtHead;
   };
-  const canDeactivate=()=>ctx().commander||ctx().trainingHead||ctx().recruitmentHead||ctx().policeHead||ctx().courtHead;
+  const canDeactivate=p=>{
+   const c=ctx();
+   if(c.commander)return true;
+   if(hasLeadership(p))return false;
+   return c.trainingHead&&p.training_trainer||c.recruitmentHead&&p.recruitment_trainer||
+    c.policeHead&&p.police_staff||c.courtHead&&p.court_staff;
+  };
   const statusTag=value=>{
    const [title,key]=STATUS[value]||[value,'pending'];
    return '<span class="ac-status ac-'+esc(key)+'">'+esc(title)+'</span>';
@@ -51,7 +57,7 @@
      '<button type="button" class="btn warn small" data-ac-action="reject" data-ac-user="'+esc(p.user_id)+'">رفض الطلب</button></div>';
    }
    if(p.status==='approved'){
-    const allowed=canDeactivate()&&!(!ctx().commander&&hasLeadership(p));
+    const allowed=canDeactivate(p);
     return '<div class="ac-account-actions">'+
      (allowed?'<button type="button" class="btn warn small" data-ac-action="suspend" data-ac-user="'+esc(p.user_id)+'">إلغاء التفعيل وسحب الصلاحيات</button>':
       '<span class="ac-note">هذا الحساب محمي من إلغاء التفعيل عبر تفويض آخر.</span>')+

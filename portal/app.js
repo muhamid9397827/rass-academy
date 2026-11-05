@@ -110,8 +110,16 @@ $('#authToggle').onclick=()=>{if(!$('#authSubmit').disabled)authForm(registering
 $('#forgotPassword').onclick=async()=>{
  if(!ready)return toast('ربط قاعدة البيانات غير متاح',true);
  const email=$('#email').value.trim();if(!email)return toast('أدخل بريدك الإلكتروني أولًا',true);
- const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:PORTAL_AUTH_REDIRECT});
- toast(error?'تعذر إرسال رابط الاستعادة: '+error.message:'إذا كان البريد مسجلًا، سيتم إرسال رابط استعادة كلمة المرور.',!!error);
+ const button=$('#forgotPassword');button.disabled=true;button.setAttribute('aria-busy','true');
+ try{
+  const {error}=await authDeadline(()=>db.auth.resetPasswordForEmail(email,{redirectTo:PORTAL_AUTH_REDIRECT}),14000);
+  if(error)throw error;
+  toast('إذا كان البريد مسجلًا، سيتم إرسال رابط استعادة كلمة المرور.');
+ }catch(err){
+  const timedOut=err?.name==='AuthTimeoutError'||/abort|timeout|fetch|network|lock/i.test(String(err?.message||''));
+  if(timedOut)$('#authFresh').hidden=false;
+  toast(timedOut?'تأخر الاتصال بخدمة الاستعادة. افتح جلسة دخول جديدة ثم حاول مجددًا.':'تعذر إرسال رابط الاستعادة: '+(err.message||'خطأ غير معروف'),true);
+ }finally{button.disabled=false;button.removeAttribute('aria-busy')}
 };$('#authBack').onclick=()=>showScreen('welcome');
 $('#verifyEmailLogin').onclick=()=>authForm('login');
 $('#verifyEmailBack').onclick=()=>showScreen('welcome');
@@ -322,20 +330,32 @@ $('#recoveryForm').onsubmit=async e=>{
  const password=$('#recoveryPassword').value,confirmation=$('#recoveryPasswordConfirm').value;
  if(password.length<8)return toast('يجب أن تتكوّن كلمة المرور من 8 أحرف على الأقل.',true);
  if(password!==confirmation)return toast('كلمتا المرور غير متطابقتين.',true);
- const submit=$('#recoverySubmit');submit.disabled=true;
+ const submit=$('#recoverySubmit');submit.disabled=true;submit.setAttribute('aria-busy','true');
+ $('#recoveryStatus').textContent='جارٍ التحقق من رابط الاستعادة وتحديث كلمة المرور…';
  try{
-  const {data:authResult,error:authError}=await db.auth.getUser();
+  const {data:authResult,error:authError}=await authDeadline(()=>db.auth.getUser(),14000);
   if(authError||!authResult?.user)throw Error('رابط الاستعادة غير صالح أو انتهت صلاحيته. اطلب رابطًا جديدًا.');
-  const {error}=await db.auth.updateUser({password});
+  const {error}=await authDeadline(()=>db.auth.updateUser({password}),14000);
   if(error)throw error;
   recoveryMode=false;
   window.history.replaceState(null,'',window.location.pathname);
   $('#recoveryForm').reset();
-  await db.auth.signOut();
+  try{
+   const {error:signOutError}=await window.ASF_AUTH.deadline(()=>db.auth.signOut(),()=>window.ASF_AUTH.cancel(db),10000);
+   if(signOutError)throw signOutError;
+  }catch{
+   window.ASF_AUTH.resetSessionScope();
+   window.location.replace(PORTAL_AUTH_REDIRECT+'?login=1&fresh='+Date.now());
+   return;
+  }
   authForm('login');
   toast('تم تحديث كلمة المرور. يمكنك الآن تسجيل الدخول بالكلمة الجديدة.');
- }catch(err){toast(err.message||'تعذر تحديث كلمة المرور.',true)}
- finally{submit.disabled=false}
+ }catch(err){
+  const timedOut=err?.name==='AuthTimeoutError'||/abort|timeout|fetch|network|lock/i.test(String(err?.message||''));
+  $('#recoveryStatus').textContent=timedOut?'تأخر الاتصال بخدمة الاستعادة. ارجع إلى تسجيل الدخول واطلب رابطًا جديدًا.':(err.message||'تعذر تحديث كلمة المرور.');
+  toast($('#recoveryStatus').textContent,true);
+ }
+ finally{submit.disabled=false;submit.removeAttribute('aria-busy')}
 };
 async function query(name,select='*'){const {data,error}=await db.from(name).select(select);if(error)throw error;return data||[]}
 async function loadIdentity(silent=false,fromAuth=false){
@@ -833,9 +853,9 @@ async function renderServiceRewards(department,cachedCases=null,cachedDecisions=
   const d=decisionMap.get(c.id);
   return d&&!existing.has(c.id)&&(department==='police'?c.submitted_by===user.id:d.decided_by===user.id);
  });
- const canPay=commander||(department==='police'&&policeHead);
+ const canPay=commander||(department==='police'&&policeHead)||(department==='court'&&courtHead);
  panel.innerHTML='<div class="row between"><h3>مكافآت جهود '+unit+'</h3>'+badge('توثيق إداري')+'</div>'+
- '<p class="muted">تُحتسب الاستحقاقات عن القضايا التي صدر فيها قرار قضائي: '+value.toLocaleString('en-US')+' عن القضية المستحقة. تسجيل الاستحقاق لا يعني صرفه؛ يؤكد القائد أو رئاسة الشرطة المخولة الصرف الفعلي، ولا يستطيع الشخص اعتماد مكافأته بنفسه.</p>'+
+ '<p class="muted">تُحتسب الاستحقاقات عن القضايا التي صدر فيها قرار قضائي: '+value.toLocaleString('en-US')+' عن القضية المستحقة. تسجيل الاستحقاق لا يعني صرفه؛ يؤكد القائد أو رئاسة '+unit+' المخولة الصرف الفعلي، ولا يستطيع الشخص اعتماد مكافأته بنفسه.</p>'+ 
  (eligible.length?'<h4>أعمال مؤهلة لتسجيل الاستحقاق</h4><div class="dept-record-list">'+eligible.map(c=>
   '<div class="dept-record"><strong>'+esc(c.subject)+'</strong><br><small>قرار قضائي بتاريخ '+date(decisionMap.get(c.id).decided_at)+'</small><div style="margin-top:10px"><button type="button" class="btn primary small" data-service-claim="'+esc(c.id)+'">تسجيل استحقاق '+value.toLocaleString('en-US')+'</button></div></div>').join('')+'</div>':'')+
  '<h4>سجل المكافآت</h4>'+

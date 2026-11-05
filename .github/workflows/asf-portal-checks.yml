@@ -24,7 +24,7 @@ jobs:
         with:
           node-version: '22'
       - name: JavaScript syntax
-        run: node --check portal/auth-client.js && node --check portal/app.js && node --check portal/mobile.js && node --check portal/confirmation.js && node --check portal/config.js && node --check portal/academy-app.js && node --check portal/academy-filter.js && node --check portal/mp-data.js && node --check portal/police-workspace.js && node --check portal/police-simple.spec.cjs && node --check portal/notice-center.js && node --check portal/notice-center.spec.cjs && node --check portal/mfa-commander.js && node --check portal/mfa-commander.spec.cjs && node --check portal/academy-demo.js && node --check portal/academy-demo.spec.cjs && node --check portal/academy-demo-public.spec.cjs && node --check portal/auth-race.spec.cjs && node --check portal/auth-expiry.spec.cjs && node --check portal/auth-storage.spec.cjs && node --check portal/member-center.js && node --check portal/member-center.spec.cjs && node --check portal/training-recruitment.spec.cjs && node --check portal/departments.spec.cjs && node --check portal/police-simple.spec.cjs && node --check portal/responsibilities.spec.cjs && node --check portal/mobile.spec.cjs && node --check portal/access-requests.spec.cjs && node --check portal/auth-native-validation.spec.cjs
+        run: node --check portal/auth-client.js && node --check portal/app.js && node --check portal/mobile.js && node --check portal/confirmation.js && node --check portal/config.js && node --check portal/academy-app.js && node --check portal/academy-filter.js && node --check portal/mp-data.js && node --check portal/police-workspace.js && node --check portal/police-simple.spec.cjs && node --check portal/notice-center.js && node --check portal/notice-center.spec.cjs && node --check portal/mfa-commander.js && node --check portal/mfa-commander.spec.cjs && node --check portal/academy-demo.js && node --check portal/academy-demo.spec.cjs && node --check portal/academy-demo-public.spec.cjs && node --check portal/auth-race.spec.cjs && node --check portal/auth-expiry.spec.cjs && node --check portal/auth-storage.spec.cjs && node --check portal/auth-status.spec.cjs && node --check portal/recovery.spec.cjs && node --check portal/member-center.js && node --check portal/member-center.spec.cjs && node --check portal/operations-dashboard.spec.cjs && node --check portal/training-recruitment.spec.cjs && node --check portal/departments.spec.cjs && node --check portal/police-simple.spec.cjs && node --check portal/responsibilities.spec.cjs && node --check portal/mobile.spec.cjs && node --check portal/access-requests.spec.cjs && node --check portal/auth-native-validation.spec.cjs
       - name: Browser smoke test
         run: |
           npm install --no-save playwright@1.58.0
@@ -34,9 +34,11 @@ jobs:
           node portal/auth-race.spec.cjs
           node portal/auth-hang.spec.cjs
           node portal/member-center.spec.cjs
+          node portal/operations-dashboard.spec.cjs
           node portal/training-recruitment.spec.cjs
           node portal/auth-native-validation.spec.cjs
           node portal/auth-expiry.spec.cjs
+          node portal/auth-status.spec.cjs
           node portal/smoke.spec.cjs
           node portal/academy-landing.spec.cjs
           node portal/flow.spec.cjs
@@ -107,6 +109,11 @@ jobs:
           grep -q "perform public.asf_set_delegation" portal/supabase/18-access-requests.sql
           grep -q "access_decision" portal/supabase/19-access-request-notice-categories.sql
           grep -q "access_request" portal/supabase/19-access-request-notice-categories.sql
+          grep -q "when 'court' then public.asf_is_court_head()" portal/supabase/migrations/20261105120000_scoped_leadership_rewards.sql
+          grep -q "Section heads may deactivate their own staff only" portal/supabase/migrations/20261105120000_scoped_leadership_rewards.sql
+          grep -q "r.department='court' and public.asf_is_court_head()" portal/supabase/migrations/20261105120000_scoped_leadership_rewards.sql
+          grep -q "Another leader must verify own bonus" portal/supabase/migrations/20261105120000_scoped_leadership_rewards.sql
+          grep -q "recipient_id=(select auth.uid())" portal/supabase/migrations/20261105121000_rls_initplan_and_queue_indexes.sql
           if grep -Eq 'NEW\.(title|body|sender_name|discord_id)' portal/supabase/15-email-webhook-bridge.sql; then
             echo 'Forbidden private report fields in outbound webhook'; exit 1
           fi
