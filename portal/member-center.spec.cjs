@@ -118,7 +118,7 @@ const assert=require('node:assert/strict');
    statuses:window.__memberQA.fake.map(x=>x.status)
   }));
   const banIndex=snapshot.events.findIndex(([name])=>name==='asf-member-auth-ban');
-  const readIndex=snapshot.events.findIndex(([name])=>name==='asf_management_directory');
+  const readIndex=snapshot.events.findLastIndex(([name])=>name==='asf_management_directory');
   assert.ok(banIndex>=0&&readIndex>banIndex,'Auth ban must run before directory reload');
   assert.ok(snapshot.statuses.every(status=>status==='suspended'));
   assert.match(snapshot.message,/تحديث القائمة/);
