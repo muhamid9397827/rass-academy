@@ -58,6 +58,14 @@ const assert=require('node:assert/strict');
   assert.ok((await page.evaluate(()=>window.__memberQA.changes)).some(([name,args])=>name==='asf_admin_action'&&args.op==='suspend'));
   await page.evaluate(()=>window.__memberQA.center.renderHeads());
   await page.locator('[data-head-section="police"]').first().click();
+  await page.waitForTimeout(100);
+  const policeSnapshot=await page.evaluate(()=>({
+   fake:window.__memberQA.fake.map(p=>({id:p.user_id,status:p.status,head:p.police_head})),
+   buttons:[...document.querySelectorAll('[data-head-section="police"]')].map(b=>({pressed:b.getAttribute('aria-pressed'),className:b.className,enabled:b.dataset.headEnable,disabled:b.disabled})),
+   last:window.__memberQA.last,
+   changes:window.__memberQA.changes.slice(-3)
+  }));
+  console.log('Leadership QA snapshot:',JSON.stringify(policeSnapshot));
   await page.locator('[data-head-section="police"].on').first().waitFor();
   await page.locator('[data-head-section="court"]').first().click();
   await page.locator('[data-head-section="court"].on').first().waitFor();
