@@ -312,3 +312,124 @@ grant execute on function public.asf_auth_ban_allowed(uuid,text) to authenticate
 -- No employee, court member, or police chief can grant judicial personnel roles.
 -- Legacy police directory stays read-only for clients; all role writes go through
 -- the scoped asf_management_set_staff RPC.
+
+-- Trainers may review course outcomes separately from confirming delivery.
+alter table public.asf_academy_results
+ add column if not exists training_reviewed_at timestamptz,
+ add column if not exists training_reviewed_by uuid references auth.users(id) on delete set null,
+ add column if not exists training_reviewed_by_name text;
+
+create or replace function public.asf_training_review_result(p_result uuid)
+returns jsonb language plpgsql security definer set search_path=''
+as $$
+declare r public.asf_academy_results%rowtype;
+ actor public.asf_profiles%rowtype;
+ v_already boolean;
+begin
+ if auth.uid() is null or not (public.asf_is_commander()
+  or public.asf_has_feature('academy.manage')
+  or public.asf_department_has_role('training','head')
+  or public.asf_department_has_role('training','trainer'))
+ then raise exception 'Training review authority required'; end if;
+ select * into actor from public.asf_profiles where user_id=auth.uid() and status='approved';
+ if not found then raise exception 'Approved trainer required'; end if;
+ select * into r from public.asf_academy_results where id=p_result for update;
+ if not found or r.is_test or r.course_id='individual-qualification'
+ then raise exception 'Genuine course result required'; end if;
+ v_already:=r.training_reviewed_at is not null;
+ if not v_already then
+  update public.asf_academy_results
+  set training_reviewed_at=clock_timestamp(),
+      training_reviewed_by=auth.uid(),training_reviewed_by_name=actor.game_name
+  where id=p_result returning * into r;
+  insert into public.asf_audit(actor_id,action,target_id,detail)
+  values(auth.uid(),'training_result_reviewed',p_result::text,
+   jsonb_build_object('receipt',r.receipt,'reviewer',actor.game_name,'passed',r.passed));
+ end if;
+ return jsonb_build_object('already',v_already,'reviewed_at',r.training_reviewed_at,
+ 'reviewed_by_name',r.training_reviewed_by_name,'receipt',r.receipt);
+end;
+$$;
+revoke all on function public.asf_training_review_result(uuid) from public,anon,authenticated;
+grant execute on function public.asf_training_review_result(uuid) to authenticated;
+
+-- Preliminary recruitment acceptance is an explicit decision, not hiring and not
+-- an automatic membership activation. Only genuine passed/reviewed results qualify.
+alter table public.asf_academy_results
+ add column if not exists qualification_preliminary_at timestamptz,
+ add column if not exists qualification_preliminary_by uuid references auth.users(id) on delete set null,
+ add column if not exists qualification_preliminary_by_name text;
+
+create or replace function public.asf_recruitment_qualification_action(p_result uuid,p_action text)
+returns jsonb language plpgsql security definer set search_path=''
+as $$
+declare r public.asf_academy_results%rowtype;
+ actor public.asf_profiles%rowtype;
+ v_already boolean:=false;
+begin
+ if auth.uid() is null or not (public.asf_is_commander()
+  or public.asf_department_has_role('recruitment','head')
+  or public.asf_department_has_role('recruitment','trainer'))
+ then raise exception 'Recruitment reviewer only'; end if;
+ if p_action not in ('review','preliminary','hire') then raise exception 'Invalid action'; end if;
+ select * into actor from public.asf_profiles where user_id=auth.uid() and status='approved';
+ if not found then raise exception 'Active reviewer required'; end if;
+ select * into r from public.asf_academy_results where id=p_result for update;
+ if not found or r.course_id<>'individual-qualification' or r.is_test then
+  raise exception 'Genuine qualification result required'; end if;
+ if p_action='review' then
+  v_already:=r.qualification_reviewed_at is not null;
+  if not v_already then
+   update public.asf_academy_results set qualification_reviewed_at=clock_timestamp(),
+     qualification_reviewed_by=auth.uid(),qualification_reviewed_by_name=actor.game_name
+   where id=p_result returning * into r;
+  end if;
+ elsif p_action='preliminary' then
+  if not r.passed or r.qualification_reviewed_at is null then
+   raise exception 'Only reviewed successful results can receive preliminary acceptance'; end if;
+  v_already:=r.qualification_preliminary_at is not null;
+  if not v_already then
+   update public.asf_academy_results set qualification_preliminary_at=clock_timestamp(),
+     qualification_preliminary_by=auth.uid(),qualification_preliminary_by_name=actor.game_name
+   where id=p_result returning * into r;
+  end if;
+ else
+  -- Legacy explicit hiring records stay supported; never inferred from preliminary acceptance.
+  if not r.passed or r.qualification_reviewed_at is null then raise exception 'Passed reviewed result required'; end if;
+  v_already:=r.qualification_hired_at is not null;
+  if not v_already then
+   update public.asf_academy_results set qualification_hired_at=clock_timestamp(),
+     qualification_hired_by=auth.uid(),qualification_hired_by_name=actor.game_name
+   where id=p_result returning * into r;
+  end if;
+ end if;
+ if not v_already then
+  insert into public.asf_audit(actor_id,action,target_id,detail)
+  values(auth.uid(),case p_action when 'review' then 'qualification_reviewed'
+    when 'preliminary' then 'qualification_preliminary' else 'qualification_hired' end,
+    p_result::text,jsonb_build_object('receipt',r.receipt,'reviewer',actor.game_name,
+    'passed',r.passed,'not_automatic_role_grant',true));
+ end if;
+ return jsonb_build_object('already',v_already,'receipt',r.receipt,
+  'reviewed_at',r.qualification_reviewed_at,'reviewed_by_name',r.qualification_reviewed_by_name,
+  'preliminary_at',r.qualification_preliminary_at,'preliminary_by_name',r.qualification_preliminary_by_name,
+  'hired_at',r.qualification_hired_at,'hired_by_name',r.qualification_hired_by_name);
+end;
+$$;
+revoke all on function public.asf_recruitment_qualification_action(uuid,text) from public,anon,authenticated;
+grant execute on function public.asf_recruitment_qualification_action(uuid,text) to authenticated;
+
+-- Existing standalone recruitment RPC must not bypass the new centralized membership
+-- admission boundary merely because a user has a trainer role.
+create or replace function public.asf_recruitment_accept(p_user uuid)
+returns text language plpgsql security definer set search_path=''
+as $$
+begin
+ if auth.uid() is null or not (public.asf_is_commander()
+   or public.asf_department_has_role('recruitment','head'))
+ then raise exception 'Admission through leadership center only'; end if;
+ return public.asf_admin_action('approve',p_user,null);
+end;
+$$;
+revoke all on function public.asf_recruitment_accept(uuid) from public,anon,authenticated;
+grant execute on function public.asf_recruitment_accept(uuid) to authenticated;
