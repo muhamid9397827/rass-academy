@@ -313,11 +313,28 @@ grant execute on function public.asf_auth_ban_allowed(uuid,text) to authenticate
 -- Legacy police directory stays read-only for clients; all role writes go through
 -- the scoped asf_management_set_staff RPC.
 
+-- Restrict recruitment records to recruitment and the commander, not course trainers.
+drop policy if exists "department teachers read course results" on public.asf_academy_results;
+create policy "department teachers read course results" on public.asf_academy_results
+ for select to authenticated using(
+  course_id<>'individual-qualification'
+  and ((select public.asf_department_has_role('training','trainer'))
+   or (select public.asf_department_has_role('training','head')))
+ );
+drop policy if exists "course leadership reads results" on public.asf_academy_results;
+create policy "course leadership reads results" on public.asf_academy_results
+ for select to authenticated using(
+  (select public.asf_is_commander())
+  or (course_id<>'individual-qualification' and (select public.asf_has_feature('academy.manage')))
+ );
+
 -- Trainers may review course outcomes separately from confirming delivery.
 alter table public.asf_academy_results
  add column if not exists training_reviewed_at timestamptz,
  add column if not exists training_reviewed_by uuid references auth.users(id) on delete set null,
  add column if not exists training_reviewed_by_name text;
+-- Only safe display fields are directly readable; reviewer IDs stay private.
+grant select(training_reviewed_at,training_reviewed_by_name) on public.asf_academy_results to authenticated;
 
 create or replace function public.asf_training_review_result(p_result uuid)
 returns jsonb language plpgsql security definer set search_path=''
@@ -359,6 +376,7 @@ alter table public.asf_academy_results
  add column if not exists qualification_preliminary_at timestamptz,
  add column if not exists qualification_preliminary_by uuid references auth.users(id) on delete set null,
  add column if not exists qualification_preliminary_by_name text;
+grant select(qualification_preliminary_at,qualification_preliminary_by_name) on public.asf_academy_results to authenticated;
 
 create or replace function public.asf_recruitment_qualification_action(p_result uuid,p_action text)
 returns jsonb language plpgsql security definer set search_path=''
