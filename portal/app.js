@@ -19,7 +19,7 @@ const ACCESS_HINTS={
  'users.approve':'قبول أو رفض الطلبات الجديدة فقط، دون تغيير الرتب أو توزيع الصلاحيات.'
 };
 const ACCESS_STATES={pending:'قيد المراجعة',approved:'موافق عليه',rejected:'مرفوض'};
-let accessPrefill='court.manage';
+let accessPrefill='reports.read';
 
 const RANKS=['جندي','جندي أول','عريف','وكيل رقيب','رقيب','رقيب أول','رئيس رقباء','ملازم','ملازم أول','نقيب','رائد','مقدم','عقيد','عميد','لواء','فريق','فريق أول'];
 const cfg=window.ASF_CONFIG||{}, ready=!!(cfg.supabaseUrl&&cfg.supabaseAnonKey&&window.supabase);
@@ -72,10 +72,15 @@ function openAcademy(){window.open('academy.html','_blank','noopener')}
 $('#openAcademy').onclick=openAcademy;
 const restrictedModal=$('#restrictedModal');
 function showRestricted(section){
- accessPrefill=section.includes('القضاء')?'court.manage':section.includes('الدورات')?'academy.manage':'police.manage';
+ const deptRole=/القضاء|الشرطة|الدورات|التدريب|التجنيد/.test(section);
+ accessPrefill='reports.read';
  $('#restrictedTitle').textContent=section+' — يتطلب تصريحًا خاصًا';
- $('#restrictedMessage').textContent='لا تملك صلاحية الدخول إلى قسم '+section+'. يمكنك إرسال طلب تصريح إلى القائد مع توضيح السبب.';
- restrictedModal.hidden=false;document.body.classList.add('modal-open');$('#requestRestrictedAccess').focus();
+ $('#restrictedMessage').textContent=deptRole?
+  'الوصول إلى هذا القسم يتطلب رولًا إداريًا يُمنح عبر مركز العضويات والصلاحيات بواسطة الرئاسة المخوّلة. لا يمكن الحصول عليه من طلبات تصاريح التقارير.':
+  'لا تملك صلاحية الدخول إلى قسم '+section+'. يمكنك تقديم طلب تصريح تقارير إلى القائد مع توضيح السبب.';
+ $('#requestRestrictedAccess').hidden=deptRole;
+ restrictedModal.hidden=false;document.body.classList.add('modal-open');
+ (deptRole?$('#ackRestricted'):$('#requestRestrictedAccess')).focus();
 }
 function closeRestricted(){restrictedModal.hidden=true;document.body.classList.remove('modal-open')}
 $('#closeRestricted').onclick=closeRestricted;$('#ackRestricted').onclick=closeRestricted;
