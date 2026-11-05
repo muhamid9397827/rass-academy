@@ -14,6 +14,9 @@ function extract(start,end){
 }
 assert.match(sql,/Preliminary acceptance required before final hiring/);
 assert.match(sql,/Review the training result before delivery/);
+assert.equal((sql.match(/p_section is null or p_section not in/g)||[]).length,2,'both privileged role RPCs validate null sections');
+assert.match(sql,/p_role is null or p_role not in/);
+assert.match(sql,/p_action is null or p_action not in/);
 const functions=extract('function mountQualificationResults(){','function mountAcademyResults(){')+
  '\n'+extract('function mountAcademyResults(){','function cardReport(')+
  '\nwindow.__resultFlows={mountQualificationResults,mountAcademyResults};';
