@@ -9,7 +9,7 @@ const assert=require('node:assert/strict');
   page.on('pageerror',e=>errors.push(e.message));
   page.on('dialog',d=>d.accept());
   await page.goto('http://127.0.0.1:8000/portal/config.js',{waitUntil:'domcontentloaded'});
-  await page.setContent('<link rel="stylesheet" href="http://127.0.0.1:8000/portal/styles.css"><link rel="stylesheet" href="http://127.0.0.1:8000/portal/member-center.css"><main id="page"></main>');
+  await page.setContent('<link rel="stylesheet" href="http://127.0.0.1:8000/portal/styles.css"><link rel="stylesheet" href="http://127.0.0.1:8000/portal/member-center.css"><meta charset="utf-8"><main id="page"></main>');
   await page.addScriptTag({url:'http://127.0.0.1:8000/portal/member-center.js'});
   await page.evaluate(()=>{
    const a='11111111-2222-4333-8444-555555555591',b='11111111-2222-4333-8444-555555555592';
