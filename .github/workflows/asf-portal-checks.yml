@@ -44,6 +44,7 @@ jobs:
           node portal/academy-landing.spec.cjs
           node portal/flow.spec.cjs
           node portal/landing.spec.cjs
+          node portal/brand-about.spec.cjs
           node portal/recovery.spec.cjs
           node portal/signup.spec.cjs
           node portal/confirmation.spec.cjs
