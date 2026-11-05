@@ -855,7 +855,24 @@ async function buildPdf(report){
   const scale=Math.min(2,Math.sqrt(8000000/(width*height)));
   const canvas=document.createElement('canvas');canvas.width=Math.ceil(width*scale);canvas.height=Math.ceil(height*scale);canvas.style.width=width+'px';canvas.style.height=height+'px';
   const context=canvas.getContext('2d');context.fillStyle='#ffffff';context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(image,0,0,canvas.width,canvas.height);
-  return await window.html2pdf().set({margin:10,filename:code(report.report_number)+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,backgroundColor:'#ffffff',windowWidth:794,scrollX:0,scrollY:0,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true}}).from(canvas,'canvas').outputPdf('blob');
+  // Place page cuts in whitespace so long Arabic lines never split across pages.
+  const pageHeight=Math.floor(canvas.width*277/190),segments=[];
+  const pixels=context.getImageData(0,0,canvas.width,canvas.height).data;
+  const emptyRow=y=>{for(let x=0;x<canvas.width;x++){const i=(y*canvas.width+x)*4;if(pixels[i]<230||pixels[i+1]<230||pixels[i+2]<230)return false;}return true;};
+  for(let start=0;start<canvas.height;){
+   let end=Math.min(start+pageHeight,canvas.height);
+   if(end<canvas.height){
+    for(let y=end-2;y>Math.max(start,end-Math.ceil(80*scale));y--){if(emptyRow(y)&&emptyRow(y-1)&&emptyRow(y+1)){end=y;break;}}
+   }
+   segments.push({start,end});start=end;
+  }
+  let printable=canvas;
+  if(segments.length>1){
+   printable=document.createElement('canvas');printable.width=canvas.width;printable.height=(segments.length-1)*pageHeight+segments.at(-1).end-segments.at(-1).start;
+   const output=printable.getContext('2d');output.fillStyle='#ffffff';output.fillRect(0,0,printable.width,printable.height);
+   segments.forEach(({start,end},i)=>output.drawImage(canvas,0,start,canvas.width,end-start,0,i*pageHeight,canvas.width,end-start));
+  }
+  return await window.html2pdf().set({margin:10,filename:code(report.report_number)+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,backgroundColor:'#ffffff',windowWidth:794,scrollX:0,scrollY:0,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true}}).from(printable,'canvas').outputPdf('blob');
  }finally{host.remove();}
 }
 

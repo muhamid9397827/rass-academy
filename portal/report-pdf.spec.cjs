@@ -26,6 +26,11 @@ const constants=source.split('\n').filter(l=>/^const (esc|KINDS|date|code)=/.tes
       paper.remove();
       const blob=await window.pdfQA.buildPdf(report),canvas=await worker.get('canvas');
       const factor=canvas.width/714,ctx=canvas.getContext('2d');
+      const pageHeight=Math.floor(canvas.width*277/190);
+      for(let boundary=pageHeight;boundary<canvas.height;boundary+=pageHeight){
+       const edge=ctx.getImageData(0,boundary-1,canvas.width,2).data;
+       if([...edge].some((value,i)=>i%4!==3&&value<230))throw Error('PDF page break intersects report text');
+      }
       const ink=areas.map(a=>{
        const pixels=ctx.getImageData(Math.max(0,Math.round(a.x*factor)),Math.max(0,Math.round(a.y*factor)),Math.floor(a.width*factor),Math.max(1,Math.floor(a.height*factor))).data;
        let dark=0;for(let i=0;i<pixels.length;i+=4)if(pixels[i]<150&&pixels[i+1]<150&&pixels[i+2]<150)dark++;
