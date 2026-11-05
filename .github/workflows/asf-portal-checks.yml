@@ -30,7 +30,7 @@ jobs:
           npm install --no-save playwright@1.58.0
           npx playwright install --with-deps chromium
           (python3 -m http.server 8000 >/tmp/asf-http.log 2>&1 &)
-          node portal/auth-session.spec.cjs
+          timeout 120s node portal/auth-session.spec.cjs
           node portal/auth-race.spec.cjs
           node portal/auth-hang.spec.cjs
           node portal/member-center.spec.cjs

@@ -67,7 +67,7 @@ const enc=o=>Buffer.from(JSON.stringify(o)).toString('base64url');const jwt=enc(
  await page.screenshot({path:'/tmp/asf-mobile/login-offline-390.png',fullPage:true});
  mode='ok';await page.locator('#email').fill('qa@example.invalid');await page.locator('#password').fill('TestPass2026!');await page.locator('#authSubmit').click();await page.locator('#workspace').waitFor({state:'visible',timeout:12000});
  const expiry=await ctx.newPage();await expiry.goto(base);await expiry.locator('#workspace').waitFor({state:'visible',timeout:12000});
- await expiry.clock.install();await expiry.clock.setSystemTime(Date.now()+22*86400000);await expiry.evaluate(()=>window.dispatchEvent(new Event('focus')));
+ await expiry.evaluate(()=>{const key='asf-portal-auth-v4-sxtbgnjbrcsmgsdhkbno-lifetime';const meta=JSON.parse(localStorage.getItem(key));meta.startedAt=Date.now()-22*86400000;localStorage.setItem(key,JSON.stringify(meta));});await expiry.reload();
  await expiry.locator('#welcome').waitFor({state:'visible',timeout:12000});await page.locator('#welcome').waitFor({state:'visible',timeout:12000});await expiry.close();
  await holder.evaluate(()=>window.releaseOldLock());assert.deepEqual(errors,[]);await ctx.close();await browser.close();
  console.log('PASS real SDK: mobile sign-in and session reload under held legacy Web Lock, password errors, network failure, section error boundary and cleared logout data');

@@ -817,12 +817,14 @@ function renderPaper(r){
  const sections=r.mode==='free'?'<h4>نص التقرير</h4><div class="paper-body">'+esc(r.body.text||'')+'</div>':
  ['achievements','progress','needs','notes'].map((k,i)=>'<h4>'+['الإنجازات','التقدم','الاحتياجات','الملاحظات'][i]+'</h4><div class="paper-body">'+esc(r.body[k]||'—')+'</div>').join('');
  const el=document.createElement('article');el.className='report-paper';
- el.style.cssText="width:714px;max-width:none!important;padding:28px 36px;box-sizing:border-box;background:#fff!important;color:#172537!important;color-scheme:light;direction:rtl;font:14px/1.9 'Cairo',Arial,sans-serif;overflow-wrap:break-word;";
+ el.style.cssText="width:714px;max-width:none!important;padding:28px 36px;box-sizing:border-box;background:#fff!important;color:#172537!important;color-scheme:light;direction:rtl;font:14px/1.9 Arial,sans-serif;overflow-wrap:break-word;";
  el.innerHTML='<div style="display:flex;justify-content:space-between"><b>بوابة أمن المنشآت<br>القيادة العامة</b><b style="font-size:30px">◆</b></div><h2>تقرير إداري رسمي</h2><div style="text-align:center">'+esc(KINDS[r.kind])+(r.kind==='secret'?'<p><span class="stamp">سري للغاية</span></p>':'')+'</div>'+
  '<div class="paper-meta"><div>رقم التقرير: <b>'+code(r.report_number)+'</b></div><div>تاريخ الإرسال: '+esc(date(r.submitted_at))+'</div><div>اسم المرسل: '+esc(r.sender_name)+'</div><div>الرتبة: '+esc(r.sender_rank)+'</div><div>الكود: '+esc(r.sender_code)+'</div><div>الجهة المستلمة: القائد</div></div>'+
  '<h3>الموضوع: '+esc(r.title)+'</h3>'+sections+
  (r.original||r.original_report_id?'<p>تصحيح مرتبط بالتقرير: '+esc(r.original||r.original_report_id)+'</p>':'')+
  '<div class="paper-footer">وثيقة إلكترونية لأغراض المحاكاة داخل سيرفر رول بلاي · رقم التقرير '+code(r.report_number)+'</div>';
+ el.style.setProperty('font-family','Arial,sans-serif','important');
+ el.querySelector('.paper-meta').style.gridTemplateColumns='1fr 1fr';
  // Freeze print colors independently of dark mode, mobile styles and inherited colors.
  el.querySelectorAll('*').forEach(node=>node.style.setProperty('color',node.classList.contains('stamp')?'#ac3434':'#172537','important'));
  el.querySelectorAll('.paper-body').forEach(node=>{node.style.cssText+=';white-space:pre-wrap;line-height:1.9;opacity:1;visibility:visible;overflow-wrap:anywhere;';});
@@ -832,10 +834,31 @@ async function buildPdf(report){
  if(typeof window.html2pdf!=='function')throw Error('مكتبة PDF لم تُحمّل');
  const body=report.body||{};
  if(!Object.values(body).some(value=>String(value??'').trim()))throw Error('نص التقرير غير متاح؛ أعد فتح التقرير وحاول مجددًا.');
- if(document.fonts){
-  let timer;try{await Promise.race([document.fonts.load("14px 'Cairo'"),new Promise(resolve=>{timer=setTimeout(resolve,4000)})]);}finally{clearTimeout(timer)}
- }
- return window.html2pdf().set({margin:10,filename:code(report.report_number)+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,logging:false,backgroundColor:'#ffffff',windowWidth:794,windowHeight:1123,scrollX:0,scrollY:0},jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true},pagebreak:{mode:['css','legacy']}}).from(renderPaper(report)).outputPdf('blob');
+ const paper=renderPaper(report),host=document.createElement('div');
+ host.style.cssText='position:absolute;left:-10000px;top:0;width:714px;pointer-events:none;';
+ host.append(paper);document.body.append(host);
+ try{
+  // Let the browser shape Arabic and lay out the complete report natively.
+  // html2canvas's word-by-word RTL rendering can omit or scramble Arabic runs.
+  const copy=paper.cloneNode(true),originals=[paper,...paper.querySelectorAll('*')],copies=[copy,...copy.querySelectorAll('*')];
+  originals.forEach((node,i)=>{
+   const computed=getComputedStyle(node);
+   copies[i].style.cssText=Array.from(computed).map(key=>key+':'+computed.getPropertyValue(key)+';').join('');
+  });
+  copy.style.margin='0';
+  const width=714,height=Math.ceil(paper.getBoundingClientRect().height)+2;
+  if(height>15000)throw Error('التقرير طويل جداً للطباعة دفعة واحدة؛ قسّمه إلى تقريرين.');
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('width',String(width));svg.setAttribute('height',String(height));
+  const foreign=document.createElementNS('http://www.w3.org/2000/svg','foreignObject');
+  foreign.setAttribute('width','100%');foreign.setAttribute('height','100%');foreign.append(copy);svg.append(foreign);
+  const image=new Image();
+  await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(Error('تعذر رسم النص العربي للطباعة.'));image.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(svg));});
+  const scale=Math.min(2,Math.sqrt(8000000/(width*height)));
+  const canvas=document.createElement('canvas');canvas.width=Math.ceil(width*scale);canvas.height=Math.ceil(height*scale);canvas.style.width=width+'px';canvas.style.height=height+'px';
+  const context=canvas.getContext('2d');context.fillStyle='#ffffff';context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(image,0,0,canvas.width,canvas.height);
+  return await window.html2pdf().set({margin:10,filename:code(report.report_number)+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,backgroundColor:'#ffffff',windowWidth:794,scrollX:0,scrollY:0,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true}}).from(canvas,'canvas').outputPdf('blob');
+ }finally{host.remove();}
 }
 
 async function renderServiceRewards(department,cachedCases=null,cachedDecisions=null){
