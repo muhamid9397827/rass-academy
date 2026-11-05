@@ -50,7 +50,19 @@ mock=mock.replace(beforeSignup,
   await page.getByText('أدخل كلمة المرور للمتابعة.').waitFor({state:'visible'});
   assert.equal(await page.evaluate(()=>window.__signinCount||0),0,'empty password cannot reach auth API');
 
+  // Regression: an invalid Discord ID left in a hidden signup field must not
+  // block email/password login through native HTML pattern validation.
+  await page.locator('#authToggle').click();
+  await page.locator('#discordId').fill('invalid-discord-id');
+  assert.equal(await page.locator('#discordId').evaluate(e=>e.disabled),false,'signup enables Discord input');
+  await page.locator('#authToggle').click();
+  assert.equal(await page.locator('#discordId').evaluate(e=>e.disabled),true,'login disables hidden signup fields');
+  assert.equal(await page.locator('#gameName').evaluate(e=>e.disabled),true,'login disables hidden game name');
+  assert.equal(await page.locator('#rank').evaluate(e=>e.disabled),true,'login disables hidden rank');
+  assert.equal(await page.locator('#activationReason').evaluate(e=>e.disabled),true,'login disables hidden activation reason');
   await page.locator('#password').fill('abc123');
+  assert.equal(await page.locator('#authForm').evaluate(e=>e.checkValidity()),true,
+   'hidden invalid Discord pattern must never block login');
   assert.equal(await page.locator('#password').evaluate(e=>e.minLength),0,'existing passwords have no new signup minimum');
   await page.locator('#authSubmit').click();
   await page.locator('#workspace').waitFor({state:'visible',timeout:12000});
@@ -59,6 +71,8 @@ mock=mock.replace(beforeSignup,
   await page.locator('#welcome').waitFor({state:'visible'});
 
   await page.locator('#showRegister').click();
+  assert.equal(await page.locator('#discordId').evaluate(e=>e.disabled),false,'signup re-enables Discord validation');
+  assert.equal(await page.locator('#activationReason').evaluate(e=>e.disabled),false,'signup re-enables activation reason');
   assert.equal(await page.locator('#password').evaluate(e=>e.minLength),8,'new signup still enforces eight characters');
   await page.locator('#email').fill('synthetic@example.invalid');
   await page.locator('#password').fill('abc123');

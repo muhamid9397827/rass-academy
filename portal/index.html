@@ -58,11 +58,11 @@
  <label>البريد الإلكتروني<input id="email" type="email" required autocomplete="email"></label>
  <label>كلمة المرور<input id="password" type="password" required autocomplete="current-password"></label>
  <div id="registerFields" hidden>
- <label>الاسم والكنية داخل اللعبة<input id="gameName" maxlength="80" minlength="5" autocomplete="name" placeholder="مثال: مجاهد ال عباد"><small class="muted">لا تُقبل الأسماء المفردة؛ اكتب اسمًا وكنية.</small></label>
- <label>Discord User ID<input id="discordId" type="text" inputmode="numeric" pattern="[0-9]{17,20}" dir="ltr" placeholder="18 أو 19 رقمًا"></label>
- <label>الرتبة<select id="rank"></select></label>
+ <label>الاسم والكنية داخل اللعبة<input id="gameName" disabled maxlength="80" minlength="5" autocomplete="name" placeholder="مثال: مجاهد ال عباد"><small class="muted">لا تُقبل الأسماء المفردة؛ اكتب اسمًا وكنية.</small></label>
+ <label>Discord User ID<input id="discordId" disabled type="text" inputmode="numeric" pattern="[0-9]{17,20}" dir="ltr" placeholder="18 أو 19 رقمًا"></label>
+ <label>الرتبة<select id="rank" disabled></select></label>
  <label class="activation-reason-field" for="activationReason">سبب طلب تفعيل الحساب
-  <textarea id="activationReason" rows="4" minlength="10" maxlength="500" placeholder="مثال: أحتاج الدخول للأنظمة الإدارية لأداء مهامي في أمن المنشآت."></textarea>
+  <textarea id="activationReason" disabled rows="4" minlength="10" maxlength="500" placeholder="مثال: أحتاج الدخول للأنظمة الإدارية لأداء مهامي في أمن المنشآت."></textarea>
  </label>
  <p class="activation-reason-notice" id="activationReasonNotice"><span aria-hidden="true">!</span> <strong>تنويه:</strong> في حال عدم ذكر سبب طلب التفعيل، لن يتم تفعيل حسابك من القيادة.</p></div>
  <p id="authStatus" class="auth-status" role="status" aria-live="polite" hidden></p>
