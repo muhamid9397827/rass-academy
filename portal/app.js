@@ -686,18 +686,11 @@ async function renderReports(mode){
  };
 }
 async function downloadPdf(r){
- let {data,error}=await db.storage.from('asf-reports').download(r.pdf_path);
- const mayRepair=commander||(profile?.status==='approved'&&r.author_id===user?.id&&r.kind!=='secret');
- if(error && mayRepair && r.deleted_at===null){
-  try{
-   const pdf=await buildPdf(r);
-   const {error:uploadError}=await db.storage.from('asf-reports').upload(r.pdf_path,pdf,{contentType:'application/pdf',upsert:false});
-   if(uploadError)throw uploadError;
-   data=pdf;error=null;
-   toast('أُعيد إنشاء ملف PDF من بيانات التقرير المحفوظة.');
-  }catch(repairError){toast('تعذر إصلاح ملف PDF: '+repairError.message,true)}
- }
- if(error)return toast('ملف PDF غير جاهز أو ليس لديك صلاحية: '+error.message,true);
+ // Always render the current authorized report data. Older archived PDFs may
+ // contain only a heading; downloading them again cannot repair their content.
+ let data;
+ try{data=await buildPdf(r);}
+ catch(err){return toast('تعذر إنشاء ملف PDF بمحتوى التقرير: '+err.message,true);}
  if(commander||(r.kind!=='secret'&&(has('reports.read',r.kind)||has('reports.review',r.kind)))){
   const {error:openError}=await db.rpc('asf_report_receipt',{p_report:r.id,p_received:false});
   if(openError)toast('تم تنزيل PDF لكن تعذر تسجيل الاطلاع: '+openError.message,true);
@@ -824,16 +817,25 @@ function renderPaper(r){
  const sections=r.mode==='free'?'<h4>نص التقرير</h4><div class="paper-body">'+esc(r.body.text||'')+'</div>':
  ['achievements','progress','needs','notes'].map((k,i)=>'<h4>'+['الإنجازات','التقدم','الاحتياجات','الملاحظات'][i]+'</h4><div class="paper-body">'+esc(r.body[k]||'—')+'</div>').join('');
  const el=document.createElement('article');el.className='report-paper';
+ el.style.cssText="width:714px;max-width:none!important;padding:28px 36px;box-sizing:border-box;background:#fff!important;color:#172537!important;color-scheme:light;direction:rtl;font:14px/1.9 'Cairo',Arial,sans-serif;overflow-wrap:break-word;";
  el.innerHTML='<div style="display:flex;justify-content:space-between"><b>بوابة أمن المنشآت<br>القيادة العامة</b><b style="font-size:30px">◆</b></div><h2>تقرير إداري رسمي</h2><div style="text-align:center">'+esc(KINDS[r.kind])+(r.kind==='secret'?'<p><span class="stamp">سري للغاية</span></p>':'')+'</div>'+
  '<div class="paper-meta"><div>رقم التقرير: <b>'+code(r.report_number)+'</b></div><div>تاريخ الإرسال: '+esc(date(r.submitted_at))+'</div><div>اسم المرسل: '+esc(r.sender_name)+'</div><div>الرتبة: '+esc(r.sender_rank)+'</div><div>الكود: '+esc(r.sender_code)+'</div><div>الجهة المستلمة: القائد</div></div>'+
  '<h3>الموضوع: '+esc(r.title)+'</h3>'+sections+
  (r.original||r.original_report_id?'<p>تصحيح مرتبط بالتقرير: '+esc(r.original||r.original_report_id)+'</p>':'')+
  '<div class="paper-footer">وثيقة إلكترونية لأغراض المحاكاة داخل سيرفر رول بلاي · رقم التقرير '+code(r.report_number)+'</div>';
+ // Freeze print colors independently of dark mode, mobile styles and inherited colors.
+ el.querySelectorAll('*').forEach(node=>node.style.setProperty('color',node.classList.contains('stamp')?'#ac3434':'#172537','important'));
+ el.querySelectorAll('.paper-body').forEach(node=>{node.style.cssText+=';white-space:pre-wrap;line-height:1.9;opacity:1;visibility:visible;overflow-wrap:anywhere;';});
  return el;
 }
 async function buildPdf(report){
  if(typeof window.html2pdf!=='function')throw Error('مكتبة PDF لم تُحمّل');
- return window.html2pdf().set({margin:5,filename:code(report.report_number)+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}}).from(renderPaper(report)).outputPdf('blob');
+ const body=report.body||{};
+ if(!Object.values(body).some(value=>String(value??'').trim()))throw Error('نص التقرير غير متاح؛ أعد فتح التقرير وحاول مجددًا.');
+ if(document.fonts){
+  let timer;try{await Promise.race([document.fonts.load("14px 'Cairo'"),new Promise(resolve=>{timer=setTimeout(resolve,4000)})]);}finally{clearTimeout(timer)}
+ }
+ return window.html2pdf().set({margin:10,filename:code(report.report_number)+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,logging:false,backgroundColor:'#ffffff',windowWidth:794,windowHeight:1123,scrollX:0,scrollY:0},jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true},pagebreak:{mode:['css','legacy']}}).from(renderPaper(report)).outputPdf('blob');
 }
 
 async function renderServiceRewards(department,cachedCases=null,cachedDecisions=null){

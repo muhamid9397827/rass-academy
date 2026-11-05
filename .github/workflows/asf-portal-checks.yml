@@ -40,6 +40,7 @@ jobs:
           node portal/auth-expiry.spec.cjs
           node portal/auth-status.spec.cjs
           node portal/smoke.spec.cjs
+          node portal/report-pdf.spec.cjs
           node portal/academy-landing.spec.cjs
           node portal/flow.spec.cjs
           node portal/landing.spec.cjs
@@ -63,6 +64,13 @@ jobs:
         with:
           name: mobile-qa-${{ github.sha }}
           path: /tmp/asf-mobile/
+          if-no-files-found: ignore
+      - name: PDF content QA files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf-qa-${{ github.sha }}
+          path: /tmp/asf-pdf/
           if-no-files-found: ignore
       - name: Server cleanup policy tests
         run: node portal/auth-client.spec.cjs && node portal/auth-storage.spec.cjs && node portal/purge.spec.cjs

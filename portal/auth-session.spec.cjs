@@ -43,8 +43,10 @@ const enc=o=>Buffer.from(JSON.stringify(o)).toString('base64url');const jwt=enc(
  assert.ok(await holder.evaluate(async()=>{const state=await navigator.locks.query();return state.held.some(l=>l.name.includes('auth-token'));}),'old lock remains held, without blocking new SDK');
  // Persisted session survives a mobile reload while the old tab's lock still exists.
  await page.reload();await page.locator('#workspace').waitFor({state:'visible',timeout:12000});assert.equal(tokens,1);
+ const second=await ctx.newPage();await second.goto(base);await second.locator('#workspace').waitFor({state:'visible',timeout:12000});assert.equal(tokens,1,'new tab reuses the existing session without password sign-in');
  mode='section-error';await page.locator('[data-mobile-page="reports"]').click();await page.getByText('تعذر تحميل القسم:',{exact:false}).waitFor();assert.match(await page.locator('#page').innerText(),/QA temporary section failure/);
  mode='ok';await page.locator('#signOut').click();await page.locator('#welcome').waitFor({state:'visible'});assert.equal(await page.locator('#page').textContent(),'');
+ await second.locator('#welcome').waitFor({state:'visible',timeout:12000});assert.equal(await second.locator('#workspace').isVisible(),false,'logout propagates to other tabs');await second.close();
  // Existing accounts may have a 6-character password allowed by Supabase.
  // An HTML minlength=8 on the *login* field silently swallowed the click.
  await page.locator('#showLogin').click();
@@ -63,6 +65,10 @@ const enc=o=>Buffer.from(JSON.stringify(o)).toString('base64url');const jwt=enc(
  mode='invalid';await page.locator('#email').fill('qa@example.invalid');await page.locator('#password').fill('WrongPass2026!');await page.locator('#authSubmit').click();await page.locator('#authStatus.error').waitFor();assert.match(await page.locator('#authStatus').innerText(),/كلمة المرور غير صحيحة/);assert.equal(await page.locator('#authSubmit').isDisabled(),false);
  mode='offline';await page.locator('#authSubmit').click();await page.locator('#authStatus.error').waitFor();await page.waitForFunction(()=>!document.querySelector('#authSubmit').disabled);assert.equal(await page.locator('#workspace').isVisible(),false);
  await page.screenshot({path:'/tmp/asf-mobile/login-offline-390.png',fullPage:true});
+ mode='ok';await page.locator('#email').fill('qa@example.invalid');await page.locator('#password').fill('TestPass2026!');await page.locator('#authSubmit').click();await page.locator('#workspace').waitFor({state:'visible',timeout:12000});
+ const expiry=await ctx.newPage();await expiry.goto(base);await expiry.locator('#workspace').waitFor({state:'visible',timeout:12000});
+ await expiry.clock.install();await expiry.clock.setSystemTime(Date.now()+22*86400000);await expiry.evaluate(()=>window.dispatchEvent(new Event('focus')));
+ await expiry.locator('#welcome').waitFor({state:'visible',timeout:12000});await page.locator('#welcome').waitFor({state:'visible',timeout:12000});await expiry.close();
  await holder.evaluate(()=>window.releaseOldLock());assert.deepEqual(errors,[]);await ctx.close();await browser.close();
  console.log('PASS real SDK: mobile sign-in and session reload under held legacy Web Lock, password errors, network failure, section error boundary and cleared logout data');
 })().catch(async e=>{if(activePage){console.error('UI state:',await activePage.locator('#authStatus').innerText().catch(()=>''));fs.mkdirSync('/tmp/asf-mobile',{recursive:true});await activePage.screenshot({path:'/tmp/asf-mobile/login-failure-390.png',fullPage:true}).catch(()=>{});}console.error(e);process.exit(1)});
