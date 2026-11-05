@@ -63,6 +63,13 @@ const assert=require('node:assert/strict');
   await page.locator('button[data-ac-action="suspend"]').first().click();
   assert.equal(await page.locator('#acFilter').inputValue(),'suspended');
   assert.equal(await page.locator('.ac-suspended').count(),1,'deactivated member visible with correct state');
+  const beforeRetry=await page.evaluate(()=>window.__memberQA.changes.length);
+  await page.locator('button[data-ac-action="sync-ban"]').first().click();
+  await page.waitForFunction(expected=>window.__memberQA.changes.length>expected,beforeRetry);
+  const retryEvents=await page.evaluate(n=>window.__memberQA.changes.slice(n),beforeRetry);
+  assert.ok(retryEvents.some(([name,args])=>name==='asf-member-auth-ban'&&args.body.mode==='ban'));
+  assert.equal(retryEvents.filter(([name])=>name==='asf_admin_action').length,0,
+   'ban retry must not repeat or change the membership decision');
   assert.ok((await page.evaluate(()=>window.__memberQA.changes)).some(([name,args])=>name==='asf_admin_action'&&args.op==='suspend'));
   await page.evaluate(()=>window.__memberQA.center.renderHeads());
   await page.locator('[data-head-section="police"]').first().click();
