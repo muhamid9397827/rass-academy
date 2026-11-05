@@ -24,7 +24,7 @@ jobs:
         with:
           node-version: '22'
       - name: JavaScript syntax
-        run: node --check portal/auth-client.js && node --check portal/app.js && node --check portal/mobile.js && node --check portal/confirmation.js && node --check portal/config.js && node --check portal/academy-app.js && node --check portal/academy-filter.js && node --check portal/mp-data.js && node --check portal/police-workspace.js && node --check portal/police-simple.spec.cjs && node --check portal/notice-center.js && node --check portal/notice-center.spec.cjs && node --check portal/mfa-commander.js && node --check portal/mfa-commander.spec.cjs && node --check portal/academy-demo.js && node --check portal/academy-demo.spec.cjs && node --check portal/academy-demo-public.spec.cjs && node --check portal/auth-race.spec.cjs && node --check portal/auth-expiry.spec.cjs && node --check portal/auth-storage.spec.cjs
+        run: node --check portal/auth-client.js && node --check portal/app.js && node --check portal/mobile.js && node --check portal/confirmation.js && node --check portal/config.js && node --check portal/academy-app.js && node --check portal/academy-filter.js && node --check portal/mp-data.js && node --check portal/police-workspace.js && node --check portal/police-simple.spec.cjs && node --check portal/notice-center.js && node --check portal/notice-center.spec.cjs && node --check portal/mfa-commander.js && node --check portal/mfa-commander.spec.cjs && node --check portal/academy-demo.js && node --check portal/academy-demo.spec.cjs && node --check portal/academy-demo-public.spec.cjs && node --check portal/auth-race.spec.cjs && node --check portal/auth-expiry.spec.cjs && node --check portal/auth-storage.spec.cjs && node --check portal/auth-native-validation.spec.cjs
       - name: Browser smoke test
         run: |
           npm install --no-save playwright@1.58.0
@@ -33,6 +33,7 @@ jobs:
           node portal/auth-session.spec.cjs
           node portal/auth-race.spec.cjs
           node portal/auth-hang.spec.cjs
+          node portal/auth-native-validation.spec.cjs
           node portal/auth-expiry.spec.cjs
           node portal/smoke.spec.cjs
           node portal/academy-landing.spec.cjs
