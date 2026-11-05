@@ -519,8 +519,9 @@ function mountQualificationResults(){
  if(!(commander||hasDeptRole('recruitment','head')||hasDeptRole('recruitment','trainer'))){
   panel.innerHTML=empty('مراجعة التأهيل مخصصة للقبول والتجنيد.');return;
  }
- panel.innerHTML='<section class="section-card" style="margin-top:20px"><div class="row between"><h3>نتائج تأهيل المتقدمين والقبول المبدئي</h3>'+badge('قراران مستقلان')+'</div>'+
- '<p class="muted">تظهر نتيجة النجاح أو الرسوب للمتقدم فور تصحيح الاختبار من الخادم. هنا تُوثّق مراجعة النتيجة باسم المسؤول، ثم يُسجَّل القبول المبدئي للناجح فقط بعد المراجعة. هذه الإجراءات لا تعطي رول Discord تلقائيًا ولا تغيّر نتيجة الاختبار.</p>'+
+ const canHire=commander||hasDeptRole('recruitment','head');
+ panel.innerHTML='<section class="section-card" style="margin-top:20px"><div class="row between"><h3>نتائج تأهيل المتقدمين والقبول المبدئي</h3>'+badge('3 إجراءات مستقلة')+'</div>'+
+ '<p class="muted">تظهر نتيجة النجاح أو الرسوب للمتقدم فور تصحيح الاختبار من الخادم. هنا تُوثّق مراجعة النتيجة باسم المسؤول، ثم القبول المبدئي للناجح فقط، ثم يؤكد رئيس القبول والتجنيد التوظيف النهائي بإجراء منفصل. لا يتغير التقييم ولا تُمنح رولات Discord تلقائيًا.</p>'+
  '<form id="qualificationFilter" class="row" style="margin-bottom:12px"><input name="search" placeholder="بحث بالاسم أو Discord أو الإيصال" maxlength="60" style="max-width:380px"><button class="btn ghost" type="submit">بحث</button><button id="qualificationRefresh" class="btn ghost" type="button">تحديث</button></form><div id="qualificationRows" aria-live="polite"></div></section>';
  let term='',offset=0,request=0;
  const load=async()=>{
@@ -532,25 +533,26 @@ function mountQualificationResults(){
   if(!container.isConnected||id!==request)return;
   if(error){container.textContent='تعذر تحميل نتائج التأهيل: '+error.message;return;}
   container.innerHTML='<p class="muted">'+esc(count??data.length)+' نتيجة</p>'+
-   (data.length?'<div class="table-scroll"><table><thead><tr><th>المتقدم والإيصال</th><th>النتيجة</th><th>مراجعة النتيجة</th><th>القبول المبدئي</th></tr></thead><tbody>'+
+   (data.length?'<div class="table-scroll"><table><thead><tr><th>المتقدم والإيصال</th><th>النتيجة</th><th>مراجعة النتيجة</th><th>القبول المبدئي</th><th>التوظيف النهائي · الرئاسة</th></tr></thead><tbody>'+
     data.map(r=>'<tr><td><strong>'+esc(r.trainee_name)+'</strong><br><small dir="ltr">'+esc(r.discord_id)+'</small><br>'+esc(r.receipt)+'<br>'+date(r.received_at)+'</td>'+
      '<td>'+badge(r.passed?'ناجح':'راسب')+'<br>'+esc(r.score)+' / '+esc(r.total)+' — '+esc(r.percentage)+'%'+(r.passed?'<br>الرتبة المبدئية: '+esc(r.assigned_rank||'—'):'')+'</td>'+
      '<td>'+(r.qualification_reviewed_at?'<strong>✓ تمت المراجعة بواسطة '+esc(r.qualification_reviewed_by_name)+'</strong><br>'+date(r.qualification_reviewed_at):
       '<button type="button" class="btn primary small" data-qualification-action="review" data-qualification-id="'+esc(r.id)+'">✓ راجعت النتيجة</button>')+'</td>'+
      '<td>'+(r.qualification_preliminary_at?'<strong>✓ قبول مبدئي بواسطة '+esc(r.qualification_preliminary_by_name)+'</strong><br>'+date(r.qualification_preliminary_at):
        !r.passed?'غير مؤهل للقبول':!r.qualification_reviewed_at?'بانتظار مراجعة النتيجة':
-       '<button type="button" class="btn primary small" data-qualification-action="preliminary" data-qualification-id="'+esc(r.id)+'">✓ قبول مبدئي</button>')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+
+       '<button type="button" class="btn primary small" data-qualification-action="preliminary" data-qualification-id="'+esc(r.id)+'">✓ قبول مبدئي</button>')+'</td>'+ '<td>'+(r.qualification_hired_at?'<strong>✓ تم توظيفه بواسطة '+esc(r.qualification_hired_by_name||'الرئاسة')+'</strong><br>'+date(r.qualification_hired_at):!r.passed?'غير مؤهل للتوظيف':!r.qualification_preliminary_at?'بانتظار القبول المبدئي':!canHire?'قرار الرئاسة فقط':'<button type="button" class="btn primary small" data-qualification-action="hire" data-qualification-id="'+esc(r.id)+'">✓ تأكيد التوظيف النهائي</button>')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+
    '<div class="row"><button type="button" class="btn ghost small" id="qualificationPrev" '+(offset===0?'disabled':'')+'>السابق</button><button type="button" class="btn ghost small" id="qualificationNext" '+(offset+30>=(count??data.length)?'disabled':'')+'>التالي</button></div>';
   $('#qualificationPrev').onclick=()=>{offset=Math.max(0,offset-30);load()};
   $('#qualificationNext').onclick=()=>{offset+=30;load()};
   container.querySelectorAll('[data-qualification-action]').forEach(button=>button.onclick=async()=>{
    const action=button.dataset.qualificationAction,which=button.dataset.qualificationId;
-   if(!confirm(action==='review'?'هل قمت بمراجعة نتيجة هذا المتقدم؟ سيُسجل اسمك وتاريخ المراجعة.':'هل تؤكد القبول المبدئي لهذا المتقدم الناجح؟ سيُسجل اسمك وتاريخ القرار، دون منح رتبة أو رول تلقائيًا.'))return;
+   const question=action==='review'?'هل قمت بمراجعة نتيجة هذا المتقدم؟ سيُسجل اسمك وتاريخ المراجعة.':action==='preliminary'?'هل تؤكد القبول المبدئي لهذا المتقدم الناجح؟ سيُسجل اسمك وتاريخ القرار دون منح رول تلقائيًا.':'هل تؤكد توظيف هذا المتقدم نهائيًا؟ هذه شهادة تسجيل قرار الرئاسة وليست منحًا آليًا لرول Discord.';
+   if(!confirm(question))return;
    button.disabled=true;
    try{
     const {data:result,error:err}=await db.rpc('asf_recruitment_qualification_action',{p_result:which,p_action:action});
     if(err)throw err;
-    toast(result.already?'سبق توثيق هذا الإجراء.':action==='review'?'تم توثيق مراجعة النتيجة باسم المسؤول.':'تم تسجيل القبول المبدئي باسم المسؤول.');
+    toast(result.already?'سبق توثيق هذا الإجراء.':action==='review'?'تم توثيق مراجعة النتيجة باسم المسؤول.':action==='preliminary'?'تم تسجيل القبول المبدئي باسم المسؤول.':'تم توثيق التوظيف النهائي باسم مسؤول الرئاسة.');
     await load();
    }catch(err){toast(err.message||'تعذر حفظ الإجراء',true);button.disabled=false;}
   });
@@ -589,7 +591,7 @@ function mountAcademyResults(){
     (canReviewReward&&reward.actor_id!==user.id?'<button class="btn primary small" data-course-reward="'+esc(reward.id)+'">✓ تم إعطاء المكافأة</button>':'');
   };
   const sync={pending:'قيد المتابعة',confirmed:'مؤكد',unconfirmed:'غير مؤكد',failed:'تعذر الإرسال'};
-  rows.innerHTML='<p class="muted">'+esc(count??data?.length??0)+' نتيجة</p>'+(data?.length?'<div class="table-scroll"><table><thead><tr><th>الإيصال والتاريخ</th><th>المتدرّب</th><th>الدورة</th><th>النتيجة</th><th>مراجعة المدرب</th><th>تسليم الرول للمتدرب</th><th>المدرب ووقت الإجراء</th><th>مكافأة المدرب</th><th>نسخة الجدول القديم</th></tr></thead><tbody>'+data.map(r=>'<tr><td>'+esc(r.receipt)+'<br>'+date(r.received_at)+'</td><td>'+esc(r.trainee_name)+'<br>'+esc(r.trainee_rank)+'<br>'+esc(r.discord_id)+'</td><td>'+esc(r.course_title)+'</td><td>'+esc(r.score)+' / '+esc(r.total)+' · '+esc(r.percentage)+'%<br>'+badge(r.passed?'اجتياز':'رسوب')+'</td><td>'+(r.training_reviewed_at?'<strong>✓ تمت المراجعة بواسطة '+esc(r.training_reviewed_by_name||'المدرب')+'</strong><br>'+date(r.training_reviewed_at):r.course_id==='individual-qualification'?'مراجعة القبول والتجنيد':'<button type="button" class="btn ghost small" data-review-result="'+esc(r.id)+'">✓ تمت مراجعة الدورة</button>')+'</td><td>'+(r.delivered_at?'<span class="course-delivered">✓ تم تسليم الرول (توثيق يدوي)</span>':r.passed?'<button class="btn primary small" data-deliver-result="'+esc(r.id)+'">✓ تم إعطاء رول الدورة</button>':badge('غير مجتاز'))+'</td><td>'+esc(r.delivered_by_name||'—')+(r.delivered_by_code?'<br>'+esc(r.delivered_by_code):'')+(r.delivered_at?'<br>'+date(r.delivered_at):'')+'</td><td class="dept-reward-cell">'+rewardCell(r)+'</td><td>'+esc(sync[r.legacy_status]||'غير مؤكد')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+'<div class="row"><button class="btn ghost small" id="academyResultsPrev" '+(offset===0?'disabled':'')+'>السابق</button><button class="btn ghost small" id="academyResultsNext" '+(offset+50>=(count??data?.length??0)?'disabled':'')+'>التالي</button></div>';
+  rows.innerHTML='<p class="muted">'+esc(count??data?.length??0)+' نتيجة</p>'+(data?.length?'<div class="table-scroll"><table><thead><tr><th>الإيصال والتاريخ</th><th>المتدرّب</th><th>الدورة</th><th>النتيجة</th><th>مراجعة المدرب</th><th>تسليم الرول للمتدرب</th><th>المدرب ووقت الإجراء</th><th>مكافأة المدرب</th><th>نسخة الجدول القديم</th></tr></thead><tbody>'+data.map(r=>'<tr><td>'+esc(r.receipt)+'<br>'+date(r.received_at)+'</td><td>'+esc(r.trainee_name)+'<br>'+esc(r.trainee_rank)+'<br>'+esc(r.discord_id)+'</td><td>'+esc(r.course_title)+'</td><td>'+esc(r.score)+' / '+esc(r.total)+' · '+esc(r.percentage)+'%<br>'+badge(r.passed?'اجتياز':'رسوب')+'</td><td>'+(r.training_reviewed_at?'<strong>✓ تمت المراجعة بواسطة '+esc(r.training_reviewed_by_name||'المدرب')+'</strong><br>'+date(r.training_reviewed_at):r.course_id==='individual-qualification'?'مراجعة القبول والتجنيد':'<button type="button" class="btn ghost small" data-review-result="'+esc(r.id)+'">✓ تمت مراجعة الدورة</button>')+'</td><td>'+(r.delivered_at?'<span class="course-delivered">✓ تم تسليم الرول (توثيق يدوي)</span>':r.course_id==='individual-qualification'?'يتبع القبول والتجنيد':!r.passed?badge('غير مجتاز'):!r.training_reviewed_at?'بانتظار مراجعة المدرب':'<button class="btn primary small" data-deliver-result="'+esc(r.id)+'">✓ تم إعطاء رول الدورة</button>')+'</td><td>'+esc(r.delivered_by_name||'—')+(r.delivered_by_code?'<br>'+esc(r.delivered_by_code):'')+(r.delivered_at?'<br>'+date(r.delivered_at):'')+'</td><td class="dept-reward-cell">'+rewardCell(r)+'</td><td>'+esc(sync[r.legacy_status]||'غير مؤكد')+'</td></tr>').join('')+'</tbody></table></div>':empty('لا توجد نتائج مطابقة'))+'<div class="row"><button class="btn ghost small" id="academyResultsPrev" '+(offset===0?'disabled':'')+'>السابق</button><button class="btn ghost small" id="academyResultsNext" '+(offset+50>=(count??data?.length??0)?'disabled':'')+'>التالي</button></div>';
   $('#academyResultsPrev').onclick=()=>{offset=Math.max(0,offset-50);load()};$('#academyResultsNext').onclick=()=>{offset+=50;load()};
   rows.querySelectorAll('[data-review-result]').forEach(button=>button.onclick=async()=>{
    if(!confirm('هل راجعت نتيجة الدورة؟ سيتم حفظ اسمك وتاريخ المراجعة دون تعديل درجتها.'))return;
