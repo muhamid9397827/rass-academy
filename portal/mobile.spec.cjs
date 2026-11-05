@@ -47,6 +47,7 @@ async function section(page,name){
    await section(page,name);await fits(page,name+' '+width);
    if(name==='members'&&width<=430){
     await page.locator('.ac-hero h2').waitFor({state:'visible'});
+    await page.locator('#acFilter').selectOption('approved');
     await page.locator('.ac-member').waitFor({state:'visible'});
     assert.match(await page.locator('.ac-content').innerText(),/QA Member/);
     if(width===390)await page.screenshot({path:'/tmp/asf-mobile/members-390.png',fullPage:true,animations:'disabled'});
