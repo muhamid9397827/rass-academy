@@ -8,7 +8,9 @@ const assert=require('node:assert/strict');
   const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   page.on('dialog',d=>d.accept());
-  await page.goto('http://127.0.0.1:8000/portal/config.js',{waitUntil:'domcontentloaded'});
+  await page.route('**/portal/qa-blank',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:'<!doctype html><meta charset="utf-8"><title>Test</title>'}));
+  await page.goto('http://127.0.0.1:8000/portal/qa-blank',{waitUntil:'domcontentloaded'});
+  assert.equal(await page.evaluate(()=>document.characterSet),'UTF-8','browser test must decode Arabic strings as UTF-8');
   await page.setContent('<link rel="stylesheet" href="http://127.0.0.1:8000/portal/styles.css"><link rel="stylesheet" href="http://127.0.0.1:8000/portal/member-center.css"><meta charset="utf-8"><main id="page"></main>');
   await page.addScriptTag({url:'http://127.0.0.1:8000/portal/member-center.js'});
   await page.evaluate(()=>{
