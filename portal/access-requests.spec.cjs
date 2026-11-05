@@ -11,7 +11,7 @@ const sdk=String.raw`
   {user_id:leader,game_name:'قائد الاختبار',rank:'لواء',military_code:'ASF-0001',status:'approved',court_enabled:true},
   {user_id:member,game_name:'عضو الاختبار',rank:'رقيب',military_code:'ASF-0002',status:'approved',court_enabled:false}
  ];
- const state={requests:isCommander?[{id:'11111111-2222-4333-8444-555555555581',user_id:member,permission:'court.manage',reason:'أحتاج صلاحية مجلس القضاء للمراجعة.',status:'pending',created_at:new Date().toISOString(),decision_note:''}]:[],
+ const state={requests:isCommander?[{id:'11111111-2222-4333-8444-555555555581',user_id:member,permission:'reports.read',reason:'أحتاج صلاحية مجلس القضاء للمراجعة.',status:'pending',created_at:new Date().toISOString(),decision_note:''}]:[],
   submitted:[],reviewed:[],granted:[]};
  window.__accessQA=state;
  class Query {
@@ -60,12 +60,12 @@ const sdk=String.raw`
  assert.equal(await page.locator('[data-section="court"]').count(),0,'no locked court card on dashboard');
  await page.locator('#accessDashboardShortcut').click();
  await page.locator('#accessRequestForm').waitFor({state:'visible'});
- await page.locator('#accessPermission').selectOption('court.manage');
+ await page.locator('#accessPermission').selectOption('reports.read');
  await page.locator('#accessRequestForm textarea[name="reason"]').fill('أحتاج تصريح المجلس لمراجعة القضايا داخل القطاع.');
  await page.locator('#sendAccessRequest').click();
  await page.getByText('قيد المراجعة').waitFor({state:'visible'});
  const submission=await page.evaluate(()=>window.__accessQA.submitted);
- assert.equal(submission.length,1);assert.equal(submission[0].p_permission,'court.manage');
+ assert.equal(submission.length,1);assert.equal(submission[0].p_permission,'reports.read');
  assert.equal(await page.locator('[data-page="access-queue"]').isVisible(),false,'ordinary member cannot see commander queue');
  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth);
  assert.ok(overflow<=2,'mobile access form overflow '+overflow);
@@ -80,8 +80,8 @@ const sdk=String.raw`
  await page.getByText('موافق عليه').waitFor({state:'visible'});
  const decision=await page.evaluate(()=>({reviews:window.__accessQA.reviewed,grants:window.__accessQA.granted}));
  assert.equal(decision.reviews.length,1);assert.equal(decision.reviews[0].p_allow,true);
- assert.equal(decision.grants[0],'court.manage','approved grant delegated through server call');
+ assert.equal(decision.grants[0],'reports.read','approved grant delegated through server call');
  assert.deepEqual(errors,[],'no uncaught frontend errors');
  await browser.close();
- console.log('PASS access requests: locked court modal, member request/history, commander approval, responsive');
+ console.log('PASS access requests: locked court card, non-role permission request, commander approval, responsive');
 })().catch(e=>{console.error(e);process.exit(1)});
