@@ -291,3 +291,24 @@ grant execute on function public.asf_admin_action(text,uuid,text) to authenticat
 
 -- Suspended or rejected accounts remain able to sign into Supabase Auth until
 -- the separate privileged Auth-ban function completes. RLS rejects portal access meanwhile.
+
+-- The Auth ban/unban Edge Function calls this as the ORIGINAL authenticated actor.
+-- Never trust client-provided target, role, status, or permission assertions.
+create or replace function public.asf_auth_ban_allowed(p_target uuid,p_mode text)
+returns boolean language sql stable security definer set search_path=''
+as $$
+ select auth.uid() is not null and p_target is not null
+  and p_target<>auth.uid()
+  and p_mode in ('ban','unban')
+  and not exists(select 1 from app_private.commanders c where c.user_id=p_target)
+  and exists(select 1 from public.asf_profiles p where p.user_id=p_target
+   and ((p_mode='ban' and p.status in ('rejected','suspended')
+      and (public.asf_can_manage_members() or public.asf_has_feature('users.approve')))
+    or (p_mode='unban' and p.status='approved' and public.asf_is_commander())));
+$$;
+revoke all on function public.asf_auth_ban_allowed(uuid,text) from public,anon,authenticated;
+grant execute on function public.asf_auth_ban_allowed(uuid,text) to authenticated;
+
+-- No employee, court member, or police chief can grant judicial personnel roles.
+-- Legacy police directory stays read-only for clients; all role writes go through
+-- the scoped asf_management_set_staff RPC.
