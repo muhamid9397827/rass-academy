@@ -175,6 +175,18 @@ $('#authForm').onsubmit=async e=>{
  $('#authSubmit').textContent=registering?'جارٍ إنشاء الحساب…':'جارٍ تسجيل الدخول…';
  $('#authForm').setAttribute('aria-busy','true');
  $('#authToggle').disabled=true;$('#forgotPassword').disabled=true;$('#authSubmit').disabled=true;
+ // Last-resort UI guard: a stalled Auth operation must never leave a disabled login indefinitely.
+ const loginWatchdog=window.setTimeout(()=>{
+  if(attempt!==authEpoch||!$('#authSubmit').disabled)return;
+  markAuthBlocked();
+  status.hidden=false;status.className='auth-status error';
+  status.textContent='تأخر تسجيل الدخول أكثر من المتوقع. اضغط «إعادة اتصال نظيفة» لبدء جلسة جديدة.';
+  $('#authFresh').hidden=false;
+  $('#authSubmit').disabled=false;
+  $('#authSubmit').textContent='إعادة فتح تسجيل الدخول';
+  $('#authForm').removeAttribute('aria-busy');
+  $('#authToggle').disabled=false;$('#forgotPassword').disabled=false;
+ },33000);
  let passwordAccepted=false;
  try{
   if(registering){
@@ -217,6 +229,7 @@ $('#authForm').onsubmit=async e=>{
    ?(passwordAccepted?'تم قبول تسجيل الدخول، لكن تحميل صلاحيات الحساب أو التحقق بخطوتين تأخر. افتح جلسة دخول جديدة بأمان.':'تأخر الاتصال بخدمة الدخول. أعد فتح تسجيل الدخول بأمان.')
    :(passwordAccepted?'تم قبول كلمة المرور، لكن تعذر تحميل الحساب: ':'')+(err.message||'تعذر تنفيذ العملية');
  }finally{
+  window.clearTimeout(loginWatchdog);
   $('#authSubmit').disabled=false;
   $('#authSubmit').textContent=authNeedsReload?'إعادة فتح تسجيل الدخول':registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';
   $('#authForm').removeAttribute('aria-busy');$('#authToggle').disabled=false;$('#forgotPassword').disabled=false;
