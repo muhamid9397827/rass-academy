@@ -66,6 +66,7 @@ assert.match(sdk,/asf_police_set_role/,'must include police leadership mock');
  await page.locator('[data-ac-staff="police"]').waitFor({state:'visible'});
  assert.equal(await page.locator('[data-ac-staff="court"]').count(),0,'police chief cannot distribute court roles');
  await page.locator('[data-ac-staff="police"]').click();
+ await page.waitForFunction(()=>window.__policeOps.some(x=>x.name==='asf_management_set_staff'));
  const actions=await page.evaluate(()=>window.__policeOps);
  assert.ok(actions.some(x=>x.name==='asf_management_set_staff'&&x.args.p_section==='police'&&x.args.p_enable===true));
  await visit('commander');
