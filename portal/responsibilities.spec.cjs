@@ -19,6 +19,7 @@ let sdk=portalMock.replace(" const userId=",' const role=new URLSearchParams(loc
  const base='http://127.0.0.1:8000/portal/';
  await page.goto(base+'?role=admissions');await page.locator('#workspace').waitFor({state:'visible'});
  await page.locator('#mobileMenuToggle').click();await page.locator('[data-page="members"]').click();
+ page.once('dialog',dialog=>dialog.accept());
  await page.locator('[data-ac-action="approve"]').click();
  await page.waitForFunction(()=>window.__asfTest.state.decisions.length>0);
  assert.equal((await page.evaluate(()=>window.__asfTest.state.decisions))[0].op,'approve');
