@@ -33,17 +33,17 @@ const functions=extract('function mountQualificationResults(){','function mountA
     qualification:[
      {id:'11111111-2222-4333-8444-555555555501',receipt:'ACD-501',course_id:'individual-qualification',
       trainee_name:'متقدم اختبار',discord_id:'123456789012345678',score:85,total:100,percentage:85,passed:true,
-      assigned_rank:'جندي',received_at:now,qualification_reviewed_at:null,qualification_reviewed_by_name:null,
+      assigned_rank:'جندي',is_test:false,received_at:now,qualification_reviewed_at:null,qualification_reviewed_by_name:null,
       qualification_preliminary_at:null,qualification_preliminary_by_name:null,
       qualification_hired_at:null,qualification_hired_by_name:null},
      {id:'11111111-2222-4333-8444-555555555502',receipt:'ACD-502',course_id:'individual-qualification',
       trainee_name:'متقدم راسب',discord_id:'123456789012345679',score:45,total:100,percentage:45,passed:false,
-      assigned_rank:null,received_at:now,qualification_reviewed_at:null,
+      assigned_rank:null,is_test:false,received_at:now,qualification_reviewed_at:null,
       qualification_preliminary_at:null,qualification_hired_at:null}
     ],
     training:[{id:'11111111-2222-4333-8444-555555555503',receipt:'ACD-503',course_id:'operations',
       trainee_name:'متدرب ناجح',trainee_rank:'جندي',discord_id:'123456789012345680',course_title:'العمليات',
-      score:90,total:100,percentage:90,passed:true,received_at:now,legacy_status:'confirmed',
+      score:90,total:100,percentage:90,passed:true,is_test:false,received_at:now,legacy_status:'confirmed',
       training_reviewed_at:null,training_reviewed_by_name:null,
       delivered_at:null,delivered_by_name:null,delivered_by_code:null}]
    };
