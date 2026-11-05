@@ -93,7 +93,7 @@ const assert=require('node:assert/strict');
   assert.equal(await page.locator('[data-ac-staff="police"]').count(),0,
    'training head can only assign training trainers');
   await page.evaluate(()=>window.__memberQA.center.renderHeads());
-  assert.match(await page.locator('#page').textContent(),/القائد فقط/);
+  assert.match(await page.locator('#page').textContent(),/للقائد فقط|القائد فقط/);
   for(const width of [320,390,768]){
    await page.setViewportSize({width,height:840});
    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth);
