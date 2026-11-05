@@ -11,7 +11,9 @@
 .landing-about-link{font-size:12px}
 .academy-about-link{display:inline-block;margin-inline:10px;font-size:13px}
 body.about-page{min-height:100dvh}
-.about-header .brand{text-decoration:none;color:inherit}
+.about-header{height:auto;min-height:76px;gap:12px;flex-wrap:wrap;padding-block:10px}
+.about-header .brand{text-decoration:none;color:inherit;flex:1 1 165px}
+.about-header .top-actions{margin-inline-start:auto}
 .about-header .top-actions{gap:12px}
 .about-container{max-width:1040px;margin:0 auto;padding:clamp(22px,5vw,56px) 18px 64px}
 .about-hero{padding:clamp(24px,5vw,48px);background:linear-gradient(120deg,#152d38,#0f2030);border:1px solid #2f5263;border-radius:22px}
