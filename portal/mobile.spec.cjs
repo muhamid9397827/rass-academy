@@ -13,8 +13,26 @@ sdk=sdk.replace("if(name==='asf_is_commander')return {data:true,error:null};",
 fs.mkdirSync('/tmp/asf-mobile',{recursive:true});
 const base='http://127.0.0.1:8000/portal/';
 async function fits(page,label){
+ await page.evaluate(()=>document.fonts.ready);
  const geometry=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));
  assert.ok(geometry.scroll<=geometry.width+2,label+' overflow: '+JSON.stringify(geometry));
+ // A page can fit the viewport while Arabic words collapse into vertical letters.
+ const broken=await page.evaluate(()=>{
+  const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),bad=[];
+  let node;
+  while(node=walker.nextNode()){
+   const el=node.parentElement;
+   if(el.closest('script,style,[hidden],thead')||!el.getClientRects().length||getComputedStyle(el).visibility!=='visible')continue;
+   for(const match of node.textContent.matchAll(/[\u0621-\u064A]{3,}/g)){
+    const range=document.createRange();range.setStart(node,match.index);range.setEnd(node,match.index+match[0].length);
+    const rects=[...range.getClientRects()].filter(r=>r.width>0&&r.height>0);
+    if(rects.length&&Math.max(...rects.map(r=>r.top))-Math.min(...rects.map(r=>r.top))>2)
+     bad.push({word:match[0],element:el.tagName,class:el.className});
+   }
+  }
+  return bad.slice(0,15);
+ });
+ assert.deepEqual(broken,[],label+' keeps Arabic words intact');
 }
 async function section(page,name){
  await page.locator('#mobileMenuToggle').click();
@@ -35,6 +53,11 @@ async function section(page,name){
   await page.goto(base);await page.locator('#workspace').waitFor({state:'visible'});
   assert.equal(await page.locator('#mobileBottomNav').isVisible(),true);
   await fits(page,'dashboard '+width);
+  const brandLines=await page.locator('.topbar .brand>span:last-child').evaluate(el=>{
+   const range=document.createRange();range.selectNode(el.firstChild);
+   return new Set([...range.getClientRects()].map(r=>Math.round(r.top))).size;
+  });
+  assert.equal(brandLines,1,'portal name stays horizontal at '+width);
   if(width===390)await page.screenshot({path:'/tmp/asf-mobile/dashboard-390.png',fullPage:true,animations:'disabled'});
   await page.locator('#mobileMore').click();
   assert.equal(await page.locator('#mobileMenuToggle').getAttribute('aria-expanded'),'true');
@@ -81,6 +104,12 @@ async function section(page,name){
   const state={...academyState,stage:'quiz',result:null,optionOrders:Object.fromEntries(academyState.questionIds.map(id=>[id,[0,1,2]])),answers:{},visibilityCount:0,studyStartedAt:Date.now()-600000,studyEndsAt:Date.now()-1000,quizStartedAt:Date.now(),quizEndsAt:Date.now()+600000,createdAt:Date.now(),updatedAt:Date.now()};
   await quiz.addInitScript(s=>localStorage.setItem('asf-portal-academy-v1:active-session',JSON.stringify(s)),state);
   await quiz.goto(base+'academy.html');await quiz.locator('#start-facilities-training').click();await quiz.locator('#resume-button').click();await quiz.locator('#quiz-view').waitFor({state:'visible'});await fits(quiz,'quiz '+width);
+  const counter=await quiz.locator('.metric-card__value:has(#answered-count)').evaluate(el=>{
+   const answered=el.querySelector('#answered-count').getBoundingClientRect();
+   const total=el.querySelector('#total-count').getBoundingClientRect();
+   return {answeredTop:answered.top,totalTop:total.top,height:el.getBoundingClientRect().height,lineHeight:parseFloat(getComputedStyle(el).lineHeight)};
+  });
+  assert.ok(Math.abs(counter.answeredTop-counter.totalTop)<2&&counter.height<=counter.lineHeight+2,'answer counter stays on one line at '+width);
   if(width===390)await quiz.screenshot({path:'/tmp/asf-mobile/quiz-390.png',fullPage:true,animations:'disabled'});await quiz.close();
   const result=await browser.newPage({viewport:{width,height:844}});
   await result.addInitScript(s=>localStorage.setItem('asf-portal-academy-v1:last-result',JSON.stringify(s)),academyState);

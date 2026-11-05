@@ -1411,8 +1411,8 @@ a {
   text-align: center;
 }
 
-.metric-card span,
-.metric-card strong {
+.metric-card > span,
+.metric-card > strong {
   display: block;
 }
 
