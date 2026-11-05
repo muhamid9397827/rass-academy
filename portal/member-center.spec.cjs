@@ -66,6 +66,21 @@ const assert=require('node:assert/strict');
   assert.ok(await page.locator('[data-ac-staff="police"]').count()>0);
   assert.equal(await page.locator('[data-ac-staff="court"]').count(),0,'police head cannot assign judiciary role');
   assert.equal(await page.locator('[data-ac-staff="training"]').count(),0,'police head cannot assign trainers');
+  await page.evaluate(()=>{window.__memberQA.ctx={
+   commander:false,policeHead:false,courtHead:true,trainingHead:false,recruitmentHead:false,
+   canManageMembers:true,canApprove:true
+  }});
+  await page.evaluate(()=>window.__memberQA.center.render());
+  assert.equal(await page.locator('[data-ac-staff]').count(),0,
+   'judicial leader can manage cases and warnings, not give personnel roles');
+  await page.evaluate(()=>{window.__memberQA.ctx={
+   commander:false,policeHead:false,courtHead:false,trainingHead:true,recruitmentHead:false,
+   canManageMembers:true,canApprove:true
+  }});
+  await page.evaluate(()=>window.__memberQA.center.render());
+  assert.ok(await page.locator('[data-ac-staff="training"]').count()>0);
+  assert.equal(await page.locator('[data-ac-staff="police"]').count(),0,
+   'training head can only assign training trainers');
   await page.evaluate(()=>window.__memberQA.center.renderHeads());
   assert.match(await page.locator('#page').textContent(),/القائد فقط/);
   for(const width of [320,390,768]){
