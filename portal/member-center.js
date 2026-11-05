@@ -51,15 +51,22 @@
      '<button type="button" class="btn warn small" data-ac-action="reject" data-ac-user="'+esc(p.user_id)+'">رفض الطلب</button></div>';
    }
    if(p.status==='approved'){
-    return canDeactivate()&&!(!ctx().commander&&hasLeadership(p))?
-     '<div class="ac-account-actions"><button type="button" class="btn warn small" data-ac-action="suspend" data-ac-user="'+esc(p.user_id)+'">إلغاء التفعيل وسحب الصلاحيات</button></div>':
-     '<span class="ac-note">هذا الحساب محمي من إلغاء التفعيل عبر تفويض آخر.</span>';
+    const allowed=canDeactivate()&&!(!ctx().commander&&hasLeadership(p));
+    return '<div class="ac-account-actions">'+
+     (allowed?'<button type="button" class="btn warn small" data-ac-action="suspend" data-ac-user="'+esc(p.user_id)+'">إلغاء التفعيل وسحب الصلاحيات</button>':
+      '<span class="ac-note">هذا الحساب محمي من إلغاء التفعيل عبر تفويض آخر.</span>')+
+     (ctx().commander?'<button type="button" class="btn ghost small" data-ac-action="sync-unban" data-ac-user="'+esc(p.user_id)+'">إصلاح وصول الحساب</button>':'')+
+     '</div>';
    }
-   return ctx().commander&&String(p.activation_reason||'').trim().length>=10?
-    '<button type="button" class="btn ghost small" data-ac-action="approve" data-ac-user="'+esc(p.user_id)+'">إعادة التفعيل · القائد</button>':
-    '<span class="ac-note">مغلق — إعادة التفعيل لدى القائد فقط</span>';
+   return '<div class="ac-account-actions">'+
+    (ctx().commander&&String(p.activation_reason||'').trim().length>=10?
+     '<button type="button" class="btn ghost small" data-ac-action="approve" data-ac-user="'+esc(p.user_id)+'">إعادة التفعيل · القائد</button>':
+     '<span class="ac-note">مغلق — إعادة التفعيل لدى القائد فقط</span>')+
+    ((ctx().canManageMembers||ctx().canApprove||ctx().commander)?
+     '<button type="button" class="btn ghost small" data-ac-action="sync-ban" data-ac-user="'+esc(p.user_id)+'">تأكيد حظر الدخول</button>':'')+
+    '</div>';
   }
-  function staffRoles(p){
+    function staffRoles(p){
    if(p.status!=='approved')return '';
    const options=Object.entries(SECTIONS).filter(([key])=>canStaff(key));
    if(!options.length)return '';
@@ -128,11 +135,22 @@
   async function performStatus(button){
    const id=button.dataset.acUser,action=button.dataset.acAction,p=members.find(m=>m.user_id===id);
    if(!p)return;
-   const question=action==='suspend'?'إلغاء تفعيل '+p.game_name+' وسحب جميع صلاحياته داخل البوابة؟':
-     action==='reject'?'رفض طلب '+p.game_name+' وإغلاق الوصول؟':
-     'تأكيد '+(p.status==='pending'?'تفعيل':'إعادة تفعيل')+' '+p.game_name+'؟';
+   const syncOnly=action==='sync-ban'||action==='sync-unban';
+   if(syncOnly&&!((action==='sync-ban'&&['rejected','suspended'].includes(p.status))||
+     (action==='sync-unban'&&ctx().commander&&p.status==='approved')))
+    return notify('حالة الحساب لا تسمح بإعادة المزامنة.',true);
+   const question=action==='sync-ban'?'إعادة تأكيد حظر تسجيل الدخول للحساب الملغى '+p.game_name+'؟':
+    action==='sync-unban'?'إعادة تأكيد رفع الحظر عن حساب '+p.game_name+' المفعّل؟':
+    action==='suspend'?'إلغاء تفعيل '+p.game_name+' وسحب جميع صلاحياته داخل البوابة؟':
+    action==='reject'?'رفض طلب '+p.game_name+' وإغلاق الوصول؟':
+    'تأكيد '+(p.status==='pending'?'تفعيل':'إعادة تفعيل')+' '+p.game_name+'؟';
    if(!confirm(question))return;
    await withBusy(async()=>{
+    if(syncOnly){
+     const ok=await syncAuthBan(id,action==='sync-ban'?'ban':'unban');
+     notify(ok?'تم التحقق من مزامنة حالة الدخول مع Supabase Auth.':'تعذرت مزامنة Auth. حالة صلاحيات البوابة لم تتغير، ويمكن إعادة المحاولة.',!ok);
+     return;
+    }
     const oldStatus=p.status;
     const {error}=await db.rpc('asf_admin_action',{op:action,target:id,arg:null});
     if(error)throw error;
