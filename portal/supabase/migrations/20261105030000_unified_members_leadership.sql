@@ -535,7 +535,7 @@ begin
  end if;
  return jsonb_build_object('opened_at',rec.last_opened_at,'received_at',rec.received_at,
  'viewer_name',rec.viewer_name,'viewer_unit',rec.viewer_unit,'open_count',rec.open_count);
-end $function$
+end $function$;
 
 revoke all on function public.asf_report_receipt(uuid,boolean) from public,anon,authenticated;
 grant execute on function public.asf_report_receipt(uuid,boolean) to authenticated;
@@ -568,7 +568,7 @@ begin
  insert into public.asf_notifications(recipient_id,category,message)
  values(r.actor_id,'access_decision','تم توثيق صرف مكافأة عملك ('||r.amount::text||') عن قضية '||r.subject_label||'.');
  return jsonb_build_object('paid_at',r.paid_at,'paid_by_name',r.paid_by_name,'amount',r.amount);
-end $function$
+end $function$;
 
 revoke all on function public.asf_service_reward_mark_paid(uuid) from public,anon,authenticated;
 grant execute on function public.asf_service_reward_mark_paid(uuid) to authenticated;
