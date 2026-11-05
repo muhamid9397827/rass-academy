@@ -26,7 +26,13 @@ const assert=require('node:assert/strict');
    const db={
     rpc:async(name,args={})=>{
      changes.push([name,args]);
-     if(name==='asf_management_directory')return {data:fake.map(p=>({...p})),error:null};
+     if(name==='asf_management_directory'){
+      if(window.__memberQA.failRosterOnce){
+       window.__memberQA.failRosterOnce=false;
+       return {data:null,error:{message:'Synthetic directory outage'}};
+      }
+      return {data:fake.map(p=>({...p})),error:null};
+     }
      const p=fake.find(p=>p.user_id===(args.p_user||args.target));
      if(name==='asf_admin_action'){
       p.status={approve:'approved',reject:'rejected',suspend:'suspended'}[args.op]||p.status;
@@ -37,7 +43,7 @@ const assert=require('node:assert/strict');
      }else if(name==='asf_management_set_head')p[args.p_section+'_head']=args.p_enable;
      return {data:null,error:null};
     },
-    functions:{invoke:async()=>({data:{ok:true},error:null})}
+    functions:{invoke:async(name,args)=>{changes.push([name,args]);return {data:{ok:true},error:null}}}
    };
    window.__memberQA.center=window.ASF_MEMBER_CENTER.create({
     db,getContext:()=>window.__memberQA.ctx,notify:(message,error)=>{window.__memberQA.last={message,error}}
@@ -91,6 +97,29 @@ const assert=require('node:assert/strict');
    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth);
    assert.ok(overflow<=2,'responsive width '+width+' has overflow '+overflow);
   }
+  // Simulate an unavailable roster after a successful suspension.
+  // Auth must still be banned and the responsible person must be told of the refresh problem.
+  await page.evaluate(()=>{
+   window.__memberQA.ctx={
+    commander:true,policeHead:true,courtHead:true,trainingHead:true,recruitmentHead:true,
+    canManageMembers:true,canApprove:true
+   };
+  });
+  await page.evaluate(()=>window.__memberQA.center.render());
+  await page.locator('#acFilter').selectOption('approved');
+  await page.evaluate(()=>{window.__memberQA.failRosterOnce=true});
+  await page.locator('button[data-ac-action="suspend"]').first().click();
+  await page.waitForFunction(()=>window.__memberQA.last?.message?.includes('تحديث القائمة'));
+  const snapshot=await page.evaluate(()=>({
+   events:window.__memberQA.changes.slice(-4),
+   message:window.__memberQA.last.message,
+   statuses:window.__memberQA.fake.map(x=>x.status)
+  }));
+  const banIndex=snapshot.events.findIndex(([name])=>name==='asf-member-auth-ban');
+  const readIndex=snapshot.events.findIndex(([name])=>name==='asf_management_directory');
+  assert.ok(banIndex>=0&&readIndex>banIndex,'Auth ban must run before directory reload');
+  assert.ok(snapshot.statuses.every(status=>status==='suspended'));
+  assert.match(snapshot.message,/تحديث القائمة/);
   assert.deepEqual(errors,[],'no unhandled browser exceptions');
   console.log('PASS: unified member status transitions, scoped staff, commander-only heads, 320px mobile');
  }finally{await browser.close()}
