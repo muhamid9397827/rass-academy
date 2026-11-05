@@ -8,6 +8,8 @@ const ledger={is_test:false,receipt:'ACD-00000001',trainee_name:'اسم متدر
 let sdk=portalMock.replace("military_code:'ASF-QA001'",'activation_reason:'+JSON.stringify(reason)+",military_code:'ASF-QA001'")
  .replace('asf_police_overrides:[]','asf_police_overrides:[],asf_academy_results:'+JSON.stringify([ledger]))
  .replace('asf_change_requests:[]','asf_change_requests:'+JSON.stringify([{id:'qa-change',user_id:'11111111-2222-4333-8444-555555555572',new_game_name:'اسم تجريبي طويل لتعديل العضوية',new_discord_id:'99999999999999999999',state:'pending'}]));
+sdk=sdk.replace("if(name==='asf_is_commander')return {data:true,error:null};",
+ "if(name==='asf_management_directory')return {data:[{...state.member,activation_reason:'صلاحية اختبار',training_head:false,recruitment_head:false,police_head:false,court_head:false,training_trainer:true,recruitment_trainer:false,police_staff:false,court_staff:false}],error:null};\n   if(name==='asf_is_commander')return {data:true,error:null};");
 fs.mkdirSync('/tmp/asf-mobile',{recursive:true});
 const base='http://127.0.0.1:8000/portal/';
 async function fits(page,label){
@@ -44,8 +46,9 @@ async function section(page,name){
   for(const name of ['members','changes','delegations','audit','compose','police','court','academy','access','account','reports','trash','inbox']){
    await section(page,name);await fits(page,name+' '+width);
    if(name==='members'&&width<=430){
-    await page.waitForFunction(()=>document.querySelector('.mobile-record-table td')?.dataset.label==='الاسم');
-    assert.equal(await page.locator('.mobile-record-table').evaluate(el=>getComputedStyle(el).display),'block');
+    await page.locator('.ac-hero h2').waitFor({state:'visible'});
+    await page.locator('.ac-member').waitFor({state:'visible'});
+    assert.match(await page.locator('.ac-content').innerText(),/QA Member/);
     if(width===390)await page.screenshot({path:'/tmp/asf-mobile/members-390.png',fullPage:true,animations:'disabled'});
    }
   }
