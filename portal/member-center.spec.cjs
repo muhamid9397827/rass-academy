@@ -85,11 +85,25 @@ const assert=require('node:assert/strict');
   await page.evaluate(()=>{window.__memberQA.ctx={
    commander:false,policeHead:false,courtHead:true,trainingHead:false,recruitmentHead:false,
    canManageMembers:true,canApprove:true
-  }});
+  };
+   const staff=window.__memberQA.fake.find(member=>member.status==='suspended');
+   staff.status='approved';
+   for(const key of ['training_head','recruitment_head','police_head','court_head','training_trainer','recruitment_trainer','police_staff','court_staff'])staff[key]=false;
+  });
   await page.evaluate(()=>window.__memberQA.center.render());
   await page.locator('#acFilter').selectOption('approved');
-  assert.equal(await page.locator('[data-ac-staff]').count(),0,
-   'judicial leader can manage cases and warnings, not give personnel roles');
+  assert.ok(await page.locator('[data-ac-staff="court"]').count()>0,
+   'court head can manage court staff only');
+  assert.equal(await page.locator('[data-ac-staff="police"]').count(),0,'court head cannot assign police staff');
+  assert.equal(await page.locator('[data-ac-staff="training"]').count(),0,'court head cannot assign trainers');
+  assert.equal(await page.locator('[data-ac-action="suspend"]').count(),0,
+   'court head cannot suspend an approved member before that member belongs to court staff');
+  await page.locator('[data-ac-staff="court"]').first().click();
+  assert.ok(await page.locator('[data-ac-staff="court"].on').count()>0);
+  assert.ok(await page.locator('[data-ac-action="suspend"]').count()>0,
+   'court head may deactivate its own non-leadership staff member');
+  await page.locator('[data-ac-action="suspend"]').first().click();
+  assert.equal(await page.locator('#acFilter').inputValue(),'suspended');
   await page.evaluate(()=>{window.__memberQA.ctx={
    commander:false,policeHead:false,courtHead:false,trainingHead:true,recruitmentHead:false,
    canManageMembers:true,canApprove:true
