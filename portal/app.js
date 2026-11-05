@@ -7,22 +7,16 @@ const KINDS={personnel:'تقرير مسؤول الأفراد',officers:'تقري
 const STATES={new:'جديد',reviewing:'قيد المراجعة',reviewed:'تمت المراجعة',needs_more:'يحتاج استكمال'};
 
 const ACCESS_PERMISSIONS={
- 'court.manage':'إدارة مجلس القضاء',
- 'police.manage':'قسم الشرطة العسكرية',
  'reports.read':'الاطلاع على التقارير العادية',
  'reports.review':'مراجعة التقارير العادية',
  'users.review':'الاطلاع على طلبات الأعضاء',
- 'users.approve':'قبول الأعضاء الجدد',
- 'academy.manage':'رئاسة الدورات ومتابعة التسليم'
+ 'users.approve':'قبول الأعضاء الجدد'
 };
 const ACCESS_HINTS={
- 'court.manage':'القضايا والقرارات القضائية، بعد تصريح القيادة فقط.',
- 'police.manage':'تعديل العقوبات المقترحة داخل قسم الشرطة العسكرية.',
  'reports.read':'التقارير غير السرية فقط؛ لا يشمل تقارير «سري للغاية».',
  'reports.review':'إضافة ملاحظات ومراجعة التقارير غير السرية فقط.',
  'users.review':'الاطلاع على طلبات الأعضاء دون صلاحية اعتماد الحسابات.',
- 'users.approve':'قبول أو رفض الطلبات الجديدة فقط، دون تغيير الرتب أو توزيع الصلاحيات.',
- 'academy.manage':'إشعارات النجاح، والاطلاع على جدول الدورات وتأكيد التسليم باسمك.'
+ 'users.approve':'قبول أو رفض الطلبات الجديدة فقط، دون تغيير الرتب أو توزيع الصلاحيات.'
 };
 const ACCESS_STATES={pending:'قيد المراجعة',approved:'موافق عليه',rejected:'مرفوض'};
 let accessPrefill='court.manage';
