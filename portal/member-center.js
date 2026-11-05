@@ -119,10 +119,11 @@
    });
   }
   async function syncAuthBan(target,mode){
-   // PostgreSQL revokes portal access first. The privileged function enforces an Auth ban.
-   const {data,error}=await db.functions.invoke('asf-member-auth-ban',{body:{target,mode}});
-   if(error||!data?.ok)return false;
-   return true;
+   // Never let a read/render error skip Auth synchronization after the DB transition.
+   try{
+    const {data,error}=await db.functions.invoke('asf-member-auth-ban',{body:{target,mode}});
+    return !error&&data?.ok===true;
+   }catch(_error){return false;}
   }
   async function performStatus(button){
    const id=button.dataset.acUser,action=button.dataset.acAction,p=members.find(m=>m.user_id===id);
@@ -135,19 +136,25 @@
     const oldStatus=p.status;
     const {error}=await db.rpc('asf_admin_action',{op:action,target:id,arg:null});
     if(error)throw error;
+    const isBan=action==='suspend'||action==='reject';
+    const shouldSync=isBan||oldStatus==='suspended'||oldStatus==='rejected';
+    // This must happen immediately after the committed status change: a failed
+    // directory read must never prevent the security-relevant Auth ban/unban.
+    const authOk=!shouldSync||await syncAuthBan(id,isBan?'ban':'unban');
     // Keep the affected member visible in its new status instead of silently
     // removing the row from the pending queue after approving/rejecting it.
     filter=action==='approve'?'approved':action==='reject'?'rejected':'suspended';
-    await reload();
-    const isBan=action==='suspend'||action==='reject';
-    const shouldSync=isBan||oldStatus==='suspended'||oldStatus==='rejected';
-    const authOk=!shouldSync||await syncAuthBan(id,isBan?'ban':'unban');
+    let refreshed=true;
+    try{await reload();}catch(_error){refreshed=false;}
+    const feedback=$('#acFeedback');
     if(!authOk){
      notify(isBan?'تم إلغاء صلاحيات البوابة وتحديث حالة الحساب، لكن تعذر تأكيد حظره من Supabase Auth؛ يجب إتمام الحظر.':
       'تم تحديث عضوية البوابة، لكن تعذر تأكيد رفع الحظر من Supabase Auth.',true);
-     const feedback=$('#acFeedback');if(feedback)feedback.textContent='تنبيه: يحتاج حظر أو رفع حظر Supabase Auth إلى إعادة المحاولة من المسؤول.';
+     if(feedback)feedback.textContent='تنبيه: يحتاج حظر أو رفع حظر Supabase Auth إلى إعادة المحاولة من المسؤول.';
+    }else if(!refreshed){
+     notify('تم حفظ قرار العضوية ومزامنة Auth، لكن تعذر تحديث القائمة. أعد فتح المركز للتحقق.',true);
     }else{
-     notify(action==='approve'?'تم تفعيل العضوية وتحديث حالة الحساب.':action==='reject'?'تم رفض الطلب وإغلاق صلاحيات البوابة.':'تم إلغاء التفعيل وسحب الصلاحيات وطلب الحظر.');
+     notify(action==='approve'?'تم تفعيل العضوية وتحديث حالة الحساب.':action==='reject'?'تم رفض الطلب وإغلاق صلاحيات البوابة.':'تم إلغاء التفعيل وسحب الصلاحيات وتأكيد حظر Auth.');
     }
    });
   }
