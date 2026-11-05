@@ -38,7 +38,7 @@ const recoveryTokenHash=recoveryHash.get('token_hash')||recoveryQuery.get('token
 const recoveryLinkOpened=recoveryHash.get('type')==='recovery'||recoveryQuery.get('type')==='recovery';
 let db=ready?window.ASF_AUTH.createClient():null;
 let authEpoch=0,authNeedsReload=false,signingOut=false;
-let user=null, profile=null, commander=false, policeHead=false, grants=[], departmentRoles=[], pageName=new URLSearchParams(location.search).get('view')==='academy-results'?'academy-results':'dashboard', draftId=null, latestReports=[], correctionSource=null, notificationChannel=null;
+let user=null, profile=null, commander=false, policeHead=false, courtHead=false, canManageMembers=false, grants=[], departmentRoles=[], pageName=new URLSearchParams(location.search).get('view')==='academy-results'?'academy-results':'dashboard', draftId=null, latestReports=[], correctionSource=null, notificationChannel=null;
 const toast=(m,error=false)=>{const b=$('#toast');b.textContent=m;b.className='show'+(error?' error':'');clearTimeout(toast.t);toast.t=setTimeout(()=>b.className='',5800)};
 const set=(s,html)=>{$(s).innerHTML=html};
 const date=d=>d?new Date(d).toLocaleString('ar-SA',{dateStyle:'short',timeStyle:'short'}):'—';
@@ -49,7 +49,7 @@ const btn=(label,act,id='',kind='ghost')=>'<button class="btn '+kind+' small" da
 const badge=(s,secret=false)=>'<span class="badge '+(secret?'secret':'')+'">'+esc(s)+'</span>';
 const empty=msg=>'<div class="empty">'+esc(msg)+'</div>';
 const isFullName=value=>{const name=String(value||'').trim();const parts=name.split(/\s+/);return name.length<=80&&parts.length>=2&&parts.every(p=>p.length>=2&&/^\p{L}+$/u.test(p));};
-const has=(permission,kind=null)=>commander||grants.some(g=>g.permission===permission&&(kind===null||g.report_kind===null||g.report_kind===kind));
+const has=(permission,kind=null)=>commander||((permission==='police.manage'&&(policeHead||courtHead))||(permission==='court.manage'&&courtHead)||(['users.review','users.approve'].includes(permission)&&canManageMembers))||grants.some(g=>g.permission===permission&&(kind===null||g.report_kind===null||g.report_kind===kind));
 const hasDeptRole=(department,role)=>commander||departmentRoles.some(r=>r.department===department&&r.role===role);
 const hasDept=(department)=>commander||departmentRoles.some(r=>r.department===department);
 const policeUI=window.ASF_POLICE_UI.create({db,getContext:()=>({user,commander,hasPolice:has('police.manage'),isPoliceHead:policeHead,gameName:profile?.game_name}),notify:toast});
@@ -64,6 +64,13 @@ const deptUI=window.ASF_DEPARTMENTS.create({
  go:navigate,
  mountResults:mountAcademyResults,
  mountQualifications:mountQualificationResults
+});
+const memberUI=window.ASF_MEMBER_CENTER.create({
+ db,
+ getContext:()=>({user,commander,policeHead,courtHead,canManageMembers,
+  canApprove:has('users.approve'),
+  trainingHead:hasDeptRole('training','head'),recruitmentHead:hasDeptRole('recruitment','head')}),
+ notify:toast
 });
 
 function showScreen(which){['welcome','authScreen','mfaScreen','verifyEmailScreen','recoveryScreen','pendingScreen','workspace'].forEach(id=>$('#'+id).hidden=id!==which);$('#notificationTrigger').hidden=which!=='workspace';window.ASF_MOBILE?.setWorkspace(which==='workspace')}
@@ -106,7 +113,7 @@ $('#verifyEmailBack').onclick=()=>showScreen('welcome');
 $('#rank').innerHTML=opt(RANKS.map(r=>[r,r]));
 $('#signOut').onclick=async()=>{
  if(signingOut)return;signingOut=true;['showLogin','showRegister','registerFromHero','signOut'].forEach(id=>$('#'+id).disabled=true);
- authEpoch++;user=null;profile=null;commander=false;policeHead=false;grants=[];departmentRoles=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');showScreen('welcome');$('#signOut').hidden=true;$('#sessionLabel').textContent='';
+ authEpoch++;user=null;profile=null;commander=false;policeHead=false;courtHead=false;canManageMembers=false;grants=[];departmentRoles=[];latestReports=[];correctionSource=null;draftId=null;set('#page','');showScreen('welcome');$('#signOut').hidden=true;$('#sessionLabel').textContent='';
  if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
  try{const {error}=await window.ASF_AUTH.deadline(()=>db.auth.signOut(),()=>{authNeedsReload=true;window.ASF_AUTH.cancel(db)});if(error)throw error;}catch(err){
   authNeedsReload=true;window.ASF_AUTH.cancel(db);
@@ -143,7 +150,7 @@ function bindAuthListener(){
    recoveryMode=true;
    showRecoveryScreen();
   }else if(event==='SIGNED_OUT'){
-   authEpoch++;user=null;commander=false;policeHead=false;profile=null;grants=[];departmentRoles=[];
+   authEpoch++;user=null;commander=false;policeHead=false;courtHead=false;canManageMembers=false;profile=null;grants=[];departmentRoles=[];
    latestReports=[];correctionSource=null;draftId=null;set('#page','');
    if(notificationChannel){
     const channel=notificationChannel;notificationChannel=null;
@@ -348,17 +355,19 @@ async function loadIdentity(silent=false,fromAuth=false){
     return;
    }
   }
- const [{data:p,error:pe},{data:cm,error:ce},{data:dg,error:de},{data:responsibilities,error:re},{data:departmentMemberships,error:dme},{data:policeMembership,error:hme}]=await Promise.all([
+ const [{data:p,error:pe},{data:cm,error:ce},{data:dg,error:de},{data:responsibilities,error:re},{data:departmentMemberships,error:dme},{data:policeMembership,error:hme},{data:courtChief,error:che},{data:managementScope,error:mse}]=await Promise.all([
     db.from('asf_profiles').select('*').eq('user_id',user.id).maybeSingle(),
     db.rpc('asf_is_commander'),
     db.from('asf_delegations').select('*').eq('user_id',user.id),
     db.from('asf_responsibilities').select('*').eq('user_id',user.id),
     db.from('asf_department_roles').select('user_id,department,role').eq('user_id',user.id),
-    db.from('asf_police_heads').select('user_id').eq('user_id',user.id)
+    db.from('asf_police_heads').select('user_id').eq('user_id',user.id),
+    db.rpc('asf_is_court_head'),
+    db.rpc('asf_can_manage_members')
   ]);
   if(epoch!==authEpoch)return;
-  if(pe||ce||de||re||dme||hme)throw pe||ce||de||re||dme||hme;
-  profile=p;commander=!!cm;policeHead=!!policeMembership?.length;grants=[...(dg||[]),...(responsibilities||[])];departmentRoles=departmentMemberships||[];
+  if(pe||ce||de||re||dme||hme||che||mse)throw pe||ce||de||re||dme||hme||che||mse;
+  profile=p;commander=!!cm;policeHead=!!policeMembership?.length;courtHead=!!courtChief;canManageMembers=!!managementScope;grants=[...(dg||[]),...(responsibilities||[])];departmentRoles=departmentMemberships||[];
   if(!notificationChannel){
     // All signed-in members can receive their own decision notices. RLS stays authoritative.
     notificationChannel=db.channel('asf-notices-'+user.id)
@@ -388,7 +397,7 @@ async function loadIdentity(silent=false,fromAuth=false){
   $('#sessionLabel').textContent=p?.game_name||user.email;$('#signOut').hidden=false;noticeUI.refreshBadge().catch(()=>{});
   if(commander||p?.status==='approved'){
    showScreen('workspace');$('#courtNav').hidden=!(commander||p?.court_enabled||has('court.manage'));
-    $('#policeNav').hidden=!(commander||policeHead||has('police.manage'));
+    $('#policeNav').hidden=!(commander||policeHead||courtHead||has('police.manage'));
    $('#adminNav').hidden=!(commander||has('reports.read')||has('reports.review')||has('users.review')||has('users.approve'));
    document.querySelector('[data-page="members"]').hidden=!(commander||has('users.review')||has('users.approve'));
    document.querySelector('[data-page="changes"]').hidden=!(commander||has('users.review'));
@@ -403,7 +412,7 @@ async function loadIdentity(silent=false,fromAuth=false){
    document.querySelector('[data-page="access-queue"]').hidden=!commander;
    await navigate(pageName);
   }else{
-   showScreen('pendingScreen');
+   set('#page','');showScreen('pendingScreen');
    const missingReason=p?.status==='pending'&&String(p?.activation_reason||'').trim().length<10;
    $('#pendingText').textContent=p?.status==='rejected'?'تم رفض الطلب. تواصل مع الإدارة.':p?.status==='suspended'?'الحساب موقوف حاليًا.':missingReason?'يجب استكمال سبب طلب التفعيل قبل أن يتمكن القائد من الموافقة.':'حسابك بانتظار موافقة القائد. يمكنك دخول الدورات العامة.';
    $('#pendingReasonSection').hidden=!missingReason;
@@ -431,7 +440,7 @@ async function navigate(name){
  if(!user||!(commander||profile?.status==='approved'))return;
  window.ASF_MOBILE?.closeMenu();window.ASF_MOBILE?.setPage(name);
  pageName=name;document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page===name));
- const titles={notifications:'مركز الإشعارات',dashboard:'لوحة التحكم',operations:'مركز العمليات والمهام',academy:'الأكاديمية والدورات','academy-results':'نتائج الاختبارات والمراجعة والتسليم','training-center':'كلية التدريب','recruitment-center':'القبول والتجنيد','department-admin':'رئاسات الأقسام',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'إدارة المستخدمين',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',access:'طلب تصريح ومتابعته','access-queue':'طلبات التصاريح الواردة',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
+ const titles={notifications:'مركز الإشعارات',dashboard:'لوحة التحكم',operations:'مركز العمليات والمهام',academy:'الأكاديمية والدورات','academy-results':'نتائج الاختبارات والمراجعة والتسليم','training-center':'كلية التدريب','recruitment-center':'القبول والتجنيد','department-admin':'توزيع الرئاسات',reports:'تقاريري',compose:'إنشاء تقرير',police:'الشرطة العسكرية',court:'مجلس القضاء',inbox:'التقارير الواردة',members:'مركز العضويات والصلاحيات',changes:'طلبات تعديل البيانات',delegations:'تفويض القيادات',access:'طلب تصريح ومتابعته','access-queue':'طلبات التصاريح الواردة',trash:'سلة المحذوفات',audit:'سجل العمليات',account:'الملف الشخصي'};
  set('#pageTitle','<div><h1>'+esc(titles[name]||'بوابة أمن المنشآت')+'</h1><p>المنصة الموحدة · إعدادات الصلاحيات حسب حسابك</p></div>');
  set('#page','<div class="empty">جارٍ تحميل البيانات...</div>');
  try{
@@ -442,12 +451,7 @@ async function navigate(name){
   if(name==='academy-results')return await renderAcademyResults();
   if(name==='training-center')return await deptUI.render('training');
   if(name==='recruitment-center')return await deptUI.render('recruitment');
-  if(name==='department-admin'&&commander){
-    await deptUI.renderAdmin();
-    $('#page').insertAdjacentHTML('beforeend','<section class="section-card"><h3>رئاسة الشرطة العسكرية</h3><p class="muted">تعيين رئيس الشرطة وتوزيع رول الشرطة العسكرية ورول مجلس القضاء للأعضاء المعتمدين من مكان واحد.</p><button type="button" class="btn primary" id="openPoliceLeadership">فتح إدارة رئاسة الشرطة</button></section>');
-    $('#openPoliceLeadership').onclick=async()=>{await navigate('police');const details=$('#mpLeadershipDetails');if(details){details.open=true;details.scrollIntoView({block:'start',behavior:'smooth'});}};
-    return;
-   }
+  if(name==='department-admin'&&commander)return await memberUI.renderHeads();
   if(name==='reports'||name==='inbox'||name==='trash')return await renderReports(name);
   if(name==='compose')return await renderCompose();
   if(name==='police')return await renderPolice();
@@ -913,20 +917,8 @@ function courtWarningCard(w){
  (state.expiresAt?'<p class="muted">نهاية المدة: '+date(state.expiresAt)+'</p>':'')+
  (w.cancelled_at?'<p class="muted">أُلغي بتاريخ '+date(w.cancelled_at)+'؛ السبب: '+esc(w.cancellation_reason)+'</p>':state.archived?'':btn('إلغاء الإنذار','cancel-warning',w.id,'warn'))+'</div>';
 }
-async function renderMembers(){
- const rows=await query('asf_profiles');rows.sort((a,b)=>a.created_at<b.created_at?1:-1);
- const hasReason=p=>String(p.activation_reason||'').trim().length>=10;
- const admission=p=>p.status==='pending'&&(commander||has('users.approve'))?(hasReason(p)?btn('تفعيل','approve',p.user_id,'primary'):'<span class="activation-missing">بانتظار سبب التفعيل</span>')+btn('رفض','reject',p.user_id,'warn'):'—';
- const actions=p=>!commander?admission(p):'<div class="actions">'+(p.status!=='approved'?(hasReason(p)?btn('تفعيل','approve',p.user_id,'primary'):'<span class="activation-missing">بانتظار سبب التفعيل</span>'):btn('إيقاف','suspend',p.user_id,'warn'))+
- btn('تغيير الرتبة','rank',p.user_id)+btn(p.court_enabled?'إلغاء القضاء':'تفعيل القضاء',p.court_enabled?'court_off':'court_on',p.user_id)+btn('رفض','reject',p.user_id,'warn')+'</div>';
- set('#page','<div class="section-card"><h3>طلبات التفعيل وجميع الأعضاء</h3><p class="muted">سبب طلب التفعيل إلزامي. لن يسمح النظام باعتماد أي حساب غير معتمد لم يقدّم سببًا واضحًا.</p><div class="table-wrap"><table><thead><tr><th>الاسم</th><th>الرتبة</th><th>الكود</th><th>Discord ID</th><th>سبب طلب التفعيل</th><th>الحالة</th><th>إجراءات القائد</th></tr></thead><tbody>'+
- rows.map(p=>'<tr><td>'+esc(p.game_name)+'</td><td>'+esc(p.rank)+'</td><td>'+esc(p.military_code||'—')+'</td><td dir="ltr">'+esc(p.discord_id)+'</td><td><div class="member-reason">'+(hasReason(p)?esc(p.activation_reason):'<span class="activation-missing">لم يُذكر السبب</span>')+'</div></td><td>'+badge(p.status)+'</td><td>'+actions(p)+'</td></tr>').join('')+'</tbody></table></div></div>');
- $('#page').onclick=async e=>{if(!commander&&!has('users.approve'))return;const b=e.target.closest('button[data-action]');if(!b)return;const action=b.dataset.action;
- let arg=null;if(action==='rank'){arg=prompt('الرتبة الجديدة (من القائمة المعتمدة):',rows.find(r=>r.user_id===b.dataset.id)?.rank||'');if(!arg||!RANKS.includes(arg))return toast('الرتبة غير معتمدة',true);}
- if(['reject','suspend'].includes(action)&&!confirm('تأكيد الإجراء على الحساب؟'))return;
- const {data,error}=await db.rpc('asf_admin_action',{op:action,target:b.dataset.id,arg});if(error)return toast(error.message,true);
- toast(action==='approve'?'تم تفعيل الحساب والكود: '+data:'تم حفظ التغيير');renderMembers();};
-}
+async function renderMembers(){return memberUI.render();}
+
 async function renderChanges(){
  const rows=await query('asf_change_requests');
  set('#page','<div class="section-card"><h3>طلبات تعديل الاسم ومعرّف ديسكورد</h3><div class="table-wrap"><table><thead><tr><th>صاحب الطلب</th><th>الاسم الجديد</th><th>Discord ID</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>'+
