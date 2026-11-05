@@ -14,6 +14,8 @@ function extract(start,end){
 }
 assert.match(sql,/Preliminary acceptance required before final hiring/);
 assert.match(sql,/Review the training result before delivery/);
+assert.match(sql,/r\.department='police' and \(public\.asf_is_police_head\(\) or public\.asf_is_court_head\(\)\)/);
+assert.match(sql,/when public\.asf_is_court_head\(\) then 'رئاسة مجلس القضاء العسكري'/);
 assert.equal((sql.match(/p_section is null or p_section not in/g)||[]).length,2,'both privileged role RPCs validate null sections');
 assert.match(sql,/p_role is null or p_role not in/);
 assert.match(sql,/p_action is null or p_action not in/);
