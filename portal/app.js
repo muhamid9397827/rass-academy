@@ -107,6 +107,46 @@ $('#authFresh').onclick=()=>{
 $('#showLogin').onclick=()=>authForm('login');$('#showRegister').onclick=()=>authForm('register');
 $('#registerFromHero').onclick=()=>authForm('register');
 $('#authToggle').onclick=()=>{if(!$('#authSubmit').disabled)authForm(registering?'login':'register')};
+// A deadline stored across reloads avoids restarting the one-minute email cooldown.
+const confirmationCooldownKey='asf-confirmation-resend-until';
+let confirmationUntil=0,confirmationBusy=false,confirmationTimer=null;
+try{const saved=Number(localStorage.getItem(confirmationCooldownKey));if(Number.isFinite(saved))confirmationUntil=Math.min(saved,Date.now()+60000)}catch(_){}
+function updateConfirmationButton(){
+ const remaining=Math.max(0,Math.ceil((confirmationUntil-Date.now())/1000));
+ const button=$('#resendConfirmation');
+ button.disabled=confirmationBusy||remaining>0||$('#authSubmit').disabled;
+ button.textContent=confirmationBusy?'جارٍ إرسال بريد التأكيد…':remaining?'إعادة إرسال بريد التأكيد بعد '+remaining+' ثانية':'هل تريد إعادة إرسال بريد التأكيد؟';
+ if(remaining&&!confirmationTimer)confirmationTimer=setInterval(updateConfirmationButton,1000);
+ if(!remaining&&confirmationTimer){clearInterval(confirmationTimer);confirmationTimer=null}
+}
+function startConfirmationCooldown(){
+ confirmationUntil=Date.now()+60000;
+ try{localStorage.setItem(confirmationCooldownKey,String(confirmationUntil))}catch(_){}
+ updateConfirmationButton();
+}
+$('#resendConfirmation').onclick=async()=>{
+ if(confirmationBusy||confirmationUntil>Date.now()||$('#authSubmit').disabled)return;
+ if(!ready)return toast('ربط قاعدة البيانات غير متاح',true);
+ const emailInput=$('#email'),email=emailInput.value.trim();
+ if(!email)return toast('أدخل بريدك الإلكتروني أولًا لإعادة إرسال التأكيد.',true);
+ if(!emailInput.reportValidity())return;
+ const button=$('#resendConfirmation'),status=$('#resendConfirmationStatus');
+ confirmationBusy=true;button.setAttribute('aria-busy','true');
+ status.hidden=false;status.textContent='جارٍ إرسال بريد التأكيد…';
+ // Start before the request: timeout does not prove that email was not sent.
+ startConfirmationCooldown();
+ try{
+  const {error}=await authDeadline(()=>db.auth.resend({type:'signup',email,options:{emailRedirectTo:PORTAL_CONFIRMATION_REDIRECT}}),14000);
+  if(error)throw error;
+  status.textContent='إذا كان الحساب بانتظار تأكيد البريد، ستصلك رسالة التأكيد. راجع الوارد والبريد غير المرغوب فيه. يمكنك طلب رسالة أخرى بعد دقيقة.';
+ }catch(err){
+  const message=String(err?.message||''),limited=err?.status===429||/rate.?limit|too many|429|over_email_send_rate_limit|over_request_rate_limit/i.test(message+' '+String(err?.code||''));
+  const timedOut=err?.name==='AuthTimeoutError'||/abort|timeout|fetch|network|lock/i.test(message);
+  status.textContent=limited?'تم بلوغ حد إرسال البريد. انتظر وحاول لاحقًا؛ انتهاء عدّاد الدقيقة لا يعني تجدد حصة خدمة البريد.':timedOut?'تعذر تأكيد الإرسال بسبب تأخر الاتصال. راجع بريدك قبل المحاولة مجددًا.':'تعذر إرسال بريد التأكيد. حاول لاحقًا أو تواصل مع الإدارة.';
+  if(timedOut)$('#authFresh').hidden=false;
+ }finally{confirmationBusy=false;button.removeAttribute('aria-busy');updateConfirmationButton()}
+};
+updateConfirmationButton();
 $('#forgotPassword').onclick=async()=>{
  if(!ready)return toast('ربط قاعدة البيانات غير متاح',true);
  const email=$('#email').value.trim();if(!email)return toast('أدخل بريدك الإلكتروني أولًا',true);
@@ -208,7 +248,7 @@ $('#authForm').onsubmit=async e=>{
  status.textContent=registering?'جارٍ إنشاء الحساب…':'جارٍ التحقق من بيانات الدخول…';
  $('#authSubmit').textContent=registering?'جارٍ إنشاء الحساب…':'جارٍ تسجيل الدخول…';
  $('#authForm').setAttribute('aria-busy','true');
- $('#authToggle').disabled=true;$('#forgotPassword').disabled=true;$('#authSubmit').disabled=true;
+ $('#authToggle').disabled=true;$('#forgotPassword').disabled=true;$('#authSubmit').disabled=true;updateConfirmationButton();
  // Last-resort UI guard: a stalled Auth operation must never leave a disabled login indefinitely.
  const loginWatchdog=window.setTimeout(()=>{
   if(attempt!==authEpoch||!$('#authSubmit').disabled)return;
@@ -219,7 +259,7 @@ $('#authForm').onsubmit=async e=>{
   $('#authSubmit').disabled=false;
   $('#authSubmit').textContent='إعادة فتح تسجيل الدخول';
   $('#authForm').removeAttribute('aria-busy');
-  $('#authToggle').disabled=false;$('#forgotPassword').disabled=false;
+  $('#authToggle').disabled=false;$('#forgotPassword').disabled=false;updateConfirmationButton();
  },33000);
  let passwordAccepted=false;
  try{
@@ -242,7 +282,7 @@ $('#authForm').onsubmit=async e=>{
    if(attempt!==authEpoch)return;
    if(error){
     const message=String(error.message||'');
-    if(/email not confirmed/i.test(message))throw Error('بريدك الإلكتروني لم يتم تأكيده بعد. افتح رسالة التأكيد، ثم عد لتسجيل الدخول.');
+    if(/email not confirmed/i.test(message))throw Error('بريدك الإلكتروني لم يتم تأكيده بعد. افتح رسالة التأكيد أو اضغط «هل تريد إعادة إرسال بريد التأكيد؟».');
     if(/invalid login credentials/i.test(message))throw Error('البريد الإلكتروني أو كلمة المرور غير صحيحة.');
     if(/rate.?limit|too many requests|429/i.test(message))throw Error('محاولات دخول كثيرة. حاول لاحقاً ولا تكرر الضغط بسرعة.');
     throw error;
@@ -266,7 +306,7 @@ $('#authForm').onsubmit=async e=>{
   window.clearTimeout(loginWatchdog);
   $('#authSubmit').disabled=false;
   $('#authSubmit').textContent=authNeedsReload?'إعادة فتح تسجيل الدخول':registering?'إرسال طلب إنشاء حساب':'تسجيل الدخول';
-  $('#authForm').removeAttribute('aria-busy');$('#authToggle').disabled=false;$('#forgotPassword').disabled=false;
+  $('#authForm').removeAttribute('aria-busy');$('#authToggle').disabled=false;$('#forgotPassword').disabled=false;updateConfirmationButton();
  }
 };
 async function init(){

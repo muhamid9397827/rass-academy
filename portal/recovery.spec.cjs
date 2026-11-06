@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const sdk = `
 (() => {
- const state = { reset:null, updated:null, signedOut:0, verified:false, verification:null, resetError:false, updateError:false };
+ const state = { reset:null, resends:[], resendError:false, updated:null, signedOut:0, verified:false, verification:null, resetError:false, updateError:false };
  window.__recoveryQA=state;
  window.supabase = {createClient:()=>({
   auth: {
@@ -13,6 +13,7 @@ const sdk = `
    onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),
    verifyOtp:async({token_hash,type})=>{state.verification={token_hash,type};if(token_hash==='invalid')return {data:{user:null},error:{message:'expired'}};state.verified=true;return {data:{user:{id:'11111111-2222-4333-8444-555555555571'}},error:null}},
    resetPasswordForEmail:async(email,options)=>{state.reset={email,redirectTo:options.redirectTo};return state.resetError?{data:null,error:{message:'QA reset unavailable'}}:{data:{},error:null}},
+   resend:async(options)=>{state.resends.push(options);return state.resendError?{error:{status:429,message:'email rate limit exceeded'}}:{data:{},error:null}},
    updateUser:async(data)=>{state.updated={password:data.password};return state.updateError?{data:null,error:{message:'QA update unavailable'}}:{data:{user:{}},error:null}},
    signOut:async()=>{state.signedOut++;state.verified=false;return {error:null}}
   }
@@ -27,6 +28,30 @@ const sdk = `
  const base='http://127.0.0.1:8000/portal/';
  await page.goto(base,{waitUntil:'domcontentloaded'});
  await page.locator('#showLogin').click();
+ // Resend does not require a password or submit the login form.
+ await page.clock.install();
+ await page.locator('#resendConfirmation').click();
+ assert.equal(await page.evaluate(()=>window.__recoveryQA.resends.length),0,'empty email must not send');
+ await page.locator('#email').fill('qa@example.invalid');
+ await page.locator('#resendConfirmation').click();
+ await page.waitForFunction(()=>window.__recoveryQA.resends.length===1);
+ assert.deepEqual(await page.evaluate(()=>window.__recoveryQA.resends[0]),{type:'signup',email:'qa@example.invalid',options:{emailRedirectTo:'https://muhamid9397827.github.io/rass-academy/portal/confirmed.html'}});
+ assert.equal(await page.locator('#resendConfirmation').isDisabled(),true);
+ await page.evaluate(()=>document.querySelector('#resendConfirmation').onclick());
+ assert.equal(await page.evaluate(()=>window.__recoveryQA.resends.length),1,'repeat request must be blocked');
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.locator('#showLogin').click();
+ assert.equal(await page.locator('#resendConfirmation').isDisabled(),true,'cooldown must survive reload');
+ await page.clock.fastForward(61000);
+ assert.equal(await page.locator('#resendConfirmation').isDisabled(),false,'button must re-enable after a minute');
+ assert.equal(await page.evaluate(()=>window.__recoveryQA.resends.length),0,'timer must not send automatically');
+ await page.locator('#email').fill('qa@example.invalid');
+ await page.evaluate(()=>{window.__recoveryQA.resendError=true});
+ await page.locator('#resendConfirmation').click();
+ await page.locator('#resendConfirmationStatus').filter({hasText:'تم بلوغ حد إرسال البريد'}).waitFor();
+ assert.equal(await page.locator('#resendConfirmation').isDisabled(),true,'rate limit must keep cooldown');
+ assert.equal(await page.locator('#resendConfirmation').getAttribute('aria-busy'),null);
+ await page.clock.fastForward(61000);
  await page.locator('#email').fill('qa@example.invalid');
  await page.locator('#forgotPassword').click();
  await page.waitForFunction(()=>!!window.__recoveryQA.reset);
